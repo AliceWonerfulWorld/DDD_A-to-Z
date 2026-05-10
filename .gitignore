@@ -1,0 +1,17 @@
+.DS_Store
+.cache/
+.turbo/
+.direnv/
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
+coverage/
+
+tmp/
+*.log
+
+bin/
+
