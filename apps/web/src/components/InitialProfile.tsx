@@ -193,7 +193,14 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
         </div>
 
         {/* アバター表示エリア */}
-        <div style={{ position: "relative", width: "128px", height: "128px" }}>
+        <div style={{ 
+          position: "relative", 
+          width: "160px", // キャラクターを大きくした分、表示エリアも広げる
+          height: "160px", 
+          display: "flex", 
+          justifyContent: "center", 
+          alignItems: "center" 
+        }}>
           {/* 背後の回転魔法陣的な演出（レトロ風） */}
           <motion.div
             animate={{ rotate: 360 }}
@@ -229,7 +236,9 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              // 背景の四角形（border, background, boxShadow）を削除して、キャラクターが直接浮いているようにする
+              // キャラクターの左右の位置調整
+              // 左にずらしたい場合はマイナスの値（例: "-10px"）、右はプラスの値（例: "10px"）を設定してください
+              transform: "translateX(0px)",
             }}
           >
             <RustSamurai />
@@ -244,11 +253,13 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
             }}
             style={{
               position: "absolute",
-              bottom: "-20px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "60px",
-              height: "10px",
+              bottom: "-25px", // 上下（縦方向）の位置調整
+              // 影の左右の位置調整
+              // 基準位置から左右にずらしたい場合は "0px" の数値を変更してください（左はマイナス、右はプラス）
+              left: "calc(50% + 0px)",
+              x: "-50%", // 中央揃え用（Framer Motionの機能を利用）
+              width: "110px", // キャラクターが2.0倍になったので影も大きくする
+              height: "16px",
               background: "rgba(0,0,0,0.6)",
               borderRadius: "50%", // 影だけは少し丸みを持たせる（レトロゲームでよくある手法）
             }}
