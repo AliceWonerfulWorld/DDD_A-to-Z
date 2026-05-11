@@ -122,7 +122,7 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
 
   return (
     <div
-      className="flex flex-col items-center justify-center min-h-[100svh] p-4 relative overflow-hidden"
+      className="flex flex-col items-center justify-center min-h-svh p-4 relative overflow-hidden"
       style={{
         background: "radial-gradient(circle at 50% 120%, var(--color-navy-mid) 0%, var(--color-navy) 60%, #050510 100%)",
         fontFamily: "var(--font-dot)",
