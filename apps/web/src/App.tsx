@@ -38,7 +38,11 @@ function App() {
     <div
       style={{
         minHeight: "100svh",
-        background: "linear-gradient(180deg, #1a1a2e 0%, #0f3460 60%, #1a1a2e 100%)",
+        /* ドット絵ファンタジー町の背景画像 */
+        backgroundImage: "url('/pixel-town-bg.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center bottom",
+        backgroundRepeat: "no-repeat",
         position: "relative",
         display: "flex",
         flexDirection: "column",
@@ -48,6 +52,19 @@ function App() {
         overflow: "hidden",
       }}
     >
+      {/* 暗めのグラデーションオーバーレイ（テキスト視認性確保） */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          inset: 0,
+          background:
+            "linear-gradient(180deg, rgba(10,10,30,0.72) 0%, rgba(10,10,30,0.45) 50%, rgba(10,10,30,0.82) 100%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
       {/* 背景パーティクル */}
       <ParticleBackground />
 
@@ -58,7 +75,7 @@ function App() {
           position: "fixed",
           inset: 0,
           backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px)",
+            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px)",
           pointerEvents: "none",
           zIndex: 1,
         }}
