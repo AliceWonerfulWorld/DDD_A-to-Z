@@ -103,7 +103,7 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
     const interval = setInterval(() => {
       if (i <= fullText.length) {
         setDisplayedText(fullText.slice(0, i));
-        
+
         // スペースや改行以外の文字が表示されるタイミングで音を鳴らす
         if (i < fullText.length && fullText[i] !== " " && fullText[i] !== "\n") {
           playBeep();
@@ -193,13 +193,13 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
         </div>
 
         {/* アバター表示エリア */}
-        <div style={{ 
-          position: "relative", 
+        <div style={{
+          position: "relative",
           width: "160px", // キャラクターを大きくした分、表示エリアも広げる
-          height: "160px", 
-          display: "flex", 
-          justifyContent: "center", 
-          alignItems: "center" 
+          height: "160px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center"
         }}>
           {/* 背後の回転魔法陣的な演出（レトロ風） */}
           <motion.div
@@ -220,9 +220,8 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
 
           {/* ガクガクと呼吸するアバター */}
           <motion.div
-            animate={{ 
+            animate={{
               scaleY: [1, 1.05, 1],
-              scaleX: [1, 0.98, 1],
               y: [0, -4, 0]
             }}
             transition={{
