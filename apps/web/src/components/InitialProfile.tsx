@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { ParticleBackground } from "./ParticleBackground";
 
 // アセット管理用のMap定義
 const SPRITE_ASSETS = {
@@ -36,13 +37,33 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
 
   return (
     <div
-      className="flex flex-col items-center justify-center min-h-svh p-4 relative overflow-hidden"
+      className="flex flex-col items-center justify-center min-h-[100svh] p-4 relative overflow-hidden"
       style={{
-        background: "var(--color-navy)",
+        background: "radial-gradient(circle at 50% 120%, var(--color-navy-mid) 0%, var(--color-navy) 60%, #050510 100%)",
         fontFamily: "var(--font-dot)",
         color: "var(--color-pixel-white)",
       }}
     >
+      {/* 冒険の始まりを演出するパーティクルと光 */}
+      <ParticleBackground />
+
+      {/* 魔法陣のような光の演出（下部から） */}
+      <motion.div
+        animate={{ opacity: [0.3, 0.6, 0.3] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          position: "absolute",
+          bottom: "-20vh",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "150vw",
+          height: "60vh",
+          background: "radial-gradient(ellipse at center, rgba(0, 245, 255, 0.15) 0%, transparent 70%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
       {/* 背景のスキャンライン（Appと共通） */}
       <div
         aria-hidden="true"
@@ -64,9 +85,9 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
         style={{
           position: "relative",
           zIndex: 2,
-          border: "4px solid var(--color-pixel-white)",
+          border: "4px solid var(--color-gold)",
           background: "var(--color-navy-light)",
-          boxShadow: "8px 8px 0 rgba(0,0,0,0.8)",
+          boxShadow: "0 0 30px rgba(0, 245, 255, 0.15), 8px 8px 0 rgba(0,0,0,0.8)",
           maxWidth: "500px",
           width: "100%",
           padding: "2rem",
@@ -89,6 +110,23 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
 
         {/* アバター表示エリア */}
         <div style={{ position: "relative", width: "128px", height: "128px" }}>
+          {/* 背後の回転魔法陣的な演出（レトロ風） */}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+            style={{
+              position: "absolute",
+              top: "-20%",
+              left: "-20%",
+              width: "140%",
+              height: "140%",
+              border: "2px dashed var(--color-gold)",
+              borderRadius: "50%",
+              opacity: 0.15,
+              zIndex: 0,
+            }}
+          />
+
           {/* カクカク浮遊するアバター */}
           <motion.div
             animate={{ y: [0, -12, 0] }}
@@ -100,8 +138,9 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
             style={{
               width: "100%",
               height: "100%",
-              border: "2px dashed rgba(255,255,255,0.2)", // 仮枠
-              background: "rgba(0,0,0,0.3)",
+              border: "2px solid rgba(255,255,255,0.1)",
+              background: "rgba(0,0,0,0.4)",
+              boxShadow: "inset 0 0 10px rgba(0,0,0,0.5)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
