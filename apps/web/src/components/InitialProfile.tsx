@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ParticleBackground } from "./ParticleBackground";
 
@@ -67,19 +67,58 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
   const [displayedText, setDisplayedText] = useState("");
   const fullText = "歓迎しよう、新たな挑戦者よ。\n君のコードネームを教えてくれ。";
 
+  // Web Audio APIによるピコピコ音の準備
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    try {
+      const AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
+      if (AudioContext) {
+        audioCtxRef.current = new AudioContext();
+      }
+    } catch {
+      // AudioContext not supported
+    }
+  }, []);
+
+  const playBeep = useCallback(() => {
+    if (!audioCtxRef.current || audioCtxRef.current.state === "suspended") return;
+    try {
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      // 少しランダムに周波数を揺らしてレトロな「喋り声」感を出す
+      osc.frequency.setValueAtTime(700 + Math.random() * 100, ctx.currentTime);
+      gain.gain.setValueAtTime(0.03, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.06);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // タイプライターエフェクト
   useEffect(() => {
     let i = 0;
     const interval = setInterval(() => {
       if (i <= fullText.length) {
         setDisplayedText(fullText.slice(0, i));
+        
+        // スペースや改行以外の文字が表示されるタイミングで音を鳴らす
+        if (i < fullText.length && fullText[i] !== " " && fullText[i] !== "\n") {
+          playBeep();
+        }
         i++;
       } else {
         clearInterval(interval);
       }
-    }, 50); // 1文字ずつ表示
+    }, 90); // 1文字ずつ表示 (ピコピコ感を出すため少し遅めの90msに設定)
     return () => clearInterval(interval);
-  }, [fullText]);
+  }, [fullText, playBeep]);
 
   return (
     <div
