@@ -57,9 +57,9 @@ pnpm db:migrate:apply
 - AUTH_COOKIE_SECRET: OAuth state cookie の署名 secret
 - AUTH_COOKIE_SECURE: 本番 HTTPS では `true`
 
-アプリケーションからは `.env` の `DATABASE_URL` を使って接続します。別コンテナから接続する場合は host を `postgres` にしてください。GitHub OAuth の state は署名付き cookie、User と session は PostgreSQL に保存します。
+アプリケーションからは `.env` の `DATABASE_URL` を使い、GORM 経由で接続します。別コンテナから接続する場合は host を `postgres` にしてください。GitHub OAuth の state は署名付き cookie、User と session は PostgreSQL に保存します。
 
-DB schema は Atlas で管理します。schema の source of truth は `db/schema.sql`、生成された migration は `db/migrations/` に置きます。
+DB schema は Atlas で管理します。schema の source of truth は `db/schema.sql`、生成された migration は `db/migrations/` に置きます。Go API 起動時の `AutoMigrate` は使わず、schema 変更は Atlas migration で反映します。
 
 ```bash
 pnpm db:schema:validate

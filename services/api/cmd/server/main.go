@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/postgres"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/security"
 	httpapi "github.com/jyogi-web/ddd-a-to-z/services/api/internal/interfaces/http"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -27,8 +27,13 @@ func main() {
 		logger.Error("failed to connect database", "error", err)
 		os.Exit(1)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		logger.Error("failed to get database handle", "error", err)
+		os.Exit(1)
+	}
 	defer func() {
-		if err := db.Close(); err != nil {
+		if err := sqlDB.Close(); err != nil {
 			logger.Error("failed to close database", "error", err)
 		}
 	}()
@@ -56,7 +61,7 @@ func main() {
 	}
 }
 
-func buildAuthController(logger *slog.Logger, db *sql.DB) (*httpapi.AuthController, error) {
+func buildAuthController(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController, error) {
 	oauthConfig, err := config.GitHubOAuthFromEnv()
 	if err != nil {
 		return nil, err
