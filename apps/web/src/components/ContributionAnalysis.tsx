@@ -42,6 +42,7 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
 
     let alive = true;
     let messageIdx = 0;
+    let completeTimer: ReturnType<typeof setTimeout> | null = null;
 
     const msgTimer = setInterval(() => {
       messageIdx++;
@@ -57,7 +58,7 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
         if (next >= 100) {
           clearInterval(msgTimer);
           clearInterval(progTimer);
-          setTimeout(() => {
+          completeTimer = setTimeout(() => {
             if (alive) setPhase("complete");
           }, 600);
           return 100;
@@ -70,6 +71,7 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
       alive = false;
       clearInterval(msgTimer);
       clearInterval(progTimer);
+      if (completeTimer !== null) clearTimeout(completeTimer);
     };
   }, [phase]);
 

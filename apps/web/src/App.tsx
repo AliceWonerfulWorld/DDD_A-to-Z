@@ -38,9 +38,10 @@ function isDaytime(hour: number): boolean {
 function App() {
   const [isDay, setIsDay] = useState(() => isDaytime(new Date().getHours()));
   const [isProfileMode, setIsProfileMode] = useState(() =>
-    window.location.search.includes("profile=1"),
+    new URLSearchParams(window.location.search).get("profile") === "1",
   );
-  const isAnalysisMode = window.location.search.includes("analysis=1");
+  const isAnalysisMode =
+    new URLSearchParams(window.location.search).get("analysis") === "1";
 
   // 毎分チェックして日没・夜明けをリアルタイム反映
   useEffect(() => {
@@ -57,8 +58,7 @@ function App() {
   if (isProfileMode) {
     return (
       <InitialProfile
-        onComplete={(username) => {
-          console.log("Profile created:", username);
+        onComplete={() => {
           window.location.href = "/?analysis=1";
         }}
       />

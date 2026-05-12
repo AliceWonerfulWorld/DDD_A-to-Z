@@ -159,7 +159,7 @@ export function CompletePanel({ result, onContinue }: CompletePanelProps) {
                 >
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${(lang.cp / result.totalCP) * 100}%` }}
+                    animate={{ width: result.totalCP === 0 ? "0%" : `${(lang.cp / result.totalCP) * 100}%` }}
                     transition={{ delay: 1 + i * 0.12, duration: 0.6, ease: steppedEase(8) }}
                     style={{
                       height: "100%",
