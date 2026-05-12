@@ -10,7 +10,7 @@ const steppedEase = (steps: number) => (t: number) => Math.floor(t * steps) / st
 /* ─── Mock Data ─── */
 
 const MOCK = {
-  user: { name: "DevSamurai", title: "エンジニア見習い", rankName: "コードの探求者" },
+  user: { name: "DevSamurai", title: "Apprentice", rankName: "Code Seeker" },
   season: {
     label: "SEASON 1",
     start: "2024/05/01",
@@ -35,7 +35,7 @@ const MOCK = {
     { name: "Other", pct: 6, icon: "🔮", color: "#888", atk: 55, def: 50, mag: 60, spd: 65, luk: 40 },
   ],
   goal: { current: 2150, target: 3300 },
-  title: { name: "継続の達人", line: "継続は力なり。日々の積み重ねが未来を創る。" },
+  title: { name: "Consistency Master", line: "Consistency is key. Daily efforts build the future." },
   badges: [
     { id: 1, icon: "🌱", name: "はじめの一歩", desc: "100 Commit達成", color: "#4caf50" },
     { id: 2, icon: "🌿", name: "草生やし名人", desc: "10日連続コミット", color: "#4caf50" },
@@ -219,7 +219,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
           <span style={{ fontSize: "2rem" }}>👑</span>
           <span style={{ fontSize: "1rem", color: "#f0c040", letterSpacing: "0.1em" }}>MY PAGE</span>
           <span style={{ fontSize: "1rem", color: "rgba(240,192,64,0.3)" }}>{">"}</span>
-          <span style={{ fontSize: "0.9rem", color: "rgba(232,232,208,0.5)" }}>エンジニア・ステータス</span>
+          <span style={{ fontSize: "0.9rem", color: "rgba(232,232,208,0.5)" }}>ENGINEER STATUS</span>
         </div>
         <button
           onClick={() => onNavigate("/")}
@@ -249,7 +249,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px", flex: 1, minHeight: 0 }}>
           {/* Left: Adventurer Profile */}
           <Panel borderColor="rgba(240,192,64,0.3)">
-            <SectionTitle text="冒険者プロフィール" />
+            <SectionTitle text="PROFILE" color="#f0c040" />
             <div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: "1rem", color: "#e8e8d0" }}>{MOCK.user.name}</div>
@@ -277,16 +277,15 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 {MOCK.season.start} 〜 {MOCK.season.end}
               </div>
               <div style={{ marginTop: "6px", display: "flex", alignItems: "baseline", gap: "6px" }}>
-                <span style={{ fontSize: "0.7rem", color: "rgba(232,232,208,0.4)", fontFamily: '"Press Start 2P", monospace' }}>あと</span>
                 <span style={{ fontSize: "2rem", color: "#f0c040", fontFamily: '"Press Start 2P", monospace' }}>{MOCK.season.remaining}</span>
-                <span style={{ fontSize: "0.7rem", color: "rgba(232,232,208,0.4)", fontFamily: '"Press Start 2P", monospace' }}>日</span>
+                <span style={{ fontSize: "0.7rem", color: "rgba(232,232,208,0.4)", fontFamily: '"Press Start 2P", monospace', marginLeft: "8px" }}>DAYS LEFT</span>
               </div>
             </div>
           </Panel>
 
           {/* Center: Guild */}
           <Panel borderColor={`${gColor}40`}>
-            <SectionTitle text="所属ギルド" />
+            <SectionTitle text="GUILD" color={gColor} />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
               {/* Emblem */}
               <motion.div
@@ -330,7 +329,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 <div style={{ fontSize: "0.7rem", color: "rgba(232,232,208,0.4)", fontFamily: '"Press Start 2P", monospace' }}>RANK</div>
                 <div style={{ textAlign: "right" }}>
                   <span style={{ fontSize: "1.4rem", color: "#f0c040", fontFamily: '"Press Start 2P", monospace' }}>#{MOCK.guild.rank}</span>
-                  <span style={{ fontSize: "0.6rem", color: "rgba(232,232,208,0.3)", fontFamily: '"Press Start 2P", monospace', marginLeft: "8px" }}>/ {MOCK.guild.total} ギルド中</span>
+                  <span style={{ fontSize: "0.6rem", color: "rgba(232,232,208,0.3)", fontFamily: '"Press Start 2P", monospace', marginLeft: "8px" }}>/ {MOCK.guild.total} GUILDS</span>
                 </div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
@@ -351,7 +350,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 background: `${gColor}08`, cursor: "pointer",
               }}
             >
-              ギルド詳細を見る ▶
+              VIEW DETAILS ▶
             </button>
           </Panel>
 
@@ -409,7 +408,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   <span style={{ fontSize: "0.7rem", color: "rgba(232,232,208,0.25)", fontFamily: '"Press Start 2P", monospace' }}>More</span>
                 </div>
                 <div style={{ fontSize: "0.7rem", color: "#f0c040", fontFamily: '"Press Start 2P", monospace' }}>
-                  最長連続記録: <span style={{ color: "#4caf50" }}>{streak}</span> 日
+                  MAX STREAK: <span style={{ color: "#4caf50" }}>{streak}</span> DAYS
                 </div>
               </div>
             </div>
@@ -426,7 +425,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px", flex: 1, minHeight: 0 }}>
           {/* Left: Language Status */}
           <Panel borderColor="rgba(191,0,255,0.3)">
-            <SectionTitle text="言語ステータス" color="#bf00ff" />
+            <SectionTitle text="LANGUAGES" color="#bf00ff" />
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {MOCK.langs.map((lang, i) => (
                 <motion.div
@@ -457,11 +456,11 @@ export function MyPage({ onNavigate }: MyPageProps) {
 
           {/* Center: Goal + Title */}
           <Panel borderColor="rgba(240,192,64,0.3)">
-            <SectionTitle text="目標" />
+            <SectionTitle text="GOALS" color="#f0c040" />
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
               <span style={{ fontSize: "2rem" }}>🏁</span>
               <span style={{ fontSize: "0.8rem", color: "rgba(232,232,208,0.6)", fontFamily: '"Press Start 2P", monospace' }}>
-                年内 {MOCK.goal.target.toLocaleString()} GitHub コミット
+                TARGET: {MOCK.goal.target.toLocaleString()} COMMITS
               </span>
             </div>
             <div style={{ height: "16px", border: "2px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.4)", position: "relative", overflow: "hidden", marginBottom: "6px" }}>
@@ -472,7 +471,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
             </div>
 
             <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-              <SectionTitle text="称号" />
+              <SectionTitle text="TITLE" color="#f0c040" />
               <div style={{ textAlign: "center", padding: "8px" }}>
                 <span style={{ fontSize: "2.4rem" }}>👑</span>
                 <div style={{ fontSize: "0.9rem", color: "#f0c040", marginTop: "4px", fontFamily: '"Press Start 2P", monospace' }}>{MOCK.title.name}</div>
