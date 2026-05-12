@@ -33,19 +33,44 @@ func main() {
 		}
 	}()
 
-	authController := buildAuthController(logger, db)
+	authController, err := buildAuthController(logger, db)
+	if err != nil {
+		logger.Error("failed to build auth controller", "error", err)
+		os.Exit(1)
+	}
 
 	addr := config.EnvOrDefault("PORT", "8080")
 	logger.Info("api server listening", "addr", ":"+addr)
 
-	if err := http.ListenAndServe(":"+addr, httpapi.NewRouter(logger, authController)); err != nil {
+	server := &http.Server{
+		Addr:              ":" + addr,
+		Handler:           httpapi.NewRouter(logger, authController),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Error("api server stopped", "error", err)
 		os.Exit(1)
 	}
 }
 
-func buildAuthController(logger *slog.Logger, db *sql.DB) *httpapi.AuthController {
-	oauthClient := infragithub.NewOAuthClient(config.GitHubOAuthFromEnv(), nil)
+func buildAuthController(logger *slog.Logger, db *sql.DB) (*httpapi.AuthController, error) {
+	oauthConfig, err := config.GitHubOAuthFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	cookieSecret, err := config.AuthCookieSecretFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	cookieSecure, err := config.AuthCookieSecureFromEnv()
+	if err != nil {
+		return nil, err
+	}
+
+	oauthClient := infragithub.NewOAuthClient(oauthConfig, nil)
 	authStore := postgres.NewAuthStore(db)
 	usecase := authapp.NewUseCase(
 		oauthClient,
@@ -58,7 +83,7 @@ func buildAuthController(logger *slog.Logger, db *sql.DB) *httpapi.AuthControlle
 	return httpapi.NewAuthController(
 		usecase,
 		logger,
-		security.NewSignedValueCodec(config.AuthCookieSecretFromEnv()),
-		config.AuthCookieSecureFromEnv(),
-	)
+		security.NewSignedValueCodec(cookieSecret),
+		cookieSecure,
+	), nil
 }

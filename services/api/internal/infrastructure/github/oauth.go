@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/config"
@@ -19,7 +20,9 @@ type OAuthClient struct {
 
 func NewOAuthClient(config config.GitHubOAuth, httpClient *http.Client) *OAuthClient {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{
+			Timeout: 10 * time.Second,
+		}
 	}
 
 	return &OAuthClient{

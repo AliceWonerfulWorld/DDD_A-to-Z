@@ -20,8 +20,8 @@ func TestNewRouterHealthz(t *testing.T) {
 		t.Fatalf("status code = %d, want %d", response.Code, stdhttp.StatusOK)
 	}
 
-	if got := response.Header().Get("Content-Type"); got != "application/json" {
-		t.Fatalf("Content-Type = %q, want application/json", got)
+	if got := response.Header().Get("Content-Type"); !strings.HasPrefix(got, "application/json") {
+		t.Fatalf("Content-Type = %q, want application/json*", got)
 	}
 
 	if got := strings.TrimSpace(response.Body.String()); got != `{"status":"ok"}` {

@@ -9,7 +9,6 @@ import (
 
 	authapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/auth"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
-	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/security"
 )
 
 const (
@@ -17,15 +16,20 @@ const (
 	sessionCookieName    = "lang_war_session"
 )
 
+type StateCodec interface {
+	Sign(value string, expiresAt time.Time) (string, error)
+	Verify(signedValue string, now time.Time) (string, error)
+}
+
 type AuthController struct {
 	usecase      *authapp.UseCase
 	logger       *slog.Logger
-	stateCodec   *security.SignedValueCodec
+	stateCodec   StateCodec
 	cookieSecure bool
 	now          func() time.Time
 }
 
-func NewAuthController(usecase *authapp.UseCase, logger *slog.Logger, stateCodec *security.SignedValueCodec, cookieSecure bool) *AuthController {
+func NewAuthController(usecase *authapp.UseCase, logger *slog.Logger, stateCodec StateCodec, cookieSecure bool) *AuthController {
 	return &AuthController{
 		usecase:      usecase,
 		logger:       logger,
