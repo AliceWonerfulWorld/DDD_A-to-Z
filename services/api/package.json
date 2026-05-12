@@ -7,6 +7,6 @@
     "build": "mkdir -p .cache/bin && GOCACHE=$(pwd)/.cache/go-build go build -o .cache/bin/lang-war-api ./cmd/server",
     "test": "GOCACHE=$(pwd)/.cache/go-build go test ./...",
     "lint": "GOCACHE=$(pwd)/.cache/go-build GOLANGCI_LINT_CACHE=$(pwd)/.cache/golangci-lint golangci-lint run ./...",
-    "format": "gofmt -w cmd"
+    "format": "gofmt -w cmd internal"
   }
 }
