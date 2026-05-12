@@ -159,7 +159,9 @@ export function CompletePanel({ result, onContinue }: CompletePanelProps) {
                 >
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: result.totalCP === 0 ? "0%" : `${(lang.cp / result.totalCP) * 100}%` }}
+                    animate={{
+                      width: result.totalCP === 0 ? "0%" : `${(lang.cp / result.totalCP) * 100}%`,
+                    }}
                     transition={{ delay: 1 + i * 0.12, duration: 0.6, ease: steppedEase(8) }}
                     style={{
                       height: "100%",
@@ -224,20 +226,45 @@ export function CompletePanel({ result, onContinue }: CompletePanelProps) {
                 style={{
                   fontFamily: "var(--font-press)",
                   fontSize: "0.6rem",
-                  color: item.type === "pull_request" ? "var(--color-neon-green)" : "var(--color-gold)",
+                  color:
+                    item.type === "pull_request" ? "var(--color-neon-green)" : "var(--color-gold)",
                   minWidth: "24px",
                   textAlign: "center",
                 }}
               >
                 +{item.cp}
               </span>
-              <span style={{ color: "rgba(232,232,208,0.4)", fontSize: "0.65rem", minWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span
+                style={{
+                  color: "rgba(232,232,208,0.4)",
+                  fontSize: "0.65rem",
+                  minWidth: "120px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {item.repo}
               </span>
-              <span style={{ color: "var(--color-pixel-white)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span
+                style={{
+                  color: "var(--color-pixel-white)",
+                  flex: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {item.message}
               </span>
-              <span style={{ color: "rgba(232,232,208,0.3)", fontSize: "0.6rem", minWidth: "50px", textAlign: "right" }}>
+              <span
+                style={{
+                  color: "rgba(232,232,208,0.3)",
+                  fontSize: "0.6rem",
+                  minWidth: "50px",
+                  textAlign: "right",
+                }}
+              >
                 {item.timestamp}
               </span>
             </motion.div>

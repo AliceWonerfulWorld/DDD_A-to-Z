@@ -3,8 +3,6 @@ import { motion } from "framer-motion";
 import { ParticleBackground } from "./ParticleBackground";
 import { RustSamurai } from "./RustSamurai";
 
-
-
 interface InitialProfileProps {
   onComplete: (username: string) => void;
 }
@@ -18,14 +16,22 @@ const CODE_SNIPPETS = [
   'public static void main(String[] args) {\n  System.out.println("Hello World");\n}',
   'def hello():\n    print("Hello, world!")',
   'func main() {\n  fmt.Println("Hello, world!")\n}',
-  'const sum = (a: number, b: number) => a + b;',
-  'SELECT * FROM users WHERE id = 1;',
-  'int main() {\n  printf("Hello, World!");\n  return 0;\n}'
+  "const sum = (a: number, b: number) => a + b;",
+  "SELECT * FROM users WHERE id = 1;",
+  'int main() {\n  printf("Hello, World!");\n  return 0;\n}',
 ];
 
 function CodeRain() {
   return (
-    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        pointerEvents: "none",
+        zIndex: 0,
+      }}
+    >
       {CODE_SNIPPETS.map((code, i) => (
         <motion.div
           key={i}
@@ -42,7 +48,7 @@ function CodeRain() {
           }}
           style={{
             position: "absolute",
-            left: `${8 + (i * 14) % 75}%`,
+            left: `${8 + ((i * 14) % 75)}%`,
             fontFamily: "var(--font-dot)",
             fontSize: "0.85rem",
             color: "var(--color-neon-cyan)",
@@ -68,7 +74,10 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
 
   useEffect(() => {
     try {
-      const AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
+      const AudioContext =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof window.AudioContext })
+          .webkitAudioContext;
       if (AudioContext) {
         audioCtxRef.current = new AudioContext();
       }
@@ -120,7 +129,8 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
     <div
       className="flex flex-col items-center justify-center min-h-svh p-4 relative overflow-hidden"
       style={{
-        background: "radial-gradient(circle at 50% 120%, var(--color-navy-mid) 0%, var(--color-navy) 60%, #050510 100%)",
+        background:
+          "radial-gradient(circle at 50% 120%, var(--color-navy-mid) 0%, var(--color-navy) 60%, #050510 100%)",
         fontFamily: "var(--font-dot)",
         color: "var(--color-pixel-white)",
       }}
@@ -142,7 +152,8 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
           transform: "translateX(-50%)",
           width: "150vw",
           height: "60vh",
-          background: "radial-gradient(ellipse at center, rgba(0, 245, 255, 0.15) 0%, transparent 70%)",
+          background:
+            "radial-gradient(ellipse at center, rgba(0, 245, 255, 0.15) 0%, transparent 70%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -182,7 +193,15 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
         }}
       >
         {/* ガイドテキスト */}
-        <div style={{ minHeight: "3.5rem", fontSize: "1.1rem", whiteSpace: "pre-wrap", lineHeight: "1.6", width: "100%" }}>
+        <div
+          style={{
+            minHeight: "3.5rem",
+            fontSize: "1.1rem",
+            whiteSpace: "pre-wrap",
+            lineHeight: "1.6",
+            width: "100%",
+          }}
+        >
           {displayedText}
           <motion.span
             animate={{ opacity: [1, 0] }}
@@ -193,14 +212,16 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
         </div>
 
         {/* アバター表示エリア */}
-        <div style={{
-          position: "relative",
-          width: "160px", // キャラクターを大きくした分、表示エリアも広げる
-          height: "160px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center"
-        }}>
+        <div
+          style={{
+            position: "relative",
+            width: "160px", // キャラクターを大きくした分、表示エリアも広げる
+            height: "160px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
           {/* 背後の回転魔法陣的な演出（レトロ風） */}
           <motion.div
             animate={{ rotate: 360 }}
@@ -222,7 +243,7 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
           <motion.div
             animate={{
               scaleY: [1, 1.05, 1],
-              y: [0, -4, 0]
+              y: [0, -4, 0],
             }}
             transition={{
               duration: 1.5,

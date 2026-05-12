@@ -137,11 +137,13 @@ export function AnalyzingPanel({ progress, currentMessageIdx }: AnalyzingPanelPr
             style={{
               fontFamily: "var(--font-dot)",
               fontSize: "0.75rem",
-              color: i === currentMessageIdx ? "var(--color-neon-cyan)" : "rgba(232, 232, 208, 0.3)",
+              color:
+                i === currentMessageIdx ? "var(--color-neon-cyan)" : "rgba(232, 232, 208, 0.3)",
               padding: "2px 0",
             }}
           >
-            {i === currentMessageIdx ? "> " : "  "}{msg}
+            {i === currentMessageIdx ? "> " : "  "}
+            {msg}
           </motion.div>
         ))}
       </div>

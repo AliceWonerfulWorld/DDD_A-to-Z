@@ -1,8 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "jsPlugins": [
-    { "name": "react-doctor", "specifier": "react-doctor/oxlint-plugin" }
-  ],
+  "jsPlugins": [{ "name": "react-doctor", "specifier": "react-doctor/oxlint-plugin" }],
   "plugins": [],
   "categories": {
     "correctness": "error"
