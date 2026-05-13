@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	cpdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/cp"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type CPStore struct {
@@ -24,12 +24,19 @@ func NewCPStore(db *gorm.DB) *CPStore {
 }
 
 func (s *CPStore) Record(ctx context.Context, entry cpdomain.LedgerEntry) (cpdomain.LedgerEntry, error) {
-	var record cpLedgerRecord
-	result := s.db.WithContext(ctx).Raw(`
-		INSERT INTO cp_ledger (id, user_id, amount, type, reason, source_type, source_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		RETURNING id, user_id, amount, type, reason, source_type, source_id, balance_after, created_at
-	`, entry.ID, entry.UserID, entry.Amount, entry.Type, entry.Reason, entry.SourceType, entry.SourceID, entry.CreatedAt).Scan(&record)
+	record := cpLedgerRecord{
+		ID:         entry.ID,
+		UserID:     string(entry.UserID),
+		Amount:     entry.Amount,
+		Type:       entry.Type,
+		Reason:     entry.Reason,
+		SourceType: entry.SourceType,
+		SourceID:   entry.SourceID,
+		CreatedAt:  entry.CreatedAt,
+	}
+	result := s.db.WithContext(ctx).
+		Clauses(clause.Returning{}).
+		Create(&record)
 	if result.Error != nil {
 		return cpdomain.LedgerEntry{}, mapCPStoreError(result.Error)
 	}
@@ -41,20 +48,16 @@ func (s *CPStore) Record(ctx context.Context, entry cpdomain.LedgerEntry) (cpdom
 }
 
 func (s *CPStore) GetBalance(ctx context.Context, userID user.ID) (int64, error) {
-	var balance int64
-	err := s.db.WithContext(ctx).Raw(`
-		SELECT balance
-		FROM cp_accounts
-		WHERE user_id = ?
-	`, userID).Row().Scan(&balance)
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, gorm.ErrRecordNotFound
-	}
-	if err != nil {
-		return 0, err
+	var record cpAccountRecord
+	result := s.db.WithContext(ctx).
+		Select("balance").
+		Where("user_id = ?", userID).
+		Take(&record)
+	if result.Error != nil {
+		return 0, result.Error
 	}
 
-	return balance, nil
+	return record.Balance, nil
 }
 
 func mapCPStoreError(err error) error {
@@ -80,6 +83,10 @@ type cpLedgerRecord struct {
 	CreatedAt    time.Time          `gorm:"column:created_at"`
 }
 
+func (cpLedgerRecord) TableName() string {
+	return "cp_ledger"
+}
+
 func (r cpLedgerRecord) toDomain() cpdomain.LedgerEntry {
 	return cpdomain.LedgerEntry{
 		ID:           r.ID,
@@ -92,4 +99,13 @@ func (r cpLedgerRecord) toDomain() cpdomain.LedgerEntry {
 		BalanceAfter: r.BalanceAfter,
 		CreatedAt:    r.CreatedAt,
 	}
+}
+
+type cpAccountRecord struct {
+	UserID  string `gorm:"column:user_id"`
+	Balance int64  `gorm:"column:balance"`
+}
+
+func (cpAccountRecord) TableName() string {
+	return "cp_accounts"
 }
