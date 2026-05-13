@@ -2,12 +2,9 @@ package config
 
 import "os"
 
-// EnvOrDefault returns the configured environment value or fallback when empty.
-func EnvOrDefault(key string, fallback string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
+func EnvOrDefault(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
-
-	return value
+	return fallback
 }

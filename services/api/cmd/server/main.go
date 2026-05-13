@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	authapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/auth"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/config"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/database"
@@ -19,6 +20,10 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	if err := godotenv.Load(); err != nil {
+		logger.Warn("failed to load .env", "error", err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -74,6 +79,7 @@ func buildAuthController(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthControl
 	if err != nil {
 		return nil, err
 	}
+	frontendURL := config.EnvOrDefault("FRONTEND_URL", "http://localhost:5173")
 
 	oauthClient := infragithub.NewOAuthClient(oauthConfig, nil)
 	authStore := postgres.NewAuthStore(db)
@@ -90,5 +96,6 @@ func buildAuthController(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthControl
 		logger,
 		security.NewSignedValueCodec(cookieSecret),
 		cookieSecure,
+		frontendURL,
 	), nil
 }
