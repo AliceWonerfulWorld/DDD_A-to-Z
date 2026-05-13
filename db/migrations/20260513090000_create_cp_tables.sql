@@ -1,55 +1,16 @@
-CREATE TABLE users (
-  id TEXT PRIMARY KEY,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
+-- Create "cp_accounts" table
+CREATE TABLE "cp_accounts" ("user_id" text NOT NULL, "balance" bigint NOT NULL DEFAULT 0, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, PRIMARY KEY ("user_id"), CONSTRAINT "cp_accounts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT "cp_accounts_balance_check" CHECK (balance >= 0));
 
-CREATE TABLE github_accounts (
-  github_id BIGINT PRIMARY KEY,
-  user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
-  username TEXT NOT NULL,
-  avatar_url TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
+-- Create "cp_ledger" table
+CREATE TABLE "cp_ledger" ("id" text NOT NULL, "user_id" text NOT NULL, "amount" bigint NOT NULL, "type" text NOT NULL, "reason" text NOT NULL, "source_type" text NOT NULL, "source_id" text NOT NULL, "balance_after" bigint NOT NULL, "created_at" timestamptz NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "cp_ledger_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT "cp_ledger_amount_check" CHECK (amount <> 0), CONSTRAINT "cp_ledger_type_check" CHECK (type IN ('earn', 'spend', 'adjust')), CONSTRAINT "cp_ledger_reason_check" CHECK (length(reason) > 0), CONSTRAINT "cp_ledger_source_type_check" CHECK (length(source_type) > 0), CONSTRAINT "cp_ledger_source_id_check" CHECK (length(source_id) > 0), CONSTRAINT "cp_ledger_balance_after_check" CHECK (balance_after >= 0), CONSTRAINT "cp_ledger_type_amount_check" CHECK ((type = 'earn' AND amount > 0) OR (type = 'spend' AND amount < 0) OR type = 'adjust'));
 
-CREATE TABLE sessions (
-  token_hash TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id),
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL
-);
+-- Create index "cp_ledger_user_id_created_at_idx" to table: "cp_ledger"
+CREATE INDEX "cp_ledger_user_id_created_at_idx" ON "cp_ledger" ("user_id", "created_at" DESC);
 
-CREATE INDEX sessions_user_id_idx ON sessions(user_id);
-CREATE INDEX sessions_expires_at_idx ON sessions(expires_at);
+-- Create index "cp_ledger_source_idx" to table: "cp_ledger"
+CREATE INDEX "cp_ledger_source_idx" ON "cp_ledger" ("source_type", "source_id");
 
-CREATE TABLE cp_accounts (
-  user_id TEXT PRIMARY KEY REFERENCES users(id),
-  balance BIGINT NOT NULL DEFAULT 0 CHECK (balance >= 0),
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-
-CREATE TABLE cp_ledger (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id),
-  amount BIGINT NOT NULL CHECK (amount <> 0),
-  type TEXT NOT NULL CHECK (type IN ('earn', 'spend', 'adjust')),
-  reason TEXT NOT NULL CHECK (length(reason) > 0),
-  source_type TEXT NOT NULL CHECK (length(source_type) > 0),
-  source_id TEXT NOT NULL CHECK (length(source_id) > 0),
-  balance_after BIGINT NOT NULL CHECK (balance_after >= 0),
-  created_at TIMESTAMPTZ NOT NULL,
-  CHECK (
-    (type = 'earn' AND amount > 0)
-    OR (type = 'spend' AND amount < 0)
-    OR type = 'adjust'
-  )
-);
-
-CREATE INDEX cp_ledger_user_id_created_at_idx ON cp_ledger(user_id, created_at DESC);
-CREATE INDEX cp_ledger_source_idx ON cp_ledger(source_type, source_id);
-
+-- Reject CP accounts that start with an implicit balance.
 CREATE FUNCTION reject_nonzero_cp_account_insert()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -69,6 +30,7 @@ BEFORE INSERT ON cp_accounts
 FOR EACH ROW
 EXECUTE FUNCTION reject_nonzero_cp_account_insert();
 
+-- Only the CP ledger trigger may update account balances.
 CREATE FUNCTION reject_direct_cp_account_balance_update()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -89,6 +51,7 @@ BEFORE UPDATE OF balance ON cp_accounts
 FOR EACH ROW
 EXECUTE FUNCTION reject_direct_cp_account_balance_update();
 
+-- Create function and trigger that apply ledger entries to account balances.
 CREATE FUNCTION apply_cp_ledger_entry()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -127,6 +90,7 @@ BEFORE INSERT ON cp_ledger
 FOR EACH ROW
 EXECUTE FUNCTION apply_cp_ledger_entry();
 
+-- Keep the CP ledger append-only after insertion.
 CREATE FUNCTION reject_cp_ledger_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql

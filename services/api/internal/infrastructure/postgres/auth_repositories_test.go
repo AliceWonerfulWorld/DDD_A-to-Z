@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -61,6 +62,14 @@ func TestAuthStoreFindOrCreateByGitHub(t *testing.T) {
 		}
 		if !updated.UpdatedAt.Equal(updatedAt) {
 			t.Fatalf("updated.UpdatedAt = %s, 期待値 %s", updated.UpdatedAt, updatedAt)
+		}
+
+		var balance int64
+		if err := tx.WithContext(ctx).Raw("SELECT balance FROM cp_accounts WHERE user_id = ?", wantUserID).Scan(&balance).Error; err != nil {
+			t.Fatalf("cp_accounts の初期残高取得でエラーが発生しました: %v", err)
+		}
+		if balance != 0 {
+			t.Fatalf("cp_accounts.balance = %d, 期待値 0", balance)
 		}
 	})
 }
@@ -129,7 +138,10 @@ func beginPostgresTestTransaction(t *testing.T, ctx context.Context) *gorm.DB {
 
 	db, err := database.Open(ctx, config.DatabaseURLFromEnv())
 	if err != nil {
-		t.Skipf("PostgreSQL 結合テストをスキップします: %v", err)
+		if os.Getenv("DATABASE_URL") == "" {
+			t.Skipf("PostgreSQL 結合テストをスキップします: DATABASE_URL が未設定で、デフォルトDBへ接続できません: %v", err)
+		}
+		t.Fatalf("DATABASE_URL で指定された PostgreSQL へ接続できません: %v", err)
 	}
 
 	sqlDB, err := db.DB()
@@ -166,7 +178,13 @@ func beginPostgresTestTransaction(t *testing.T, ctx context.Context) *gorm.DB {
 }
 
 func verifyAuthSchema(db *gorm.DB) error {
-	return db.Exec("SELECT 1 FROM users LIMIT 1").Error
+	if err := db.Exec("SELECT 1 FROM users LIMIT 1").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("SELECT 1 FROM cp_accounts LIMIT 1").Error; err != nil {
+		return err
+	}
+	return db.Exec("SELECT 1 FROM cp_ledger LIMIT 1").Error
 }
 
 func uniqueGitHubID() int64 {
@@ -176,5 +194,7 @@ func uniqueGitHubID() int64 {
 func isMissingAuthSchemaError(err error) bool {
 	message := err.Error()
 	return strings.Contains(message, `relation "users" does not exist`) ||
+		strings.Contains(message, `relation "cp_accounts" does not exist`) ||
+		strings.Contains(message, `relation "cp_ledger" does not exist`) ||
 		strings.Contains(message, "SQLSTATE 42P01")
 }
