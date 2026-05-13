@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { ParticleBackground } from "./components/ParticleBackground";
 import { TitleLogo } from "./components/TitleLogo";
 import { GitHubLoginButton } from "./components/GitHubLoginButton";
-import { beginLogin, fetchMe } from "./features/auth/api";
+import { beginLogin, fetchMe, logout } from "./features/auth/api";
 import type { CurrentUser } from "./features/auth/types";
 
 // ギルド一覧（チラ見せ用）
@@ -56,6 +56,10 @@ function App() {
   }, []);
 
   const handleLogin = beginLogin;
+  const handleLogout = async () => {
+    await logout();
+    setCurrentUser(null);
+  };
   const bgImage = isDay ? "url('/pixel-town-day.png')" : "url('/pixel-town-night.png')";
   const overlay = isDay
     ? "linear-gradient(180deg, rgba(20,40,80,0.45) 0%, rgba(20,40,80,0.22) 50%, rgba(20,40,80,0.55) 100%)"
@@ -111,6 +115,58 @@ function App() {
           zIndex: 1,
         }}
       />
+
+      {currentUser && (
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            position: "fixed",
+            top: "clamp(14px, 3vw, 28px)",
+            right: "clamp(14px, 3vw, 28px)",
+            zIndex: 4,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "10px",
+            maxWidth: "min(calc(100vw - 28px), 360px)",
+            padding: "10px 16px",
+            border: "2px solid #39ff14",
+            boxShadow: "3px 3px 0 #1a7a00",
+            background: "rgba(4, 18, 12, 0.82)",
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <img
+            src={currentUser.avatar_url}
+            alt={currentUser.username}
+            style={{ width: 28, height: 28, borderRadius: "50%", flex: "0 0 auto" }}
+          />
+          <span
+            style={{
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              fontFamily: '"DotGothic16", monospace',
+              fontSize: "0.85rem",
+              color: "#39ff14",
+              letterSpacing: "0.05em",
+            }}
+          >
+            {currentUser.username}
+          </span>
+          <span
+            style={{
+              flex: "0 0 auto",
+              fontFamily: '"DotGothic16", monospace',
+              fontSize: "0.68rem",
+              color: "#39ff1480",
+            }}
+          >
+            ▶ LOGGED IN
+          </span>
+        </motion.div>
+      )}
 
       {/* メインコンテンツ */}
       <motion.main
@@ -170,37 +226,52 @@ function App() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "10px",
-                padding: "10px 20px",
-                border: "2px solid #39ff14",
-                boxShadow: "3px 3px 0 #1a7a00",
-                background: "#39ff1415",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: "14px",
               }}
             >
-              <img
-                src={currentUser.avatar_url}
-                alt={currentUser.username}
-                style={{ width: 28, height: 28, borderRadius: "50%" }}
-              />
-              <span
+              <motion.button
+                type="button"
+                onClick={() => navigate("/profile")}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ y: 3, scale: 0.98 }}
                 style={{
+                  padding: "12px 22px",
                   fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.85rem",
-                  color: "#39ff14",
-                  letterSpacing: "0.05em",
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                  background: "#ffd700",
+                  border: "3px solid #0a0a0a",
+                  boxShadow: "4px 4px 0 #0a0a0a",
+                  color: "#0a0a0a",
+                  cursor: "pointer",
+                  letterSpacing: "0.08em",
                 }}
               >
-                {currentUser.username}
-              </span>
-              <span
+                START
+              </motion.button>
+              <motion.button
+                type="button"
+                onClick={() => {
+                  void handleLogout();
+                }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ y: 3, scale: 0.98 }}
                 style={{
+                  padding: "12px 18px",
                   fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.7rem",
-                  color: "#39ff1480",
+                  fontSize: "0.78rem",
+                  background: "rgba(10,10,10,0.55)",
+                  border: "2px solid #ff5f56",
+                  boxShadow: "3px 3px 0 #7a211d",
+                  color: "#ffb0aa",
+                  cursor: "pointer",
+                  letterSpacing: "0.06em",
                 }}
               >
-                ▶ LOGGED IN
-              </span>
+                LOGOUT
+              </motion.button>
             </div>
           ) : (
             <GitHubLoginButton onClick={handleLogin} />

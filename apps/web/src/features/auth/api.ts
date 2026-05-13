@@ -17,3 +17,7 @@ export async function fetchMe(): Promise<CurrentUser | null> {
 export function beginLogin(): void {
   window.location.href = "/api/auth/github/login";
 }
+
+export async function logout(): Promise<void> {
+  await apiFetch<void>("/auth/logout", { method: "POST" });
+}
