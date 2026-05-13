@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, type Variants } from "framer-motion";
 import { useNavigate } from "react-router";
 import { ParticleBackground } from "./components/ParticleBackground";
 import { TitleLogo } from "./components/TitleLogo";
 import { GitHubLoginButton } from "./components/GitHubLoginButton";
+import { beginLogin, fetchMe } from "./features/auth/api";
+import type { CurrentUser } from "./features/auth/types";
 
 // ギルド一覧（チラ見せ用）
 const GUILDS = [
@@ -37,6 +39,7 @@ function isDaytime(hour: number): boolean {
 function App() {
   const navigate = useNavigate();
   const [isDay, setIsDay] = useState(() => isDaytime(new Date().getHours()));
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   // 毎分チェックして日没・夜明けをリアルタイム反映
   useEffect(() => {
@@ -45,11 +48,14 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
-  const handleLogin = useCallback(() => {
-    // TODO: GitHub OAuth 連携実装後にここでリダイレクト
-    window.location.href = "/api/auth/github";
+  // ログイン状態を確認
+  useEffect(() => {
+    fetchMe()
+      .then(setCurrentUser)
+      .catch(() => {});
   }, []);
 
+  const handleLogin = beginLogin;
   const bgImage = isDay ? "url('/pixel-town-day.png')" : "url('/pixel-town-night.png')";
   const overlay = isDay
     ? "linear-gradient(180deg, rgba(20,40,80,0.45) 0%, rgba(20,40,80,0.22) 50%, rgba(20,40,80,0.55) 100%)"
@@ -157,9 +163,48 @@ function App() {
           君のコードが、推しの力になる。
         </motion.p>
 
-        {/* GitHubログインボタン */}
+        {/* GitHubログインボタン / ログイン済み表示 */}
         <motion.div variants={itemVariants} style={{ marginBottom: "4rem" }}>
-          <GitHubLoginButton onClick={handleLogin} />
+          {currentUser ? (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 20px",
+                border: "2px solid #39ff14",
+                boxShadow: "3px 3px 0 #1a7a00",
+                background: "#39ff1415",
+              }}
+            >
+              <img
+                src={currentUser.avatar_url}
+                alt={currentUser.username}
+                style={{ width: 28, height: 28, borderRadius: "50%" }}
+              />
+              <span
+                style={{
+                  fontFamily: '"DotGothic16", monospace',
+                  fontSize: "0.85rem",
+                  color: "#39ff14",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {currentUser.username}
+              </span>
+              <span
+                style={{
+                  fontFamily: '"DotGothic16", monospace',
+                  fontSize: "0.7rem",
+                  color: "#39ff1480",
+                }}
+              >
+                ▶ LOGGED IN
+              </span>
+            </div>
+          ) : (
+            <GitHubLoginButton onClick={handleLogin} />
+          )}
         </motion.div>
 
         {/* 区切り線 */}

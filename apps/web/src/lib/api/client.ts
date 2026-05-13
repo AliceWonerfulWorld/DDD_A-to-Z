@@ -4,6 +4,7 @@ export class ApiError extends Error {
 
   constructor(status: number, body: unknown) {
     super(`API error: ${status}`);
+    this.name = "ApiError";
     this.status = status;
     this.body = body;
   }
@@ -15,14 +16,15 @@ export class ApiError extends Error {
  */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const { headers: initHeaders, ...restInit } = init ?? {};
+  const method = restInit.method?.toUpperCase() ?? "GET";
+  const hasBody = method !== "GET" && method !== "HEAD";
+  const mergedHeaders = new Headers(initHeaders);
+  if (hasBody && !mergedHeaders.has("Content-Type")) {
+    mergedHeaders.set("Content-Type", "application/json");
+  }
   const res = await fetch(`/api${path}`, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(initHeaders instanceof Headers
-        ? Object.fromEntries(initHeaders.entries())
-        : (initHeaders ?? {})),
-    },
+    headers: mergedHeaders,
     ...restInit,
   });
   if (!res.ok) {
