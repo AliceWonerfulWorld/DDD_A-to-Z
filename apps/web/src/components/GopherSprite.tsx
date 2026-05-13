@@ -1,12 +1,11 @@
 import { motion } from "framer-motion";
 import { SPRITE_ASSETS } from "../constants/assets";
+import { steppedEase } from "../lib/animationUtils";
 
 interface GopherSpriteProps {
   className?: string;
   style?: React.CSSProperties;
 }
-
-const steppedEase = (steps: number) => (t: number) => Math.floor(t * steps) / steps;
 
 const FRAME_WIDTH = 192;
 const FRAME_HEIGHT = 208;

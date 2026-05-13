@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
+import { steppedEase } from "../lib/animationUtils";
 
 interface GuildDashboardProps {
   onNavigate: (path: string) => void;
@@ -14,8 +15,6 @@ interface ActivityLog {
   cp: number;
   tone: string;
 }
-
-const steppedEase = (steps: number) => (t: number) => Math.floor(t * steps) / steps;
 
 const PLAYERS = [
   "AkiByte",
