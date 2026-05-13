@@ -18,6 +18,7 @@ type UserRepository interface {
 
 type SessionRepository interface {
 	Save(ctx context.Context, session Session) error
+	Delete(ctx context.Context, sessionToken string) error
 }
 
 type CurrentUserRepository interface {

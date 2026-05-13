@@ -88,6 +88,18 @@ func (r *SessionRepository) Save(ctx context.Context, session authapp.Session) e
 	return nil
 }
 
+func (r *SessionRepository) Delete(ctx context.Context, sessionToken string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	delete(r.sessions, sessionToken)
+	return nil
+}
+
 func (r *SessionRepository) findByToken(ctx context.Context, token string) (authapp.Session, bool, error) {
 	if err := ctx.Err(); err != nil {
 		return authapp.Session{}, false, err

@@ -94,6 +94,21 @@ func (r *fakeSessionRepository) Save(ctx context.Context, session Session) error
 	return nil
 }
 
+func (r *fakeSessionRepository) Delete(ctx context.Context, sessionToken string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	for i, session := range r.sessions {
+		if session.Token == sessionToken {
+			r.sessions = append(r.sessions[:i], r.sessions[i+1:]...)
+			return nil
+		}
+	}
+
+	return nil
+}
+
 func (r *fakeSessionRepository) findByToken(ctx context.Context, token string, now time.Time) (Session, bool, error) {
 	if err := ctx.Err(); err != nil {
 		return Session{}, false, err
@@ -211,6 +226,41 @@ func TestUseCaseCurrentUser(t *testing.T) {
 		}
 		if appUser.ID != login.User.ID {
 			t.Fatalf("現在のユーザーID = %q, 期待値 %q", appUser.ID, login.User.ID)
+		}
+	})
+}
+
+func TestUseCaseLogout(t *testing.T) {
+	t.Run("セッションを削除してログアウトできる", func(t *testing.T) {
+		users := newFakeUserRepository()
+		sessions := &fakeSessionRepository{}
+		usecase := NewUseCase(
+			fakeGitHubOAuthClient{
+				authURL: "https://github.com/login/oauth/authorize",
+				profile: user.GitHubProfile{
+					GitHubID: 1,
+					Username: "octocat",
+				},
+			},
+			users,
+			sessions,
+			fakeCurrentUserRepository{users: users, sessions: sessions},
+			&fakeTokenGenerator{tokens: []string{"session-token"}},
+		)
+		usecase.now = func() time.Time {
+			return time.Date(2026, 5, 11, 12, 0, 0, 0, time.UTC)
+		}
+
+		if _, err := usecase.CompleteGitHubLogin(context.Background(), "code"); err != nil {
+			t.Fatalf("CompleteGitHubLogin がエラーを返しました: %v", err)
+		}
+
+		if err := usecase.Logout(context.Background(), "session-token"); err != nil {
+			t.Fatalf("Logout がエラーを返しました: %v", err)
+		}
+
+		if _, err := usecase.CurrentUser(context.Background(), "session-token"); err != ErrUnauthenticated {
+			t.Fatalf("CurrentUser error = %v, 期待値 ErrUnauthenticated", err)
 		}
 	})
 }

@@ -114,3 +114,11 @@ func (u *UseCase) CurrentUser(ctx context.Context, sessionToken string) (user.Us
 
 	return appUser, nil
 }
+
+func (u *UseCase) Logout(ctx context.Context, sessionToken string) error {
+	if sessionToken == "" {
+		return nil
+	}
+
+	return u.sessions.Delete(ctx, sessionToken)
+}

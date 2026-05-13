@@ -158,6 +158,56 @@ func TestAuthControllerCurrentUser(t *testing.T) {
 	})
 }
 
+func TestAuthControllerLogout(t *testing.T) {
+	t.Run("ログアウトでセッションCookieを削除し現在のユーザーを取得できなくする", func(t *testing.T) {
+		controller := newTestAuthController(&fakeTokenGenerator{tokens: []string{"state-token", "session-token"}})
+		router := stdhttp.NewServeMux()
+		controller.RegisterRoutes(router)
+
+		loginResponse := httptest.NewRecorder()
+		loginRequest := httptest.NewRequest(stdhttp.MethodGet, "/auth/github/login", nil)
+		router.ServeHTTP(loginResponse, loginRequest)
+
+		callbackResponse := httptest.NewRecorder()
+		callbackRequest := httptest.NewRequest(stdhttp.MethodGet, "/auth/github/callback?code=github-code&state=state-token", nil)
+		callbackRequest.AddCookie(findCookie(loginResponse.Result().Cookies(), oauthStateCookieName))
+		router.ServeHTTP(callbackResponse, callbackRequest)
+
+		sessionCookie := findCookie(callbackResponse.Result().Cookies(), sessionCookieName)
+		if sessionCookie == nil {
+			t.Fatal("lang_war_session Cookie が設定されている必要があります")
+		}
+
+		logoutResponse := httptest.NewRecorder()
+		logoutRequest := httptest.NewRequest(stdhttp.MethodPost, "/auth/logout", nil)
+		logoutRequest.AddCookie(sessionCookie)
+		router.ServeHTTP(logoutResponse, logoutRequest)
+
+		if logoutResponse.Code != stdhttp.StatusNoContent {
+			t.Fatalf("ステータスコード = %d, 期待値 %d", logoutResponse.Code, stdhttp.StatusNoContent)
+		}
+		clearedCookie := findCookie(logoutResponse.Result().Cookies(), sessionCookieName)
+		if clearedCookie == nil {
+			t.Fatal("セッションCookie を削除する Set-Cookie が必要です")
+		}
+		if clearedCookie.Path != "/" {
+			t.Fatalf("セッションCookie 削除 Path = %q, 期待値 /", clearedCookie.Path)
+		}
+		if clearedCookie.MaxAge != -1 {
+			t.Fatalf("セッションCookie MaxAge = %d, 期待値 -1", clearedCookie.MaxAge)
+		}
+
+		currentUserResponse := httptest.NewRecorder()
+		currentUserRequest := httptest.NewRequest(stdhttp.MethodGet, "/me", nil)
+		currentUserRequest.AddCookie(sessionCookie)
+		router.ServeHTTP(currentUserResponse, currentUserRequest)
+
+		if currentUserResponse.Code != stdhttp.StatusUnauthorized {
+			t.Fatalf("ステータスコード = %d, 期待値 %d", currentUserResponse.Code, stdhttp.StatusUnauthorized)
+		}
+	})
+}
+
 func TestAuthControllerCompleteGitHubLoginRejectsInvalidState(t *testing.T) {
 	t.Run("GitHubログイン完了で不正なStateを拒否する", func(t *testing.T) {
 		controller := newTestAuthController(&fakeTokenGenerator{})

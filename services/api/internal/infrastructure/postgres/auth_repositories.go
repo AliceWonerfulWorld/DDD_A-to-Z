@@ -75,6 +75,13 @@ func (s *AuthStore) Save(ctx context.Context, session authapp.Session) error {
 	`, tokenHash(session.Token), session.UserID, session.ExpiresAt, time.Now()).Error
 }
 
+func (s *AuthStore) Delete(ctx context.Context, sessionToken string) error {
+	return s.db.WithContext(ctx).Exec(`
+		DELETE FROM sessions
+		WHERE token_hash = ?
+	`, tokenHash(sessionToken)).Error
+}
+
 func (s *AuthStore) FindUserBySessionToken(ctx context.Context, sessionToken string, now time.Time) (user.User, bool, error) {
 	var record userRecord
 	result := s.db.WithContext(ctx).Raw(`

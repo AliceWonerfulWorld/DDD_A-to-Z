@@ -51,6 +51,7 @@ func NewAuthController(
 func (c *AuthController) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /auth/github/login", c.beginGitHubLogin)
 	mux.HandleFunc("GET /auth/github/callback", c.completeGitHubLogin)
+	mux.HandleFunc("POST /auth/logout", c.logout)
 	mux.HandleFunc("GET /me", c.currentUser)
 }
 
@@ -128,6 +129,20 @@ func (c *AuthController) currentUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (c *AuthController) logout(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err == nil {
+		if err := c.usecase.Logout(r.Context(), cookie.Value); err != nil {
+			c.logger.Error("failed to logout", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	c.clearSessionCookie(w)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (c *AuthController) writeLoginError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, authapp.ErrMissingCode), errors.Is(err, authapp.ErrInvalidState):
@@ -168,6 +183,18 @@ func (c *AuthController) clearOAuthStateCookie(w http.ResponseWriter) {
 		Name:     oauthStateCookieName,
 		Value:    "",
 		Path:     oauthStateCookiePath,
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   c.cookieSecure,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func (c *AuthController) clearSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    "",
+		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   c.cookieSecure,
