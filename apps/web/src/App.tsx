@@ -6,6 +6,7 @@ import { TitleLogo } from "./components/TitleLogo";
 import { GitHubLoginButton } from "./components/GitHubLoginButton";
 import { beginLogin, fetchMe, logout } from "./features/auth/api";
 import type { CurrentUser } from "./features/auth/types";
+import { hasCompletedInitialProfile } from "./features/profile/initialProfile";
 
 // ギルド一覧（チラ見せ用）
 const GUILDS = [
@@ -40,6 +41,7 @@ function App() {
   const navigate = useNavigate();
   const [isDay, setIsDay] = useState(() => isDaytime(new Date().getHours()));
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isInitialProfileCompleted, setIsInitialProfileCompleted] = useState(false);
 
   // 毎分チェックして日没・夜明けをリアルタイム反映
   useEffect(() => {
@@ -51,7 +53,10 @@ function App() {
   // ログイン状態を確認
   useEffect(() => {
     fetchMe()
-      .then(setCurrentUser)
+      .then((user) => {
+        setCurrentUser(user);
+        setIsInitialProfileCompleted(user ? hasCompletedInitialProfile(user.id) : false);
+      })
       .catch(() => {});
   }, []);
 
@@ -59,6 +64,10 @@ function App() {
   const handleLogout = async () => {
     await logout();
     setCurrentUser(null);
+    setIsInitialProfileCompleted(false);
+  };
+  const handleStart = () => {
+    navigate(isInitialProfileCompleted ? "/home" : "/profile");
   };
   const bgImage = isDay ? "url('/pixel-town-day.png')" : "url('/pixel-town-night.png')";
   const overlay = isDay
@@ -233,7 +242,7 @@ function App() {
             >
               <motion.button
                 type="button"
-                onClick={() => navigate("/profile")}
+                onClick={handleStart}
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ y: 3, scale: 0.98 }}
                 style={{

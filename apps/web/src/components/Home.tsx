@@ -97,6 +97,36 @@ function LabelValue({ label, value }: { label: string; value: string | number })
   );
 }
 
+function TitleButton({ onClick }: { onClick: () => void }) {
+  return (
+    <motion.button
+      type="button"
+      variants={panelVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover={{ y: -2, scale: 1.03 }}
+      whileTap={{ y: 2, scale: 0.98 }}
+      onClick={onClick}
+      style={{
+        alignSelf: "flex-start",
+        border: "2px solid rgba(244, 236, 208, 0.55)",
+        borderBottomColor: "rgba(0,0,0,0.78)",
+        borderRightColor: "rgba(0,0,0,0.78)",
+        background: "rgba(3, 10, 24, 0.68)",
+        boxShadow: "0 0 0 2px rgba(0,0,0,0.68), 5px 5px 0 rgba(0,0,0,0.38)",
+        color: "#fff8d7",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        fontSize: "clamp(0.56rem, 1.4vw, 0.74rem)",
+        lineHeight: 1.5,
+        padding: "10px 12px",
+      }}
+    >
+      &lt; TITLE
+    </motion.button>
+  );
+}
+
 export function Home({ onNavigate }: HomeProps) {
   return (
     <main
@@ -158,23 +188,33 @@ export function Home({ onNavigate }: HomeProps) {
             flexWrap: "wrap",
           }}
         >
-          <HudPanel>
-            <div
-              style={{
-                color: "#ffd700",
-                fontSize: "0.64rem",
-                lineHeight: 1.6,
-                marginBottom: "10px",
-              }}
-            >
-              PLAYER INFO
-            </div>
-            <div style={{ display: "grid", gap: "6px" }}>
-              <LabelValue label="NAME" value={player.name} />
-              <LabelValue label="TITLE" value={player.title} />
-              <LabelValue label="LEVEL" value={`LV.${player.level}`} />
-            </div>
-          </HudPanel>
+          <div
+            style={{
+              display: "grid",
+              gap: "12px",
+              width: "min(100%, 360px)",
+            }}
+          >
+            <HudPanel>
+              <div
+                style={{
+                  color: "#ffd700",
+                  fontSize: "0.64rem",
+                  lineHeight: 1.6,
+                  marginBottom: "10px",
+                }}
+              >
+                PLAYER INFO
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                <LabelValue label="NAME" value={player.name} />
+                <LabelValue label="TITLE" value={player.title} />
+                <LabelValue label="LEVEL" value={`LV.${player.level}`} />
+              </div>
+            </HudPanel>
+
+            <TitleButton onClick={() => onNavigate("/")} />
+          </div>
 
           <HudPanel align="right">
             <div
