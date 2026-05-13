@@ -325,18 +325,22 @@ export function MyPage({ onNavigate }: MyPageProps) {
           </span>
         </div>
         <button
-          onClick={() => onNavigate("/")}
+          onClick={() => onNavigate("/home")}
           style={{
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: "0.8rem",
-            color: "rgba(232,232,208,0.4)",
-            background: "none",
-            border: "1px solid rgba(255,255,255,0.12)",
-            padding: "6px 12px",
+            fontSize: "0.72rem",
+            color: "#1b1304",
+            background: "#f0c040",
+            border: "2px solid #fff3a6",
+            borderBottomColor: "#6f4f1c",
+            borderRightColor: "#6f4f1c",
+            boxShadow: "0 0 0 2px rgba(0,0,0,0.72), 4px 4px 0 rgba(0,0,0,0.48)",
+            padding: "9px 14px",
             cursor: "pointer",
+            lineHeight: 1.4,
           }}
         >
-          LOGOUT [→]
+          BACK [→]
         </button>
       </motion.header>
 

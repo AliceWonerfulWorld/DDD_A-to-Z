@@ -441,7 +441,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
           padding: "10px 12px",
         }}
       >
-        &lt; 拠点に戻る
+        &lt; BACK
       </button>
 
       <div
