@@ -1,23 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, type Variants } from "framer-motion";
 import { useNavigate } from "react-router";
 import { ParticleBackground } from "./components/ParticleBackground";
 import { TitleLogo } from "./components/TitleLogo";
-import { GitHubLoginButton } from "./components/GitHubLoginButton";
+import { LogoutConfirmDialog } from "./components/LogoutConfirmDialog";
+import { GuildPreviewList } from "./components/GuildPreviewList";
+import { TitleActions } from "./components/TitleActions";
+import { TitleUserBadge } from "./components/TitleUserBadge";
 import { beginLogin, fetchMe, logout } from "./features/auth/api";
 import type { CurrentUser } from "./features/auth/types";
 import { hasCompletedInitialProfile } from "./features/profile/initialProfile";
-
-// ギルド一覧（チラ見せ用）
-const GUILDS = [
-  { name: "Rust", color: "#ff6b35", icon: "🦀" },
-  { name: "Python", color: "#3776ab", icon: "🐍" },
-  { name: "Go", color: "#00acd7", icon: "🐹" },
-  { name: "TypeScript", color: "#3178c6", icon: "📘" },
-  { name: "Java", color: "#f89820", icon: "☕" },
-  { name: "Haskell", color: "#5d4f85", icon: "λ" },
-  { name: "Zig", color: "#f7a41d", icon: "⚡" },
-] as const;
+import { useTitleAudio } from "./hooks/useTitleAudio";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -39,15 +32,18 @@ function isDaytime(hour: number): boolean {
 
 function App() {
   const navigate = useNavigate();
-  const titleBgmRef = useRef<HTMLAudioElement | null>(null);
-  const confirmModalSeRef = useRef<HTMLAudioElement | null>(null);
-  const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
-  const modalConfirmSeRef = useRef<HTMLAudioElement | null>(null);
+  const {
+    audioRefs,
+    isBgmMuted,
+    playModalCancel,
+    playModalConfirm,
+    playModalOpen,
+    toggleBgm,
+  } = useTitleAudio();
   const [isDay, setIsDay] = useState(() => isDaytime(new Date().getHours()));
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isInitialProfileCompleted, setIsInitialProfileCompleted] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [isBgmMuted, setIsBgmMuted] = useState(false);
 
   // 毎分チェックして日没・夜明けをリアルタイム反映
   useEffect(() => {
@@ -55,56 +51,6 @@ function App() {
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    const audio = titleBgmRef.current;
-    if (!audio) {
-      return;
-    }
-
-    let isUnlocked = false;
-    audio.volume = 0.42;
-
-    const removeUnlockListeners = () => {
-      window.removeEventListener("pointerdown", unlockBgm);
-      window.removeEventListener("keydown", unlockBgm);
-    };
-
-    const playBgm = () => {
-      if (isUnlocked) {
-        return;
-      }
-
-      void audio
-        .play()
-        .then(() => {
-          isUnlocked = true;
-          removeUnlockListeners();
-        })
-        .catch(() => {
-          // ブラウザの自動再生制限で止められた場合は、最初のユーザー操作で再試行する。
-        });
-    };
-
-    const unlockBgm = () => {
-      playBgm();
-    };
-
-    playBgm();
-    window.addEventListener("pointerdown", unlockBgm);
-    window.addEventListener("keydown", unlockBgm);
-
-    return () => {
-      removeUnlockListeners();
-      audio.pause();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (titleBgmRef.current) {
-      titleBgmRef.current.muted = isBgmMuted;
-    }
-  }, [isBgmMuted]);
 
   // ログイン状態を確認
   useEffect(() => {
@@ -131,30 +77,14 @@ function App() {
   const handleStart = () => {
     navigate(isInitialProfileCompleted ? "/home" : "/profile");
   };
-  const playSe = useCallback((audio: HTMLAudioElement | null) => {
-    if (!audio) {
-      return;
-    }
-
-    audio.currentTime = 0;
-    void audio.play().catch(() => {
-      // Browser autoplay restrictions can still block sound in unusual navigation paths.
-    });
-  }, []);
-  useEffect(() => {
-    if (!isLogoutDialogOpen) {
-      return;
-    }
-
-    playSe(confirmModalSeRef.current);
-  }, [isLogoutDialogOpen, playSe]);
-  const toggleBgm = () => {
-    const shouldMute = !isBgmMuted;
-    setIsBgmMuted(shouldMute);
-
-    if (!shouldMute) {
-      void titleBgmRef.current?.play().catch(() => {});
-    }
+  const closeLogoutDialog = () => setIsLogoutDialogOpen(false);
+  const cancelLogout = () => {
+    playModalCancel();
+    closeLogoutDialog();
+  };
+  const submitLogout = () => {
+    playModalConfirm();
+    void confirmLogout();
   };
   const bgImage = isDay ? "url('/pixel-town-day.png')" : "url('/pixel-town-night.png')";
   const overlay = isDay
@@ -180,10 +110,31 @@ function App() {
         transition: "background-image 2s ease",
       }}
     >
-      <audio ref={titleBgmRef} src="/bgm/title_bgm.mp3" loop preload="auto" aria-hidden="true" />
-      <audio ref={confirmModalSeRef} src="/SE/confirm-modal.wav" preload="auto" aria-hidden="true" />
-      <audio ref={modalCancelSeRef} src="/SE/modal-cancel.wav" preload="auto" aria-hidden="true" />
-      <audio ref={modalConfirmSeRef} src="/SE/modal-confirm.wav" preload="auto" aria-hidden="true" />
+      <audio
+        ref={audioRefs.titleBgmRef}
+        src="/bgm/title_bgm.mp3"
+        loop
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.confirmModalSeRef}
+        src="/SE/confirm-modal.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.modalCancelSeRef}
+        src="/SE/modal-cancel.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.modalConfirmSeRef}
+        src="/SE/modal-confirm.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
 
       <motion.button
         type="button"
@@ -279,57 +230,7 @@ function App() {
         }}
       />
 
-      {currentUser && (
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            position: "fixed",
-            top: "clamp(14px, 3vw, 28px)",
-            right: "clamp(14px, 3vw, 28px)",
-            zIndex: 4,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "10px",
-            maxWidth: "min(calc(100vw - 28px), 360px)",
-            padding: "10px 16px",
-            border: "2px solid #39ff14",
-            boxShadow: "3px 3px 0 #1a7a00",
-            background: "rgba(4, 18, 12, 0.82)",
-            backdropFilter: "blur(2px)",
-          }}
-        >
-          <img
-            src={currentUser.avatar_url}
-            alt={currentUser.username}
-            style={{ width: 28, height: 28, borderRadius: "50%", flex: "0 0 auto" }}
-          />
-          <span
-            style={{
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              fontFamily: '"DotGothic16", monospace',
-              fontSize: "0.85rem",
-              color: "#39ff14",
-              letterSpacing: "0.05em",
-            }}
-          >
-            {currentUser.username}
-          </span>
-          <span
-            style={{
-              flex: "0 0 auto",
-              fontFamily: '"DotGothic16", monospace',
-              fontSize: "0.68rem",
-              color: "#39ff1480",
-            }}
-          >
-            ▶ LOGGED IN
-          </span>
-        </motion.div>
-      )}
+      {currentUser && <TitleUserBadge user={currentUser} />}
 
       {/* メインコンテンツ */}
       <motion.main
@@ -384,61 +285,12 @@ function App() {
 
         {/* GitHubログインボタン / ログイン済み表示 */}
         <motion.div variants={itemVariants} style={{ marginBottom: "4rem" }}>
-          {currentUser ? (
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "14px",
-              }}
-            >
-              <motion.button
-                type="button"
-                onClick={handleStart}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ y: 3, scale: 0.98 }}
-                style={{
-                  padding: "12px 22px",
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                  background: "#ffd700",
-                  border: "3px solid #0a0a0a",
-                  boxShadow: "4px 4px 0 #0a0a0a",
-                  color: "#0a0a0a",
-                  cursor: "pointer",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                START
-              </motion.button>
-              <motion.button
-                type="button"
-                onClick={() => {
-                  setIsLogoutDialogOpen(true);
-                }}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ y: 3, scale: 0.98 }}
-                style={{
-                  padding: "12px 18px",
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.78rem",
-                  background: "rgba(10,10,10,0.55)",
-                  border: "2px solid #ff5f56",
-                  boxShadow: "3px 3px 0 #7a211d",
-                  color: "#ffb0aa",
-                  cursor: "pointer",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                LOGOUT
-              </motion.button>
-            </div>
-          ) : (
-            <GitHubLoginButton onClick={handleLogin} />
-          )}
+          <TitleActions
+            isLoggedIn={currentUser !== null}
+            onLogin={handleLogin}
+            onLogoutClick={() => setIsLogoutDialogOpen(true)}
+            onStart={handleStart}
+          />
         </motion.div>
 
         {/* 区切り線 */}
@@ -484,79 +336,8 @@ function App() {
           />
         </motion.div>
 
-        {/* ギルド一覧（チラ見せ） */}
-        <motion.div
-          variants={itemVariants}
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "12px",
-            justifyContent: "center",
-          }}
-        >
-          {GUILDS.map((guild, i) => (
-            <motion.div
-              key={guild.name}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8 + i * 0.08, duration: 0.4 }}
-              whileHover={{ y: -4, scale: 1.05 }}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px",
-                position: "relative",
-                overflow: "hidden",
-                padding: "16px 18px",
-                border: `1px solid ${guild.color}cc`,
-                boxShadow: `0 0 0 1px rgba(0,0,0,0.72), 3px 3px 0 rgba(0,0,0,0.58), 0 0 18px ${guild.color}2f, inset 0 0 24px rgba(0,0,0,0.42)`,
-                background: `linear-gradient(180deg, rgba(9, 13, 20, 0.7) 0%, rgba(9, 13, 20, 0.5) 100%), radial-gradient(circle at 50% 0%, ${guild.color}38 0%, transparent 58%)`,
-                backdropFilter: "blur(1.5px)",
-                cursor: "pointer",
-                minHeight: "112px",
-                minWidth: "104px",
-              }}
-            >
-              <span
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: "14px",
-                  right: "14px",
-                  height: "2px",
-                  background: guild.color,
-                  boxShadow: `0 0 10px ${guild.color}`,
-                }}
-              />
-              <span
-                style={{
-                  position: "relative",
-                  zIndex: 1,
-                  fontSize: "2rem",
-                  lineHeight: 1,
-                  filter: `drop-shadow(0 2px 0 rgba(0,0,0,0.9)) drop-shadow(0 0 10px ${guild.color}55)`,
-                }}
-              >
-                {guild.icon}
-              </span>
-              <span
-                style={{
-                  position: "relative",
-                  zIndex: 1,
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.76rem",
-                  color: "#fff7dc",
-                  letterSpacing: "0.07em",
-                  textShadow: `1px 1px 0 #000, 0 0 10px ${guild.color}`,
-                }}
-              >
-                {guild.name}
-              </span>
-            </motion.div>
-          ))}
+        <motion.div variants={itemVariants}>
+          <GuildPreviewList />
         </motion.div>
 
         {import.meta.env.DEV && (
@@ -614,129 +395,12 @@ function App() {
         )}
       </motion.main>
 
-      {isLogoutDialogOpen && (
-        <motion.div
-          role="presentation"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 10,
-            display: "grid",
-            placeItems: "center",
-            padding: "24px",
-            background: "rgba(0, 0, 0, 0.62)",
-            backdropFilter: "blur(2px)",
-          }}
-          onClick={() => setIsLogoutDialogOpen(false)}
-        >
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="logout-dialog-title"
-            initial={{ opacity: 0, y: 18, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            style={{
-              width: "min(100%, 420px)",
-              border: "4px solid #ffd700",
-              borderBottomColor: "#6f4f1c",
-              borderRightColor: "#6f4f1c",
-              background: "rgba(3, 10, 24, 0.96)",
-              boxShadow: "0 0 0 3px rgba(0,0,0,0.9), 10px 10px 0 rgba(0,0,0,0.58)",
-              color: "#fff8d7",
-              padding: "22px",
-              textAlign: "center",
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div
-              id="logout-dialog-title"
-              style={{
-                color: "#ffd700",
-                fontFamily: '"Press Start 2P", "DotGothic16", monospace',
-                fontSize: "clamp(0.92rem, 3vw, 1.1rem)",
-                lineHeight: 1.7,
-                marginBottom: "14px",
-              }}
-            >
-              LOGOUT?
-            </div>
-            <p
-              style={{
-                margin: "0 0 22px",
-                color: "rgba(255, 248, 215, 0.78)",
-                fontFamily: '"DotGothic16", monospace',
-                fontSize: "1rem",
-                lineHeight: 1.7,
-                letterSpacing: "0.04em",
-              }}
-            >
-              本当にログアウトしますか？
-            </p>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: "12px",
-              }}
-            >
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ y: 2, scale: 0.98 }}
-                onClick={() => {
-                  playSe(modalCancelSeRef.current);
-                  setIsLogoutDialogOpen(false);
-                }}
-                style={{
-                  border: "2px solid rgba(255, 255, 255, 0.34)",
-                  borderBottomColor: "rgba(0,0,0,0.78)",
-                  borderRightColor: "rgba(0,0,0,0.78)",
-                  background: "rgba(255, 255, 255, 0.08)",
-                  boxShadow: "3px 3px 0 rgba(0,0,0,0.5)",
-                  color: "#fff8d7",
-                  cursor: "pointer",
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                  lineHeight: 1.4,
-                  padding: "11px 12px",
-                }}
-              >
-                CANCEL
-              </motion.button>
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ y: 2, scale: 0.98 }}
-                onClick={() => {
-                  playSe(modalConfirmSeRef.current);
-                  void confirmLogout();
-                }}
-                style={{
-                  border: "2px solid #ffb0aa",
-                  borderBottomColor: "#7a211d",
-                  borderRightColor: "#7a211d",
-                  background: "#ff5f56",
-                  boxShadow: "3px 3px 0 rgba(0,0,0,0.5)",
-                  color: "#180403",
-                  cursor: "pointer",
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                  lineHeight: 1.4,
-                  padding: "11px 12px",
-                }}
-              >
-                LOGOUT
-              </motion.button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
+      <LogoutConfirmDialog
+        isOpen={isLogoutDialogOpen}
+        onOpen={playModalOpen}
+        onCancel={cancelLogout}
+        onConfirm={submitLogout}
+      />
     </div>
   );
 }
