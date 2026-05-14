@@ -61,6 +61,17 @@ export function GuildTown({
       />
 
       <div
+        aria-hidden="true"
+        className="bg-[radial-gradient(ellipse_at_center,_transparent_20%,_rgba(0,0,0,0.6)_100%)]"
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 2,
+        }}
+      />
+
+      <div
         style={{
           position: "absolute",
           left: "50%",
@@ -72,7 +83,7 @@ export function GuildTown({
         }}
       >
         <motion.img
-          className="pixelated"
+          className="pixelated drop-shadow-[18px_22px_0_rgba(0,0,0,0.28)]"
           src={mainStructureSrc}
           alt=""
           aria-hidden="true"
@@ -84,7 +95,6 @@ export function GuildTown({
             width: "100%",
             height: "auto",
             mixBlendMode: "screen",
-            filter: "drop-shadow(18px 20px 0 rgba(0, 0, 0, 0.2))",
           }}
         />
       </div>
@@ -100,8 +110,33 @@ export function GuildTown({
           pointerEvents: "none",
         }}
       >
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "46%",
+            width: "68%",
+            aspectRatio: "1 / 1",
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <motion.div
+            className="bg-orange-500/30 blur-2xl"
+            animate={{
+              opacity: [0.58, 0.88, 0.66, 0.8, 0.58],
+              scale: [0.92, 1.08, 0.98, 1.04, 0.92],
+            }}
+            transition={{ duration: 1.45, ease: "easeInOut", repeat: Infinity }}
+            style={{
+              width: "100%",
+              height: "100%",
+              clipPath: "circle(50% at 50% 50%)",
+            }}
+          />
+        </div>
         <motion.img
-          className="pixelated"
+          className="pixelated drop-shadow-[10px_14px_0_rgba(0,0,0,0.26)]"
           src={bonfireSrc}
           alt=""
           aria-hidden="true"
@@ -118,10 +153,10 @@ export function GuildTown({
           }}
           style={{
             display: "block",
+            position: "relative",
             width: "100%",
             height: "auto",
             mixBlendMode: "screen",
-            filter: "drop-shadow(10px 12px 0 rgba(0, 0, 0, 0.18))",
           }}
         />
       </div>
