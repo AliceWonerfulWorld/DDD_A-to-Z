@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, type Variants } from "framer-motion";
 import { useNavigate } from "react-router";
 import { ParticleBackground } from "./components/ParticleBackground";
@@ -39,10 +39,12 @@ function isDaytime(hour: number): boolean {
 
 function App() {
   const navigate = useNavigate();
+  const titleBgmRef = useRef<HTMLAudioElement | null>(null);
   const [isDay, setIsDay] = useState(() => isDaytime(new Date().getHours()));
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isInitialProfileCompleted, setIsInitialProfileCompleted] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [isBgmMuted, setIsBgmMuted] = useState(false);
 
   // 毎分チェックして日没・夜明けをリアルタイム反映
   useEffect(() => {
@@ -50,6 +52,56 @@ function App() {
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const audio = titleBgmRef.current;
+    if (!audio) {
+      return;
+    }
+
+    let isUnlocked = false;
+    audio.volume = 0.42;
+
+    const removeUnlockListeners = () => {
+      window.removeEventListener("pointerdown", unlockBgm);
+      window.removeEventListener("keydown", unlockBgm);
+    };
+
+    const playBgm = () => {
+      if (isUnlocked) {
+        return;
+      }
+
+      void audio
+        .play()
+        .then(() => {
+          isUnlocked = true;
+          removeUnlockListeners();
+        })
+        .catch(() => {
+          // ブラウザの自動再生制限で止められた場合は、最初のユーザー操作で再試行する。
+        });
+    };
+
+    const unlockBgm = () => {
+      playBgm();
+    };
+
+    playBgm();
+    window.addEventListener("pointerdown", unlockBgm);
+    window.addEventListener("keydown", unlockBgm);
+
+    return () => {
+      removeUnlockListeners();
+      audio.pause();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (titleBgmRef.current) {
+      titleBgmRef.current.muted = isBgmMuted;
+    }
+  }, [isBgmMuted]);
 
   // ログイン状態を確認
   useEffect(() => {
@@ -76,6 +128,14 @@ function App() {
   const handleStart = () => {
     navigate(isInitialProfileCompleted ? "/home" : "/profile");
   };
+  const toggleBgm = () => {
+    const shouldMute = !isBgmMuted;
+    setIsBgmMuted(shouldMute);
+
+    if (!shouldMute) {
+      void titleBgmRef.current?.play().catch(() => {});
+    }
+  };
   const bgImage = isDay ? "url('/pixel-town-day.png')" : "url('/pixel-town-night.png')";
   const overlay = isDay
     ? "linear-gradient(180deg, rgba(20,40,80,0.45) 0%, rgba(20,40,80,0.22) 50%, rgba(20,40,80,0.55) 100%)"
@@ -100,6 +160,70 @@ function App() {
         transition: "background-image 2s ease",
       }}
     >
+      <audio ref={titleBgmRef} src="/bgm/title_bgm.mp3" loop preload="auto" aria-hidden="true" />
+
+      <motion.button
+        type="button"
+        onClick={toggleBgm}
+        aria-label={isBgmMuted ? "BGMをオンにする" : "BGMをオフにする"}
+        aria-pressed={!isBgmMuted}
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ y: 2, scale: 0.98 }}
+        style={{
+          position: "fixed",
+          top: "clamp(14px, 3vw, 28px)",
+          left: "clamp(14px, 3vw, 28px)",
+          zIndex: 4,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "9px 12px",
+          border: `2px solid ${isBgmMuted ? "#ffffff66" : "#ffd700"}`,
+          boxShadow: `3px 3px 0 rgba(0,0,0,0.72), 0 0 14px ${
+            isBgmMuted ? "rgba(255,255,255,0.12)" : "rgba(255,215,0,0.3)"
+          }`,
+          background: "rgba(8, 12, 18, 0.72)",
+          backdropFilter: "blur(2px)",
+          color: isBgmMuted ? "#ffffff99" : "#fff7dc",
+          cursor: "pointer",
+          fontFamily: '"DotGothic16", monospace',
+          fontSize: "0.72rem",
+          letterSpacing: "0.08em",
+          textShadow: "1px 1px 0 #000",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            position: "relative",
+            display: "inline-grid",
+            placeItems: "center",
+            width: "1em",
+            height: "1em",
+            fontSize: "0.95rem",
+            lineHeight: 1,
+          }}
+        >
+          ♪
+          {isBgmMuted && (
+            <span
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                width: "1.25em",
+                height: "2px",
+                background: "#ffb0aa",
+                boxShadow: "1px 1px 0 #000",
+                transform: "rotate(-45deg)",
+              }}
+            />
+          )}
+        </span>
+        <span>{isBgmMuted ? "BGM OFF" : "BGM ON"}</span>
+      </motion.button>
+
       {/* グラデーションオーバーレイ（昼夜で調整） */}
       <motion.div
         aria-hidden="true"
