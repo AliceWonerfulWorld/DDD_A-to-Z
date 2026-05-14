@@ -20,6 +20,10 @@
   --border-radius-none: 0;
 }
 
+@utility pixelated {
+  image-rendering: pixelated;
+}
+
 /* ── ベースリセット ──────────────────────────── */
 *,
 *::before,

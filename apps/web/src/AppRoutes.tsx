@@ -3,6 +3,7 @@ import App from "./App.tsx";
 import { ContributionAnalysis } from "./components/ContributionAnalysis.tsx";
 import { GuildDashboard } from "./components/GuildDashboard.tsx";
 import { GuildPlaceholderPage } from "./components/GuildPlaceholderPage.tsx";
+import { GuildTown } from "./components/GuildTown.tsx";
 import { Home } from "./components/Home.tsx";
 import { InitialProfile } from "./components/InitialProfile.tsx";
 import { MyPage } from "./components/MyPage.tsx";
@@ -52,16 +53,7 @@ export function AppRoutes() {
           />
         }
       />
-      <Route
-        path="/guild/town"
-        element={
-          <GuildPlaceholderPage
-            title="GUILD TOWN"
-            caption="ギルドの街画面は準備中です。"
-            onNavigate={navigate}
-          />
-        }
-      />
+      <Route path="/guild/town" element={<GuildTown onNavigate={navigate} />} />
       <Route path="/war" element={<Navigate to="/mypage" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
