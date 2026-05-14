@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useAudioSettings } from "../features/audio/useAudioSettings";
 
+// SE playback safety timeout to avoid blocking navigation if the ended event never fires.
+const SE_PLAYBACK_TIMEOUT_MS = 700;
+
 export function useTitleAudio() {
   const { isBgmEnabled, isSeEnabled } = useAudioSettings();
   const titleBgmRef = useRef<HTMLAudioElement | null>(null);
@@ -8,6 +11,7 @@ export function useTitleAudio() {
   const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
   const modalConfirmSeRef = useRef<HTMLAudioElement | null>(null);
   const titleStartSeRef = useRef<HTMLAudioElement | null>(null);
+  const hasAttemptedBgmPlayRef = useRef(false);
 
   useEffect(() => {
     const audio = titleBgmRef.current;
@@ -27,6 +31,8 @@ export function useTitleAudio() {
       if (isUnlocked) {
         return;
       }
+
+      hasAttemptedBgmPlayRef.current = true;
 
       void audio
         .play()
@@ -57,7 +63,8 @@ export function useTitleAudio() {
     if (titleBgmRef.current) {
       titleBgmRef.current.muted = !isBgmEnabled;
 
-      if (isBgmEnabled) {
+      if (isBgmEnabled && !hasAttemptedBgmPlayRef.current) {
+        hasAttemptedBgmPlayRef.current = true;
         void titleBgmRef.current.play().catch(() => {});
       }
     }
@@ -113,7 +120,7 @@ export function useTitleAudio() {
         audio.currentTime = 0;
         audio.addEventListener("ended", finish, { once: true });
         audio.addEventListener("error", finish, { once: true });
-        timeoutId = window.setTimeout(finish, 700);
+        timeoutId = window.setTimeout(finish, SE_PLAYBACK_TIMEOUT_MS);
 
         void audio.play().catch(finish);
       });
