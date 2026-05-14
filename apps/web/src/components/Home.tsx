@@ -1,5 +1,6 @@
 import { motion, type Variants } from "framer-motion";
 import { useCallback, useRef, useState, type ReactNode } from "react";
+import { GopherSprite } from "./GopherSprite";
 
 interface HomeProps {
   onNavigate: (path: string) => void;
@@ -251,6 +252,85 @@ function ReturnTitleDialog({
   );
 }
 
+function WalkingGopher() {
+  const lastXRef = useRef<number | null>(null);
+  const [direction, setDirection] = useState<"right" | "left">("right");
+  const walkRow = direction === "right" ? 1 : 2;
+
+  return (
+    <motion.div
+      aria-hidden="true"
+      initial={false}
+      animate={{
+        x: ["16vw", "30vw", "24vw", "50vw", "62vw", "46vw", "28vw", "16vw"],
+        y: ["0px", "-10px", "6px", "-14px", "2px", "16px", "8px", "0px"],
+        scale: [0.92, 0.88, 0.94, 0.86, 0.9, 0.96, 0.94, 0.92],
+      }}
+      transition={{
+        duration: 26,
+        repeat: Infinity,
+        ease: "easeInOut",
+        times: [0, 0.16, 0.28, 0.44, 0.58, 0.72, 0.88, 1],
+      }}
+      onUpdate={(latest) => {
+        const currentX =
+          typeof latest.x === "number" ? latest.x : Number.parseFloat(String(latest.x));
+        const lastX = lastXRef.current;
+
+        if (!Number.isFinite(currentX)) {
+          return;
+        }
+
+        if (lastX !== null) {
+          const deltaX = currentX - lastX;
+          if (Math.abs(deltaX) > 0.02) {
+            setDirection(deltaX > 0 ? "right" : "left");
+          }
+        }
+
+        lastXRef.current = currentX;
+      }}
+      style={{
+        position: "absolute",
+        left: 0,
+        bottom: "clamp(6px, 2vh, 18px)",
+        width: "92px",
+        height: "100px",
+        pointerEvents: "none",
+      }}
+    >
+      <motion.div
+        animate={{ y: [0, -2, 0] }}
+        transition={{ duration: 0.45, repeat: Infinity, ease: steppedEase(3) }}
+        style={{
+          position: "absolute",
+          left: 0,
+          bottom: 8,
+          width: "132px",
+          height: "143px",
+          transform: "scale(0.62)",
+          transformOrigin: "left bottom",
+        }}
+      >
+        <GopherSprite frameCount={8} row={walkRow} />
+      </motion.div>
+      <motion.div
+        animate={{ scaleX: [1, 0.86, 1], opacity: [0.34, 0.24, 0.34] }}
+        transition={{ duration: 0.45, repeat: Infinity, ease: steppedEase(3) }}
+        style={{
+          position: "absolute",
+          left: "18px",
+          bottom: "2px",
+          width: "62px",
+          height: "10px",
+          background: "rgba(0,0,0,0.42)",
+          filter: "blur(1px)",
+        }}
+      />
+    </motion.div>
+  );
+}
+
 export function Home({ onNavigate }: HomeProps) {
   const [isReturnTitleDialogOpen, setIsReturnTitleDialogOpen] = useState(false);
   const confirmModalSeRef = useRef<HTMLAudioElement | null>(null);
@@ -437,9 +517,13 @@ export function Home({ onNavigate }: HomeProps) {
         <section
           aria-label="Character placement area"
           style={{
+            position: "relative",
             minHeight: "clamp(220px, 42vh, 520px)",
+            overflow: "hidden",
           }}
-        />
+        >
+          <WalkingGopher />
+        </section>
 
         <nav
           aria-label="Main navigation"
