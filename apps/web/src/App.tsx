@@ -5,6 +5,7 @@ import { ParticleBackground } from "./components/ParticleBackground";
 import { TitleLogo } from "./components/TitleLogo";
 import { LogoutConfirmDialog } from "./components/LogoutConfirmDialog";
 import { GuildPreviewList } from "./components/GuildPreviewList";
+import { PixelSpeakerIcon } from "./components/PixelSpeakerIcon";
 import { TitleActions } from "./components/TitleActions";
 import { TitleUserBadge } from "./components/TitleUserBadge";
 import { beginLogin, fetchMe, logout } from "./features/auth/api";
@@ -35,11 +36,13 @@ function App() {
   const {
     audioRefs,
     isBgmMuted,
+    isSeMuted,
     playModalCancel,
     playModalConfirm,
     playModalOpen,
     playTitleStart,
     toggleBgm,
+    toggleSe,
   } = useTitleAudio();
   const [isDay, setIsDay] = useState(() => isDaytime(new Date().getHours()));
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -150,67 +153,117 @@ function App() {
         aria-hidden="true"
       />
 
-      <motion.button
-        type="button"
-        onClick={toggleBgm}
-        aria-label={isBgmMuted ? "BGMをオンにする" : "BGMをオフにする"}
-        aria-pressed={!isBgmMuted}
+      <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ y: 2, scale: 0.98 }}
         style={{
           position: "fixed",
           top: "clamp(14px, 3vw, 28px)",
           left: "clamp(14px, 3vw, 28px)",
           zIndex: 4,
-          display: "inline-flex",
-          alignItems: "center",
+          display: "grid",
           gap: "8px",
-          padding: "9px 12px",
-          border: `2px solid ${isBgmMuted ? "#ffffff66" : "#ffd700"}`,
-          boxShadow: `3px 3px 0 rgba(0,0,0,0.72), 0 0 14px ${
-            isBgmMuted ? "rgba(255,255,255,0.12)" : "rgba(255,215,0,0.3)"
-          }`,
-          background: "rgba(8, 12, 18, 0.72)",
-          backdropFilter: "blur(2px)",
-          color: isBgmMuted ? "#ffffff99" : "#fff7dc",
-          cursor: "pointer",
-          fontFamily: '"DotGothic16", monospace',
-          fontSize: "0.72rem",
-          letterSpacing: "0.08em",
-          textShadow: "1px 1px 0 #000",
         }}
       >
-        <span
-          aria-hidden="true"
+        <motion.button
+          type="button"
+          onClick={toggleBgm}
+          aria-label={isBgmMuted ? "BGMをオンにする" : "BGMをオフにする"}
+          aria-pressed={!isBgmMuted}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ y: 2, scale: 0.98 }}
           style={{
-            position: "relative",
-            display: "inline-grid",
-            placeItems: "center",
-            width: "1em",
-            height: "1em",
-            fontSize: "0.95rem",
-            lineHeight: 1,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "9px 12px",
+            border: `2px solid ${isBgmMuted ? "#ffffff66" : "#ffd700"}`,
+            boxShadow: `3px 3px 0 rgba(0,0,0,0.72), 0 0 14px ${
+              isBgmMuted ? "rgba(255,255,255,0.12)" : "rgba(255,215,0,0.3)"
+            }`,
+            background: "rgba(8, 12, 18, 0.72)",
+            backdropFilter: "blur(2px)",
+            color: isBgmMuted ? "#ffffff99" : "#fff7dc",
+            cursor: "pointer",
+            fontFamily: '"DotGothic16", monospace',
+            fontSize: "0.72rem",
+            letterSpacing: "0.08em",
+            textShadow: "1px 1px 0 #000",
           }}
         >
-          ♪
-          {isBgmMuted && (
-            <span
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                width: "1.25em",
-                height: "2px",
-                background: "#ffb0aa",
-                boxShadow: "1px 1px 0 #000",
-                transform: "rotate(-45deg)",
-              }}
-            />
-          )}
-        </span>
-        <span>{isBgmMuted ? "BGM OFF" : "BGM ON"}</span>
-      </motion.button>
+          <span
+            aria-hidden="true"
+            style={{
+              position: "relative",
+              display: "inline-grid",
+              placeItems: "center",
+              width: "1em",
+              height: "1em",
+              fontSize: "0.95rem",
+              lineHeight: 1,
+            }}
+          >
+            ♪
+            {isBgmMuted && (
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  width: "1.25em",
+                  height: "2px",
+                  background: "#ffb0aa",
+                  boxShadow: "1px 1px 0 #000",
+                  transform: "rotate(-45deg)",
+                }}
+              />
+            )}
+          </span>
+          <span>{isBgmMuted ? "BGM OFF" : "BGM ON"}</span>
+        </motion.button>
+
+        <motion.button
+          type="button"
+          onClick={toggleSe}
+          aria-label={isSeMuted ? "SEをオンにする" : "SEをオフにする"}
+          aria-pressed={!isSeMuted}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ y: 2, scale: 0.98 }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "9px 12px",
+            border: `2px solid ${isSeMuted ? "#ffffff66" : "#00f5ff"}`,
+            boxShadow: `3px 3px 0 rgba(0,0,0,0.72), 0 0 14px ${
+              isSeMuted ? "rgba(255,255,255,0.12)" : "rgba(0,245,255,0.28)"
+            }`,
+            background: "rgba(8, 12, 18, 0.72)",
+            backdropFilter: "blur(2px)",
+            color: isSeMuted ? "#ffffff99" : "#e8ffff",
+            cursor: "pointer",
+            fontFamily: '"DotGothic16", monospace',
+            fontSize: "0.72rem",
+            letterSpacing: "0.08em",
+            textShadow: "1px 1px 0 #000",
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              position: "relative",
+              display: "inline-grid",
+              placeItems: "center",
+              width: "1.55em",
+              height: "1em",
+              fontSize: "0.86rem",
+              lineHeight: 1,
+            }}
+          >
+            <PixelSpeakerIcon muted={isSeMuted} />
+          </span>
+          <span>{isSeMuted ? "SE OFF" : "SE ON"}</span>
+        </motion.button>
+      </motion.div>
 
       {/* グラデーションオーバーレイ（昼夜で調整） */}
       <motion.div
