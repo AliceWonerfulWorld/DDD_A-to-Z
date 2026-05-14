@@ -1,5 +1,5 @@
 import { motion, type Variants } from "framer-motion";
-import { useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 
 interface HomeProps {
   onNavigate: (path: string) => void;
@@ -253,6 +253,61 @@ function ReturnTitleDialog({
 
 export function Home({ onNavigate }: HomeProps) {
   const [isReturnTitleDialogOpen, setIsReturnTitleDialogOpen] = useState(false);
+  const confirmModalSeRef = useRef<HTMLAudioElement | null>(null);
+  const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
+  const returnTitleSeRef = useRef<HTMLAudioElement | null>(null);
+
+  const playSe = useCallback((audio: HTMLAudioElement | null) => {
+    if (!audio) {
+      return;
+    }
+
+    audio.currentTime = 0;
+    void audio.play().catch(() => {
+      // Browser autoplay restrictions can still block sound in unusual navigation paths.
+    });
+  }, []);
+
+  const playSeUntilEnd = useCallback((audio: HTMLAudioElement | null) => {
+    if (!audio) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      let timeoutId: number | undefined;
+
+      const finish = () => {
+        audio.removeEventListener("ended", finish);
+        audio.removeEventListener("error", finish);
+        if (timeoutId !== undefined) {
+          window.clearTimeout(timeoutId);
+        }
+        resolve();
+      };
+
+      audio.currentTime = 0;
+      audio.addEventListener("ended", finish, { once: true });
+      audio.addEventListener("error", finish, { once: true });
+      timeoutId = window.setTimeout(finish, 500);
+
+      void audio.play().catch(finish);
+    });
+  }, []);
+
+  const cancelReturnTitle = () => {
+    playSe(modalCancelSeRef.current);
+    setIsReturnTitleDialogOpen(false);
+  };
+
+  const openReturnTitleDialog = () => {
+    playSe(confirmModalSeRef.current);
+    setIsReturnTitleDialogOpen(true);
+  };
+
+  const confirmReturnTitle = async () => {
+    await playSeUntilEnd(returnTitleSeRef.current);
+    onNavigate("/");
+  };
 
   return (
     <main
@@ -270,6 +325,25 @@ export function Home({ onNavigate }: HomeProps) {
         color: "#f4ecd0",
       }}
     >
+      <audio
+        ref={confirmModalSeRef}
+        src="/SE/confirm-modal.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={modalCancelSeRef}
+        src="/SE/modal-cancel.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={returnTitleSeRef}
+        src="/SE/return-title.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+
       <div
         aria-hidden="true"
         style={{
@@ -339,7 +413,7 @@ export function Home({ onNavigate }: HomeProps) {
               </div>
             </HudPanel>
 
-            <TitleButton onClick={() => setIsReturnTitleDialogOpen(true)} />
+            <TitleButton onClick={openReturnTitleDialog} />
           </div>
 
           <HudPanel align="right">
@@ -430,8 +504,8 @@ export function Home({ onNavigate }: HomeProps) {
 
       {isReturnTitleDialogOpen && (
         <ReturnTitleDialog
-          onCancel={() => setIsReturnTitleDialogOpen(false)}
-          onConfirm={() => onNavigate("/")}
+          onCancel={cancelReturnTitle}
+          onConfirm={confirmReturnTitle}
         />
       )}
     </main>
