@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { steppedEase } from "../lib/animationUtils";
 import { GopherSprite } from "./GopherSprite";
@@ -97,38 +97,40 @@ export function WalkingGopher({ onTalk }: { onTalk: () => void }) {
       }}
       onClick={reactToClick}
     >
-      {talkLine && (
-        <motion.div
-          key={talkLine}
-          initial={{ opacity: 0, y: 8, scale: 0.94 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 8, scale: 0.94 }}
-          style={{
-            position: "absolute",
-            ...speechBubbleSide,
-            bottom: "46px",
-            width: "max-content",
-            maxWidth: "min(220px, 34vw)",
-            border: "2px solid rgba(255, 215, 0, 0.82)",
-            borderBottomColor: "rgba(111, 79, 28, 0.95)",
-            borderRightColor: "rgba(111, 79, 28, 0.95)",
-            background: "rgba(3, 10, 24, 0.9)",
-            boxShadow: "0 0 0 2px rgba(0,0,0,0.72), 4px 4px 0 rgba(0,0,0,0.42)",
-            color: "#fff8d7",
-            fontFamily: '"DotGothic16", monospace',
-            fontSize: "0.78rem",
-            lineHeight: 1.5,
-            letterSpacing: "0.04em",
-            padding: "8px 10px",
-            textAlign: "center",
-            whiteSpace: "normal",
-            pointerEvents: "none",
-            zIndex: 6,
-          }}
-        >
-          {talkLine}
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {talkLine && (
+          <motion.div
+            key={talkLine}
+            initial={{ opacity: 0, y: 8, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.94 }}
+            style={{
+              position: "absolute",
+              ...speechBubbleSide,
+              bottom: "46px",
+              width: "max-content",
+              maxWidth: "min(220px, 34vw)",
+              border: "2px solid rgba(255, 215, 0, 0.82)",
+              borderBottomColor: "rgba(111, 79, 28, 0.95)",
+              borderRightColor: "rgba(111, 79, 28, 0.95)",
+              background: "rgba(3, 10, 24, 0.9)",
+              boxShadow: "0 0 0 2px rgba(0,0,0,0.72), 4px 4px 0 rgba(0,0,0,0.42)",
+              color: "#fff8d7",
+              fontFamily: '"DotGothic16", monospace',
+              fontSize: "0.78rem",
+              lineHeight: 1.5,
+              letterSpacing: "0.04em",
+              padding: "8px 10px",
+              textAlign: "center",
+              whiteSpace: "normal",
+              pointerEvents: "none",
+              zIndex: 6,
+            }}
+          >
+            {talkLine}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <motion.div
         animate={{ y: [0, -2, 0] }}
         transition={{ duration: 0.45, repeat: Infinity, ease: steppedEase(3) }}
