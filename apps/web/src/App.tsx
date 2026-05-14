@@ -3,21 +3,15 @@ import { motion, type Variants } from "framer-motion";
 import { useNavigate } from "react-router";
 import { ParticleBackground } from "./components/ParticleBackground";
 import { TitleLogo } from "./components/TitleLogo";
-import { GitHubLoginButton } from "./components/GitHubLoginButton";
+import { LogoutConfirmDialog } from "./components/LogoutConfirmDialog";
+import { GuildPreviewList } from "./components/GuildPreviewList";
+import { PixelSpeakerIcon } from "./components/PixelSpeakerIcon";
+import { TitleActions } from "./components/TitleActions";
+import { TitleUserBadge } from "./components/TitleUserBadge";
 import { beginLogin, fetchMe, logout } from "./features/auth/api";
 import type { CurrentUser } from "./features/auth/types";
 import { hasCompletedInitialProfile } from "./features/profile/initialProfile";
-
-// ギルド一覧（チラ見せ用）
-const GUILDS = [
-  { name: "Rust", color: "#ff6b35", icon: "🦀" },
-  { name: "Python", color: "#3776ab", icon: "🐍" },
-  { name: "Go", color: "#00acd7", icon: "🐹" },
-  { name: "TypeScript", color: "#3178c6", icon: "📘" },
-  { name: "Java", color: "#f89820", icon: "☕" },
-  { name: "Haskell", color: "#5d4f85", icon: "λ" },
-  { name: "Zig", color: "#f7a41d", icon: "⚡" },
-] as const;
+import { useTitleAudio } from "./hooks/useTitleAudio";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -39,10 +33,22 @@ function isDaytime(hour: number): boolean {
 
 function App() {
   const navigate = useNavigate();
+  const {
+    audioRefs,
+    isBgmMuted,
+    isSeMuted,
+    playModalCancel,
+    playModalConfirm,
+    playModalOpen,
+    playTitleStart,
+    toggleBgm,
+    toggleSe,
+  } = useTitleAudio();
   const [isDay, setIsDay] = useState(() => isDaytime(new Date().getHours()));
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isInitialProfileCompleted, setIsInitialProfileCompleted] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   // 毎分チェックして日没・夜明けをリアルタイム反映
   useEffect(() => {
@@ -73,8 +79,23 @@ function App() {
       setIsLogoutDialogOpen(false);
     }
   };
-  const handleStart = () => {
+  const handleStart = async () => {
+    if (isStarting) {
+      return;
+    }
+
+    setIsStarting(true);
+    await playTitleStart();
     navigate(isInitialProfileCompleted ? "/home" : "/profile");
+  };
+  const closeLogoutDialog = () => setIsLogoutDialogOpen(false);
+  const cancelLogout = () => {
+    playModalCancel();
+    closeLogoutDialog();
+  };
+  const submitLogout = () => {
+    playModalConfirm();
+    void confirmLogout();
   };
   const bgImage = isDay ? "url('/pixel-town-day.png')" : "url('/pixel-town-night.png')";
   const overlay = isDay
@@ -100,6 +121,150 @@ function App() {
         transition: "background-image 2s ease",
       }}
     >
+      <audio
+        ref={audioRefs.titleBgmRef}
+        src="/bgm/title_bgm.mp3"
+        loop
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.confirmModalSeRef}
+        src="/SE/confirm-modal.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.modalCancelSeRef}
+        src="/SE/modal-cancel.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.modalConfirmSeRef}
+        src="/SE/modal-confirm.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.titleStartSeRef}
+        src="/SE/title-start.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          position: "fixed",
+          top: "clamp(14px, 3vw, 28px)",
+          left: "clamp(14px, 3vw, 28px)",
+          zIndex: 4,
+          display: "grid",
+          gap: "8px",
+        }}
+      >
+        <motion.button
+          type="button"
+          onClick={toggleBgm}
+          aria-label={isBgmMuted ? "BGMをオンにする" : "BGMをオフにする"}
+          aria-pressed={!isBgmMuted}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ y: 2, scale: 0.98 }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "9px 12px",
+            border: `2px solid ${isBgmMuted ? "#ffffff66" : "#ffd700"}`,
+            boxShadow: `3px 3px 0 rgba(0,0,0,0.72), 0 0 14px ${
+              isBgmMuted ? "rgba(255,255,255,0.12)" : "rgba(255,215,0,0.3)"
+            }`,
+            background: "rgba(8, 12, 18, 0.72)",
+            backdropFilter: "blur(2px)",
+            color: isBgmMuted ? "#ffffff99" : "#fff7dc",
+            cursor: "pointer",
+            fontFamily: '"DotGothic16", monospace',
+            fontSize: "0.72rem",
+            letterSpacing: "0.08em",
+            textShadow: "1px 1px 0 #000",
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              position: "relative",
+              display: "inline-grid",
+              placeItems: "center",
+              width: "1em",
+              height: "1em",
+              fontSize: "0.95rem",
+              lineHeight: 1,
+            }}
+          >
+            ♪
+            {isBgmMuted && (
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  width: "1.25em",
+                  height: "2px",
+                  background: "#ffb0aa",
+                  boxShadow: "1px 1px 0 #000",
+                  transform: "rotate(-45deg)",
+                }}
+              />
+            )}
+          </span>
+          <span>{isBgmMuted ? "BGM OFF" : "BGM ON"}</span>
+        </motion.button>
+
+        <motion.button
+          type="button"
+          onClick={toggleSe}
+          aria-label={isSeMuted ? "SEをオンにする" : "SEをオフにする"}
+          aria-pressed={!isSeMuted}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ y: 2, scale: 0.98 }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "9px 12px",
+            border: `2px solid ${isSeMuted ? "#ffffff66" : "#00f5ff"}`,
+            boxShadow: `3px 3px 0 rgba(0,0,0,0.72), 0 0 14px ${
+              isSeMuted ? "rgba(255,255,255,0.12)" : "rgba(0,245,255,0.28)"
+            }`,
+            background: "rgba(8, 12, 18, 0.72)",
+            backdropFilter: "blur(2px)",
+            color: isSeMuted ? "#ffffff99" : "#e8ffff",
+            cursor: "pointer",
+            fontFamily: '"DotGothic16", monospace',
+            fontSize: "0.72rem",
+            letterSpacing: "0.08em",
+            textShadow: "1px 1px 0 #000",
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              position: "relative",
+              display: "inline-grid",
+              placeItems: "center",
+              width: "1.55em",
+              height: "1em",
+              fontSize: "0.86rem",
+              lineHeight: 1,
+            }}
+          >
+            <PixelSpeakerIcon muted={isSeMuted} />
+          </span>
+          <span>{isSeMuted ? "SE OFF" : "SE ON"}</span>
+        </motion.button>
+      </motion.div>
+
       {/* グラデーションオーバーレイ（昼夜で調整） */}
       <motion.div
         aria-hidden="true"
@@ -132,57 +297,7 @@ function App() {
         }}
       />
 
-      {currentUser && (
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            position: "fixed",
-            top: "clamp(14px, 3vw, 28px)",
-            right: "clamp(14px, 3vw, 28px)",
-            zIndex: 4,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "10px",
-            maxWidth: "min(calc(100vw - 28px), 360px)",
-            padding: "10px 16px",
-            border: "2px solid #39ff14",
-            boxShadow: "3px 3px 0 #1a7a00",
-            background: "rgba(4, 18, 12, 0.82)",
-            backdropFilter: "blur(2px)",
-          }}
-        >
-          <img
-            src={currentUser.avatar_url}
-            alt={currentUser.username}
-            style={{ width: 28, height: 28, borderRadius: "50%", flex: "0 0 auto" }}
-          />
-          <span
-            style={{
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              fontFamily: '"DotGothic16", monospace',
-              fontSize: "0.85rem",
-              color: "#39ff14",
-              letterSpacing: "0.05em",
-            }}
-          >
-            {currentUser.username}
-          </span>
-          <span
-            style={{
-              flex: "0 0 auto",
-              fontFamily: '"DotGothic16", monospace',
-              fontSize: "0.68rem",
-              color: "#39ff1480",
-            }}
-          >
-            ▶ LOGGED IN
-          </span>
-        </motion.div>
-      )}
+      {currentUser && <TitleUserBadge user={currentUser} />}
 
       {/* メインコンテンツ */}
       <motion.main
@@ -237,61 +352,13 @@ function App() {
 
         {/* GitHubログインボタン / ログイン済み表示 */}
         <motion.div variants={itemVariants} style={{ marginBottom: "4rem" }}>
-          {currentUser ? (
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "14px",
-              }}
-            >
-              <motion.button
-                type="button"
-                onClick={handleStart}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ y: 3, scale: 0.98 }}
-                style={{
-                  padding: "12px 22px",
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                  background: "#ffd700",
-                  border: "3px solid #0a0a0a",
-                  boxShadow: "4px 4px 0 #0a0a0a",
-                  color: "#0a0a0a",
-                  cursor: "pointer",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                START
-              </motion.button>
-              <motion.button
-                type="button"
-                onClick={() => {
-                  setIsLogoutDialogOpen(true);
-                }}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ y: 3, scale: 0.98 }}
-                style={{
-                  padding: "12px 18px",
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.78rem",
-                  background: "rgba(10,10,10,0.55)",
-                  border: "2px solid #ff5f56",
-                  boxShadow: "3px 3px 0 #7a211d",
-                  color: "#ffb0aa",
-                  cursor: "pointer",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                LOGOUT
-              </motion.button>
-            </div>
-          ) : (
-            <GitHubLoginButton onClick={handleLogin} />
-          )}
+          <TitleActions
+            isLoggedIn={currentUser !== null}
+            onLogin={handleLogin}
+            onLogoutClick={() => setIsLogoutDialogOpen(true)}
+            onStart={handleStart}
+            isStarting={isStarting}
+          />
         </motion.div>
 
         {/* 区切り線 */}
@@ -304,83 +371,47 @@ function App() {
             marginBottom: "2rem",
           }}
         >
-          <div style={{ flex: 1, height: "2px", background: "#ffffff20" }} />
+          <div
+            style={{
+              flex: 1,
+              height: "1px",
+              background: "linear-gradient(90deg, transparent, rgba(255,247,220,0.7))",
+              boxShadow: "0 0 8px rgba(255,247,220,0.22)",
+            }}
+          />
           <span
             style={{
               fontFamily: '"DotGothic16", monospace',
-              fontSize: "0.7rem",
-              color: "#ffffff60",
+              fontSize: "0.72rem",
+              color: "#fff7dc",
               letterSpacing: "0.2em",
+              padding: "4px 10px",
+              border: "1px solid rgba(255,247,220,0.28)",
+              background: "rgba(8, 12, 18, 0.52)",
+              boxShadow: "0 0 0 1px rgba(0,0,0,0.55), 0 0 14px rgba(255,247,220,0.16)",
+              textShadow: "1px 1px 0 #000, 0 0 8px rgba(255,247,220,0.38)",
             }}
           >
             SELECT YOUR GUILD
           </span>
-          <div style={{ flex: 1, height: "2px", background: "#ffffff20" }} />
+          <div
+            style={{
+              flex: 1,
+              height: "1px",
+              background: "linear-gradient(90deg, rgba(255,247,220,0.7), transparent)",
+              boxShadow: "0 0 8px rgba(255,247,220,0.22)",
+            }}
+          />
         </motion.div>
 
-        {/* ギルド一覧（チラ見せ） */}
-        <motion.div
-          variants={itemVariants}
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "12px",
-            justifyContent: "center",
-          }}
-        >
-          {GUILDS.map((guild, i) => (
-            <motion.div
-              key={guild.name}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8 + i * 0.08, duration: 0.4 }}
-              whileHover={{ y: -4, scale: 1.05 }}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "6px",
-                padding: "12px 16px",
-                border: `2px solid ${guild.color}`,
-                boxShadow: `3px 3px 0 ${guild.color}80`,
-                background: `${guild.color}15`,
-                cursor: "pointer",
-                minWidth: "90px",
-              }}
-            >
-              <span style={{ fontSize: "1.5rem" }}>{guild.icon}</span>
-              <span
-                style={{
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.7rem",
-                  color: guild.color,
-                  letterSpacing: "0.05em",
-                }}
-              >
-                {guild.name}
-              </span>
-            </motion.div>
-          ))}
+        <motion.div variants={itemVariants}>
+          <GuildPreviewList />
         </motion.div>
-
-        {/* フッター注記 */}
-        <motion.p
-          variants={itemVariants}
-          style={{
-            marginTop: "3rem",
-            fontFamily: '"DotGothic16", monospace',
-            fontSize: "0.65rem",
-            color: "#ffffff40",
-            letterSpacing: "0.1em",
-          }}
-        >
-          ※ ギルドの選択は後で変更できます。まずはGitHubでログインしてください。
-        </motion.p>
 
         {import.meta.env.DEV && (
           <motion.div
             variants={itemVariants}
-            style={{ marginTop: "2rem", display: "flex", gap: "8px", justifyContent: "center" }}
+            style={{ marginTop: "3rem", display: "flex", gap: "8px", justifyContent: "center" }}
           >
             <button
               onClick={() => navigate("/profile")}
@@ -432,125 +463,12 @@ function App() {
         )}
       </motion.main>
 
-      {isLogoutDialogOpen && (
-        <motion.div
-          role="presentation"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 10,
-            display: "grid",
-            placeItems: "center",
-            padding: "24px",
-            background: "rgba(0, 0, 0, 0.62)",
-            backdropFilter: "blur(2px)",
-          }}
-          onClick={() => setIsLogoutDialogOpen(false)}
-        >
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="logout-dialog-title"
-            initial={{ opacity: 0, y: 18, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            style={{
-              width: "min(100%, 420px)",
-              border: "4px solid #ffd700",
-              borderBottomColor: "#6f4f1c",
-              borderRightColor: "#6f4f1c",
-              background: "rgba(3, 10, 24, 0.96)",
-              boxShadow: "0 0 0 3px rgba(0,0,0,0.9), 10px 10px 0 rgba(0,0,0,0.58)",
-              color: "#fff8d7",
-              padding: "22px",
-              textAlign: "center",
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div
-              id="logout-dialog-title"
-              style={{
-                color: "#ffd700",
-                fontFamily: '"Press Start 2P", "DotGothic16", monospace',
-                fontSize: "clamp(0.92rem, 3vw, 1.1rem)",
-                lineHeight: 1.7,
-                marginBottom: "14px",
-              }}
-            >
-              LOGOUT?
-            </div>
-            <p
-              style={{
-                margin: "0 0 22px",
-                color: "rgba(255, 248, 215, 0.78)",
-                fontFamily: '"DotGothic16", monospace',
-                fontSize: "1rem",
-                lineHeight: 1.7,
-                letterSpacing: "0.04em",
-              }}
-            >
-              本当にログアウトしますか？
-            </p>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: "12px",
-              }}
-            >
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ y: 2, scale: 0.98 }}
-                onClick={() => setIsLogoutDialogOpen(false)}
-                style={{
-                  border: "2px solid rgba(255, 255, 255, 0.34)",
-                  borderBottomColor: "rgba(0,0,0,0.78)",
-                  borderRightColor: "rgba(0,0,0,0.78)",
-                  background: "rgba(255, 255, 255, 0.08)",
-                  boxShadow: "3px 3px 0 rgba(0,0,0,0.5)",
-                  color: "#fff8d7",
-                  cursor: "pointer",
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                  lineHeight: 1.4,
-                  padding: "11px 12px",
-                }}
-              >
-                CANCEL
-              </motion.button>
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ y: 2, scale: 0.98 }}
-                onClick={() => {
-                  void confirmLogout();
-                }}
-                style={{
-                  border: "2px solid #ffb0aa",
-                  borderBottomColor: "#7a211d",
-                  borderRightColor: "#7a211d",
-                  background: "#ff5f56",
-                  boxShadow: "3px 3px 0 rgba(0,0,0,0.5)",
-                  color: "#180403",
-                  cursor: "pointer",
-                  fontFamily: '"DotGothic16", monospace',
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                  lineHeight: 1.4,
-                  padding: "11px 12px",
-                }}
-              >
-                LOGOUT
-              </motion.button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
+      <LogoutConfirmDialog
+        isOpen={isLogoutDialogOpen}
+        onOpen={playModalOpen}
+        onCancel={cancelLogout}
+        onConfirm={submitLogout}
+      />
     </div>
   );
 }
