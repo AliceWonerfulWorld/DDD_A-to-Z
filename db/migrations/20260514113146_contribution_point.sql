@@ -6,7 +6,9 @@ CREATE TABLE "contribution_point_ledger" ("id" text NOT NULL, "user_id" text NOT
 CREATE INDEX "contribution_point_ledger_source_idx" ON "contribution_point_ledger" ("source_type", "source_id");
 -- Create index "contribution_point_ledger_user_id_created_at_idx" to table: "contribution_point_ledger"
 CREATE INDEX "contribution_point_ledger_user_id_created_at_idx" ON "contribution_point_ledger" ("user_id", "created_at" DESC);
--- Drop "cp_accounts" table
+-- atlas:nolint DS102
+-- Drop "cp_accounts" table (renamed to contribution_point_accounts; table is empty at migration time)
 DROP TABLE "cp_accounts";
--- Drop "cp_ledger" table
+-- atlas:nolint DS102
+-- Drop "cp_ledger" table (renamed to contribution_point_ledger; table is empty at migration time)
 DROP TABLE "cp_ledger";
