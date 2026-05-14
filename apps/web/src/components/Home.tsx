@@ -1,8 +1,12 @@
-import { motion, type Variants } from "framer-motion";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
+import { HomeHud } from "./HomeHud";
+import { HomeNav } from "./HomeNav";
+import { ReturnTitleDialog } from "./ReturnTitleDialog";
+import { WalkingGopher } from "./WalkingGopher";
+import { useHomeAudio } from "../hooks/useHomeAudio";
 
 interface HomeProps {
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string) => void | Promise<void>;
 }
 
 const player = {
@@ -13,246 +17,39 @@ const player = {
   todayCp: 320,
 };
 
+const guild = {
+  name: "TypeScript Guild",
+  icon: "TS",
+  rank: "Member",
+  accent: "#3178c6",
+};
+
 const navItems = [
   { label: "WAR MAP", caption: "BATTLE FRONT", path: "/war", accent: "#ff5f56" },
   { label: "GUILD BASE", caption: "COMMUNITY HQ", path: "/guild", accent: "#00f5ff" },
   { label: "MY STATUS", caption: "PLAYER DATA", path: "/mypage", accent: "#ffd700" },
 ];
 
-const steppedEase = (steps: number) => (t: number) => Math.floor(t * steps) / steps;
-
-const panelVariants: Variants = {
-  hidden: { opacity: 0, y: -14 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: steppedEase(6) },
-  },
-};
-
-const navVariants: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: 0.15 + i * 0.08, duration: 0.35, ease: steppedEase(6) },
-  }),
-};
-
-function HudPanel({ align = "left", children }: { align?: "left" | "right"; children: ReactNode }) {
-  return (
-    <motion.section
-      variants={panelVariants}
-      initial="hidden"
-      animate="visible"
-      style={{
-        width: "min(100%, 360px)",
-        border: "3px solid rgba(255, 215, 0, 0.72)",
-        borderBottomColor: "rgba(111, 79, 28, 0.95)",
-        borderRightColor: "rgba(111, 79, 28, 0.95)",
-        background: "rgba(3, 10, 24, 0.72)",
-        boxShadow: "0 0 0 2px rgba(0,0,0,0.78), 8px 8px 0 rgba(0,0,0,0.45)",
-        color: "#f4ecd0",
-        padding: "14px 16px",
-        textAlign: align,
-        backdropFilter: "blur(2px)",
-      }}
-    >
-      {children}
-    </motion.section>
-  );
-}
-
-function LabelValue({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(78px, max-content) 1fr",
-        gap: "12px",
-        alignItems: "baseline",
-        minHeight: "28px",
-      }}
-    >
-      <span
-        style={{
-          color: "rgba(244, 236, 208, 0.62)",
-          fontSize: "0.62rem",
-          lineHeight: 1.5,
-        }}
-      >
-        {label}
-      </span>
-      <span
-        style={{
-          color: "#fff8d7",
-          fontSize: "clamp(0.74rem, 1.6vw, 0.95rem)",
-          lineHeight: 1.5,
-          overflowWrap: "anywhere",
-        }}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function TitleButton({ onClick }: { onClick: () => void }) {
-  return (
-    <motion.button
-      type="button"
-      variants={panelVariants}
-      initial="hidden"
-      animate="visible"
-      whileHover={{ y: -2, scale: 1.03 }}
-      whileTap={{ y: 2, scale: 0.98 }}
-      onClick={onClick}
-      style={{
-        alignSelf: "flex-start",
-        border: "2px solid rgba(244, 236, 208, 0.55)",
-        borderBottomColor: "rgba(0,0,0,0.78)",
-        borderRightColor: "rgba(0,0,0,0.78)",
-        background: "rgba(3, 10, 24, 0.68)",
-        boxShadow: "0 0 0 2px rgba(0,0,0,0.68), 5px 5px 0 rgba(0,0,0,0.38)",
-        color: "#fff8d7",
-        cursor: "pointer",
-        fontFamily: "inherit",
-        fontSize: "clamp(0.56rem, 1.4vw, 0.74rem)",
-        lineHeight: 1.5,
-        padding: "10px 12px",
-      }}
-    >
-      &lt; TITLE
-    </motion.button>
-  );
-}
-
-function ReturnTitleDialog({
-  onCancel,
-  onConfirm,
-}: {
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <motion.div
-      role="presentation"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 10,
-        display: "grid",
-        placeItems: "center",
-        padding: "24px",
-        background: "rgba(0, 0, 0, 0.62)",
-        backdropFilter: "blur(2px)",
-      }}
-      onClick={onCancel}
-    >
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="return-title-dialog-title"
-        initial={{ opacity: 0, y: 18, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
-        style={{
-          width: "min(100%, 420px)",
-          border: "4px solid #ffd700",
-          borderBottomColor: "#6f4f1c",
-          borderRightColor: "#6f4f1c",
-          background: "rgba(3, 10, 24, 0.96)",
-          boxShadow: "0 0 0 3px rgba(0,0,0,0.9), 10px 10px 0 rgba(0,0,0,0.58)",
-          color: "#fff8d7",
-          padding: "22px",
-          textAlign: "center",
-        }}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div
-          id="return-title-dialog-title"
-          style={{
-            color: "#ffd700",
-            fontSize: "clamp(0.82rem, 3vw, 1.02rem)",
-            lineHeight: 1.7,
-            marginBottom: "14px",
-          }}
-        >
-          RETURN TO TITLE?
-        </div>
-        <p
-          style={{
-            margin: "0 0 22px",
-            color: "rgba(255, 248, 215, 0.78)",
-            fontFamily: '"DotGothic16", monospace',
-            fontSize: "1rem",
-            lineHeight: 1.7,
-            letterSpacing: "0.04em",
-          }}
-        >
-          タイトル画面に戻りますか？
-        </p>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: "12px",
-          }}
-        >
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ y: 2, scale: 0.98 }}
-            onClick={onCancel}
-            style={{
-              border: "2px solid rgba(255, 255, 255, 0.34)",
-              borderBottomColor: "rgba(0,0,0,0.78)",
-              borderRightColor: "rgba(0,0,0,0.78)",
-              background: "rgba(255, 255, 255, 0.08)",
-              boxShadow: "3px 3px 0 rgba(0,0,0,0.5)",
-              color: "#fff8d7",
-              cursor: "pointer",
-              fontFamily: '"DotGothic16", monospace',
-              fontSize: "0.9rem",
-              fontWeight: "bold",
-              lineHeight: 1.4,
-              padding: "11px 12px",
-            }}
-          >
-            CANCEL
-          </motion.button>
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ y: 2, scale: 0.98 }}
-            onClick={onConfirm}
-            style={{
-              border: "2px solid #fff3a6",
-              borderBottomColor: "#6f4f1c",
-              borderRightColor: "#6f4f1c",
-              background: "#f0c040",
-              boxShadow: "3px 3px 0 rgba(0,0,0,0.5)",
-              color: "#1b1304",
-              cursor: "pointer",
-              fontFamily: '"DotGothic16", monospace',
-              fontSize: "0.9rem",
-              fontWeight: "bold",
-              lineHeight: 1.4,
-              padding: "11px 12px",
-            }}
-          >
-            TITLE
-          </motion.button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 export function Home({ onNavigate }: HomeProps) {
   const [isReturnTitleDialogOpen, setIsReturnTitleDialogOpen] = useState(false);
+  const {
+    audioRefs,
+    audioError,
+    playGopherTalk,
+    playModalCancel,
+    playModalOpen,
+    playReturnTitle,
+  } = useHomeAudio(onNavigate);
+
+  const cancelReturnTitle = () => {
+    playModalCancel();
+    setIsReturnTitleDialogOpen(false);
+  };
+
+  const openReturnTitleDialog = () => {
+    playModalOpen();
+    setIsReturnTitleDialogOpen(true);
+  };
 
   return (
     <main
@@ -270,6 +67,38 @@ export function Home({ onNavigate }: HomeProps) {
         color: "#f4ecd0",
       }}
     >
+      <audio
+        ref={audioRefs.homeBgmRef}
+        src="/bgm/home_bgm.ogg"
+        loop
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.confirmModalSeRef}
+        src="/SE/confirm-modal.wav"
+        preload="none"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.modalCancelSeRef}
+        src="/SE/modal-cancel.wav"
+        preload="none"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.returnTitleSeRef}
+        src="/SE/return-title.wav"
+        preload="none"
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.gopherTalkSeRef}
+        src="/SE/gopher-talk.wav"
+        preload="none"
+        aria-hidden="true"
+      />
+
       <div
         aria-hidden="true"
         style={{
@@ -305,134 +134,52 @@ export function Home({ onNavigate }: HomeProps) {
           gap: "20px",
         }}
       >
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: "18px",
-            flexWrap: "wrap",
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gap: "12px",
-              width: "min(100%, 360px)",
-            }}
-          >
-            <HudPanel>
-              <div
-                style={{
-                  color: "#ffd700",
-                  fontSize: "0.64rem",
-                  lineHeight: 1.6,
-                  marginBottom: "10px",
-                }}
-              >
-                PLAYER INFO
-              </div>
-              <div style={{ display: "grid", gap: "6px" }}>
-                <LabelValue label="NAME" value={player.name} />
-                <LabelValue label="TITLE" value={player.title} />
-                <LabelValue label="LEVEL" value={`LV.${player.level}`} />
-              </div>
-            </HudPanel>
-
-            <TitleButton onClick={() => setIsReturnTitleDialogOpen(true)} />
-          </div>
-
-          <HudPanel align="right">
-            <div
-              style={{
-                color: "#00f5ff",
-                fontSize: "0.64rem",
-                lineHeight: 1.6,
-                marginBottom: "10px",
-              }}
-            >
-              CONTRIBUTION POINT
-            </div>
-            <div style={{ display: "grid", gap: "6px" }}>
-              <LabelValue label="TOTAL CP" value={player.totalCp.toLocaleString()} />
-              <LabelValue label="TODAY CP" value={`+${player.todayCp.toLocaleString()}`} />
-            </div>
-          </HudPanel>
-        </header>
+        <HomeHud guild={guild} player={player} onReturnTitle={openReturnTitleDialog} />
 
         <section
           aria-label="Character placement area"
           style={{
+            position: "relative",
             minHeight: "clamp(220px, 42vh, 520px)",
-          }}
-        />
-
-        <nav
-          aria-label="Main navigation"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
-            gap: "14px",
-            width: "min(100%, 900px)",
-            justifySelf: "center",
+            overflow: "visible",
           }}
         >
-          {navItems.map((item, index) => (
-            <motion.button
-              key={item.label}
-              custom={index}
-              variants={navVariants}
-              initial="hidden"
-              animate="visible"
-              whileHover={{ y: -4, scale: 1.02 }}
-              whileTap={{ y: 2, scale: 0.98 }}
-              onClick={() => onNavigate(item.path)}
-              style={{
-                minHeight: "86px",
-                border: `3px solid ${item.accent}`,
-                borderBottomColor: "rgba(0,0,0,0.75)",
-                borderRightColor: "rgba(0,0,0,0.75)",
-                background: "rgba(4, 11, 27, 0.82)",
-                boxShadow: `0 0 0 2px rgba(0,0,0,0.78), 6px 6px 0 rgba(0,0,0,0.5), inset 0 0 18px ${item.accent}22`,
-                color: "#fff8d7",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                padding: "16px 18px",
-                textAlign: "left",
-              }}
-            >
-              <span
-                style={{
-                  display: "block",
-                  color: item.accent,
-                  fontSize: "clamp(0.88rem, 2vw, 1.08rem)",
-                  lineHeight: 1.5,
-                  marginBottom: "8px",
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {item.label}
-              </span>
-              <span
-                style={{
-                  display: "block",
-                  color: "rgba(244, 236, 208, 0.66)",
-                  fontSize: "0.6rem",
-                  lineHeight: 1.5,
-                }}
-              >
-                {item.caption}
-              </span>
-            </motion.button>
-          ))}
-        </nav>
+          <WalkingGopher onTalk={playGopherTalk} />
+        </section>
+
+        <HomeNav items={navItems} onNavigate={onNavigate} />
       </div>
 
       {isReturnTitleDialogOpen && (
         <ReturnTitleDialog
-          onCancel={() => setIsReturnTitleDialogOpen(false)}
-          onConfirm={() => onNavigate("/")}
+          onCancel={cancelReturnTitle}
+          onConfirm={playReturnTitle}
         />
+      )}
+
+      {audioError && (
+        <div
+          role="alert"
+          style={{
+            position: "fixed",
+            right: "clamp(14px, 3vw, 28px)",
+            bottom: "clamp(14px, 3vw, 28px)",
+            zIndex: 12,
+            maxWidth: "min(320px, calc(100vw - 28px))",
+            border: "2px solid #ff5f56",
+            borderBottomColor: "rgba(0,0,0,0.82)",
+            borderRightColor: "rgba(0,0,0,0.82)",
+            background: "rgba(18, 6, 10, 0.94)",
+            boxShadow: "0 0 0 2px rgba(0,0,0,0.78), 5px 5px 0 rgba(0,0,0,0.48)",
+            color: "#fff8d7",
+            fontFamily: '"DotGothic16", monospace',
+            fontSize: "0.86rem",
+            lineHeight: 1.6,
+            padding: "10px 12px",
+          }}
+        >
+          {audioError}
+        </div>
       )}
     </main>
   );
