@@ -17,12 +17,12 @@ func (c fakeGitHubOAuthClient) AuthCodeURL(state string) string {
 	return c.authURL + "?state=" + state
 }
 
-func (c fakeGitHubOAuthClient) ExchangeProfile(ctx context.Context, code string) (user.GitHubProfile, error) {
+func (c fakeGitHubOAuthClient) ExchangeLogin(ctx context.Context, code string) (GitHubLogin, error) {
 	if err := ctx.Err(); err != nil {
-		return user.GitHubProfile{}, err
+		return GitHubLogin{}, err
 	}
 
-	return c.profile, nil
+	return GitHubLogin{Profile: c.profile, AccessToken: "github-token"}, nil
 }
 
 type fakeTokenGenerator struct {
@@ -47,10 +47,11 @@ func newFakeUserRepository() *fakeUserRepository {
 	}
 }
 
-func (r *fakeUserRepository) FindOrCreateByGitHub(ctx context.Context, profile user.GitHubProfile, now time.Time) (user.User, error) {
+func (r *fakeUserRepository) FindOrCreateByGitHub(ctx context.Context, login GitHubLogin, now time.Time) (user.User, error) {
 	if err := ctx.Err(); err != nil {
 		return user.User{}, err
 	}
+	profile := login.Profile
 
 	appUser, ok := r.users[profile.GitHubID]
 	if ok {

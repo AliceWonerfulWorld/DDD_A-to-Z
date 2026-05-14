@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	authapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/auth"
+	githubapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/github"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/config"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/database"
 	infragithub "github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/github"
@@ -43,9 +44,9 @@ func main() {
 		}
 	}()
 
-	authController, err := buildAuthController(logger, db)
+	authController, repositoryController, err := buildControllers(logger, db)
 	if err != nil {
-		logger.Error("failed to build auth controller", "error", err)
+		logger.Error("failed to build controllers", "error", err)
 		os.Exit(1)
 	}
 
@@ -54,7 +55,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              ":" + addr,
-		Handler:           httpapi.NewRouter(logger, authController),
+		Handler:           httpapi.NewRouter(logger, authController, repositoryController),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -66,23 +67,33 @@ func main() {
 	}
 }
 
-func buildAuthController(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController, error) {
+func buildControllers(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController, *httpapi.RepositoryController, error) {
 	oauthConfig, err := config.GitHubOAuthFromEnv()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	cookieSecret, err := config.AuthCookieSecretFromEnv()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	cookieSecure, err := config.AuthCookieSecureFromEnv()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	tokenSecret, err := config.GitHubTokenEncryptionSecretFromEnv()
+	if err != nil {
+		return nil, nil, err
+	}
+	tokenCipher, err := security.NewTokenCipher(tokenSecret)
+	if err != nil {
+		return nil, nil, err
 	}
 	frontendURL := config.EnvOrDefault("FRONTEND_URL", "http://localhost:5173")
 
 	oauthClient := infragithub.NewOAuthClient(oauthConfig, nil)
-	authStore := postgres.NewAuthStore(db)
+	repositoryClient := infragithub.NewRepositoryClient(nil)
+	authStore := postgres.NewAuthStore(db, tokenCipher)
+	repositoryStore := postgres.NewRepositoryStore(db)
 	usecase := authapp.NewUseCase(
 		oauthClient,
 		authStore,
@@ -90,12 +101,21 @@ func buildAuthController(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthControl
 		authStore,
 		security.NewSecureTokenGenerator(),
 	)
+	repositoryUseCase := githubapp.NewUseCase(
+		authStore,
+		authStore,
+		repositoryClient,
+		repositoryStore,
+	)
 
-	return httpapi.NewAuthController(
+	authController := httpapi.NewAuthController(
 		usecase,
 		logger,
 		security.NewSignedValueCodec(cookieSecret),
 		cookieSecure,
 		frontendURL,
-	), nil
+	)
+	repositoryController := httpapi.NewRepositoryController(repositoryUseCase, logger)
+
+	return authController, repositoryController, nil
 }

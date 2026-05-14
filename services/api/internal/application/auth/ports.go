@@ -9,11 +9,11 @@ import (
 
 type GitHubOAuthClient interface {
 	AuthCodeURL(state string) string
-	ExchangeProfile(ctx context.Context, code string) (user.GitHubProfile, error)
+	ExchangeLogin(ctx context.Context, code string) (GitHubLogin, error)
 }
 
 type UserRepository interface {
-	FindOrCreateByGitHub(ctx context.Context, profile user.GitHubProfile, now time.Time) (user.User, error)
+	FindOrCreateByGitHub(ctx context.Context, login GitHubLogin, now time.Time) (user.User, error)
 }
 
 type SessionRepository interface {

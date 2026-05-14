@@ -68,13 +68,13 @@ func (u *UseCase) CompleteGitHubLogin(ctx context.Context, code string) (LoginRe
 		return LoginResult{}, ErrMissingCode
 	}
 
-	profile, err := u.github.ExchangeProfile(ctx, code)
+	login, err := u.github.ExchangeLogin(ctx, code)
 	if err != nil {
 		return LoginResult{}, err
 	}
 
 	now := u.now()
-	appUser, err := u.users.FindOrCreateByGitHub(ctx, profile, now)
+	appUser, err := u.users.FindOrCreateByGitHub(ctx, login, now)
 	if err != nil {
 		return LoginResult{}, err
 	}

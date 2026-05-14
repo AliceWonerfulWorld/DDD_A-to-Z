@@ -12,6 +12,7 @@ import (
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/config"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/database"
+	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/security"
 	"gorm.io/gorm"
 )
 
@@ -19,7 +20,7 @@ func TestAuthStoreFindOrCreateByGitHub(t *testing.T) {
 	t.Run("GitHubプロフィールからユーザーを作成または更新できる", func(t *testing.T) {
 		ctx := context.Background()
 		tx := beginPostgresTestTransaction(t, ctx)
-		store := NewAuthStore(tx)
+		store := NewAuthStore(tx, newTestTokenCipher(t))
 
 		githubID := uniqueGitHubID()
 		now := time.Date(2026, 5, 12, 10, 0, 0, 0, time.UTC)
@@ -29,8 +30,11 @@ func TestAuthStoreFindOrCreateByGitHub(t *testing.T) {
 			AvatarURL: "https://example.com/first.png",
 		}
 
-		created, err := store.FindOrCreateByGitHub(ctx, profile, now)
+		created, err := store.FindOrCreateByGitHub(ctx, authapp.GitHubLogin{Profile: profile}, now)
 		if err != nil {
+			if isMissingAuthSchemaError(err) {
+				t.Skipf("PostgreSQL 結合テストをスキップします: auth schema が migrate されていません: %v", err)
+			}
 			t.Fatalf("FindOrCreateByGitHub() の作成でエラーが発生しました: %v", err)
 		}
 
@@ -49,8 +53,11 @@ func TestAuthStoreFindOrCreateByGitHub(t *testing.T) {
 			AvatarURL: "https://example.com/updated.png",
 		}
 
-		updated, err := store.FindOrCreateByGitHub(ctx, updatedProfile, updatedAt)
+		updated, err := store.FindOrCreateByGitHub(ctx, authapp.GitHubLogin{Profile: updatedProfile}, updatedAt)
 		if err != nil {
+			if isMissingAuthSchemaError(err) {
+				t.Skipf("PostgreSQL 結合テストをスキップします: auth schema が migrate されていません: %v", err)
+			}
 			t.Fatalf("FindOrCreateByGitHub() の更新でエラーが発生しました: %v", err)
 		}
 
@@ -78,7 +85,7 @@ func TestAuthStoreSessionLifecycle(t *testing.T) {
 	t.Run("セッションの保存と取得ができる", func(t *testing.T) {
 		ctx := context.Background()
 		tx := beginPostgresTestTransaction(t, ctx)
-		store := NewAuthStore(tx)
+		store := NewAuthStore(tx, newTestTokenCipher(t))
 
 		now := time.Date(2026, 5, 12, 10, 0, 0, 0, time.UTC)
 		profile := user.GitHubProfile{
@@ -86,8 +93,11 @@ func TestAuthStoreSessionLifecycle(t *testing.T) {
 			Username:  "session-user",
 			AvatarURL: "https://example.com/session.png",
 		}
-		appUser, err := store.FindOrCreateByGitHub(ctx, profile, now)
+		appUser, err := store.FindOrCreateByGitHub(ctx, authapp.GitHubLogin{Profile: profile}, now)
 		if err != nil {
+			if isMissingAuthSchemaError(err) {
+				t.Skipf("PostgreSQL 結合テストをスキップします: auth schema が migrate されていません: %v", err)
+			}
 			t.Fatalf("FindOrCreateByGitHub() がエラーを返しました: %v", err)
 		}
 
@@ -129,6 +139,54 @@ func TestAuthStoreSessionLifecycle(t *testing.T) {
 		}
 		if ok {
 			t.Fatal("FindUserBySessionToken() の期限切れセッション ok = true, 期待値 false")
+		}
+	})
+}
+
+func TestAuthStoreGitHubAccessToken(t *testing.T) {
+	t.Run("GitHub access token を暗号化保存して復号取得できる", func(t *testing.T) {
+		ctx := context.Background()
+		tx := beginPostgresTestTransaction(t, ctx)
+		store := NewAuthStore(tx, newTestTokenCipher(t))
+
+		now := time.Date(2026, 5, 14, 16, 0, 0, 0, time.UTC)
+		profile := user.GitHubProfile{
+			GitHubID:  uniqueGitHubID(),
+			Username:  "token-user",
+			AvatarURL: "https://example.com/token.png",
+		}
+		appUser, err := store.FindOrCreateByGitHub(ctx, authapp.GitHubLogin{
+			Profile:     profile,
+			AccessToken: "secret-github-token",
+		}, now)
+		if err != nil {
+			if isMissingAuthSchemaError(err) {
+				t.Skipf("PostgreSQL 結合テストをスキップします: token schema が migrate されていません: %v", err)
+			}
+			t.Fatalf("FindOrCreateByGitHub() がエラーを返しました: %v", err)
+		}
+
+		var stored string
+		if err := tx.WithContext(ctx).Raw(`
+			SELECT access_token_ciphertext
+			FROM github_accounts
+			WHERE user_id = ?
+		`, appUser.ID).Scan(&stored).Error; err != nil {
+			t.Fatalf("access_token_ciphertext の取得でエラーが発生しました: %v", err)
+		}
+		if stored == "" || stored == "secret-github-token" {
+			t.Fatalf("access_token_ciphertext = %q, 暗号化された値が必要です", stored)
+		}
+
+		accessToken, ok, err := store.GitHubAccessToken(ctx, appUser.ID)
+		if err != nil {
+			t.Fatalf("GitHubAccessToken() がエラーを返しました: %v", err)
+		}
+		if !ok {
+			t.Fatal("GitHubAccessToken() ok = false, 期待値 true")
+		}
+		if accessToken != "secret-github-token" {
+			t.Fatalf("accessToken = %q, 期待値 secret-github-token", accessToken)
 		}
 	})
 }
@@ -191,10 +249,24 @@ func uniqueGitHubID() int64 {
 	return 900_000_000_000 + time.Now().UnixNano()%100_000_000_000
 }
 
+func newTestTokenCipher(t *testing.T) *security.TokenCipher {
+	t.Helper()
+
+	cipher, err := security.NewTokenCipher("test-token-secret")
+	if err != nil {
+		t.Fatalf("NewTokenCipher() がエラーを返しました: %v", err)
+	}
+
+	return cipher
+}
+
 func isMissingAuthSchemaError(err error) bool {
 	message := err.Error()
 	return strings.Contains(message, `relation "users" does not exist`) ||
 		strings.Contains(message, `relation "contribution_point_accounts" does not exist`) ||
 		strings.Contains(message, `relation "contribution_point_ledger" does not exist`) ||
-		strings.Contains(message, "SQLSTATE 42P01")
+		strings.Contains(message, `relation "github_repositories" does not exist`) ||
+		strings.Contains(message, `column "access_token_ciphertext" does not exist`) ||
+		strings.Contains(message, "SQLSTATE 42P01") ||
+		strings.Contains(message, "SQLSTATE 42703")
 }

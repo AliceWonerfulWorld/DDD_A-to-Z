@@ -25,10 +25,11 @@ func NewUserRepository() *UserRepository {
 	}
 }
 
-func (r *UserRepository) FindOrCreateByGitHub(ctx context.Context, profile user.GitHubProfile, now time.Time) (user.User, error) {
+func (r *UserRepository) FindOrCreateByGitHub(ctx context.Context, login authapp.GitHubLogin, now time.Time) (user.User, error) {
 	if err := ctx.Err(); err != nil {
 		return user.User{}, err
 	}
+	profile := login.Profile
 
 	r.mu.Lock()
 	defer r.mu.Unlock()

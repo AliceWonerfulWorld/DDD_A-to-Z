@@ -13,21 +13,32 @@ import (
 )
 
 type AuthStore struct {
-	db *gorm.DB
+	db          *gorm.DB
+	tokenCipher TokenCipher
 }
 
-func NewAuthStore(db *gorm.DB) *AuthStore {
-	return &AuthStore{db: db}
+type TokenCipher interface {
+	Encrypt(plaintext, associatedData string) (string, error)
+	Decrypt(ciphertext, associatedData string) (string, error)
 }
 
-func (s *AuthStore) FindOrCreateByGitHub(ctx context.Context, profile user.GitHubProfile, now time.Time) (user.User, error) {
+func NewAuthStore(db *gorm.DB, tokenCipher TokenCipher) *AuthStore {
+	return &AuthStore{db: db, tokenCipher: tokenCipher}
+}
+
+func (s *AuthStore) FindOrCreateByGitHub(ctx context.Context, login authapp.GitHubLogin, now time.Time) (user.User, error) {
+	profile := login.Profile
 	if _, err := user.NewGitHubAccount(profile); err != nil {
+		return user.User{}, err
+	}
+	userID := user.ID(fmt.Sprintf("github_%d", profile.GitHubID))
+	accessTokenCiphertext, err := s.encryptAccessToken(login.AccessToken, userID)
+	if err != nil {
 		return user.User{}, err
 	}
 
 	var appUser user.User
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		userID := user.ID(fmt.Sprintf("github_%d", profile.GitHubID))
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec(`
 			INSERT INTO users (id, created_at, updated_at)
 			VALUES (?, ?, ?)
@@ -37,13 +48,17 @@ func (s *AuthStore) FindOrCreateByGitHub(ctx context.Context, profile user.GitHu
 		}
 
 		if err := tx.Exec(`
-			INSERT INTO github_accounts (github_id, user_id, username, avatar_url, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?)
+			INSERT INTO github_accounts (github_id, user_id, username, avatar_url, access_token_ciphertext, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT (github_id) DO UPDATE
 			SET username = EXCLUDED.username,
 				avatar_url = EXCLUDED.avatar_url,
+				access_token_ciphertext = CASE
+					WHEN EXCLUDED.access_token_ciphertext <> '' THEN EXCLUDED.access_token_ciphertext
+					ELSE github_accounts.access_token_ciphertext
+				END,
 				updated_at = EXCLUDED.updated_at
-		`, profile.GitHubID, userID, profile.Username, profile.AvatarURL, now, now).Error; err != nil {
+		`, profile.GitHubID, userID, profile.Username, profile.AvatarURL, accessTokenCiphertext, now, now).Error; err != nil {
 			return err
 		}
 
@@ -71,6 +86,31 @@ func (s *AuthStore) FindOrCreateByGitHub(ctx context.Context, profile user.GitHu
 	}
 
 	return appUser, nil
+}
+
+func (s *AuthStore) GitHubAccessToken(ctx context.Context, userID user.ID) (string, bool, error) {
+	var ciphertext string
+	result := s.db.WithContext(ctx).Raw(`
+		SELECT access_token_ciphertext
+		FROM github_accounts
+		WHERE user_id = ?
+	`, userID).Scan(&ciphertext)
+	if result.Error != nil {
+		return "", false, result.Error
+	}
+	if result.RowsAffected == 0 || ciphertext == "" {
+		return "", false, nil
+	}
+	if s.tokenCipher == nil {
+		return "", false, fmt.Errorf("github token cipher is not configured")
+	}
+
+	accessToken, err := s.tokenCipher.Decrypt(ciphertext, string(userID))
+	if err != nil {
+		return "", false, err
+	}
+
+	return accessToken, true, nil
 }
 
 func (s *AuthStore) Save(ctx context.Context, session authapp.Session) error {
@@ -153,4 +193,15 @@ func findUserByID(db *gorm.DB, id user.ID) (user.User, bool, error) {
 func tokenHash(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
+}
+
+func (s *AuthStore) encryptAccessToken(accessToken string, userID user.ID) (string, error) {
+	if accessToken == "" {
+		return "", nil
+	}
+	if s.tokenCipher == nil {
+		return "", fmt.Errorf("github token cipher is not configured")
+	}
+
+	return s.tokenCipher.Encrypt(accessToken, string(userID))
 }

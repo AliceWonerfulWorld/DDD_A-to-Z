@@ -24,12 +24,12 @@ func (c fakeGitHubOAuthClient) AuthCodeURL(state string) string {
 	return c.authURL + "?state=" + state
 }
 
-func (c fakeGitHubOAuthClient) ExchangeProfile(ctx context.Context, code string) (user.GitHubProfile, error) {
+func (c fakeGitHubOAuthClient) ExchangeLogin(ctx context.Context, code string) (authapp.GitHubLogin, error) {
 	if err := ctx.Err(); err != nil {
-		return user.GitHubProfile{}, err
+		return authapp.GitHubLogin{}, err
 	}
 
-	return c.profile, nil
+	return authapp.GitHubLogin{Profile: c.profile, AccessToken: "github-token"}, nil
 }
 
 type fakeTokenGenerator struct {

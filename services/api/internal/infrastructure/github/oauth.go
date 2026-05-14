@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	authapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/auth"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/config"
 	"golang.org/x/oauth2"
@@ -35,13 +36,21 @@ func (c *OAuthClient) AuthCodeURL(state string) string {
 	return c.oauthConfig().AuthCodeURL(state)
 }
 
-func (c *OAuthClient) ExchangeProfile(ctx context.Context, code string) (user.GitHubProfile, error) {
+func (c *OAuthClient) ExchangeLogin(ctx context.Context, code string) (authapp.GitHubLogin, error) {
 	token, err := c.oauthConfig().Exchange(c.contextWithHTTPClient(ctx), code)
 	if err != nil {
-		return user.GitHubProfile{}, err
+		return authapp.GitHubLogin{}, err
 	}
 
-	return c.fetchProfile(ctx, token.AccessToken)
+	profile, err := c.fetchProfile(ctx, token.AccessToken)
+	if err != nil {
+		return authapp.GitHubLogin{}, err
+	}
+
+	return authapp.GitHubLogin{
+		Profile:     profile,
+		AccessToken: token.AccessToken,
+	}, nil
 }
 
 func (c *OAuthClient) oauthConfig() *oauth2.Config {
@@ -49,7 +58,7 @@ func (c *OAuthClient) oauthConfig() *oauth2.Config {
 		ClientID:     c.config.ClientID,
 		ClientSecret: c.config.ClientSecret,
 		RedirectURL:  c.config.RedirectURL,
-		Scopes:       []string{"read:user"},
+		Scopes:       []string{"read:user", "repo"},
 		Endpoint:     oauthgithub.Endpoint,
 	}
 }

@@ -13,6 +13,11 @@ type Session struct {
 	ExpiresAt time.Time
 }
 
+type GitHubLogin struct {
+	Profile     user.GitHubProfile
+	AccessToken string
+}
+
 type LoginStart struct {
 	AuthURL        string
 	State          string

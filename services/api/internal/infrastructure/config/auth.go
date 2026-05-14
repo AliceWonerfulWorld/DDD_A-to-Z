@@ -28,3 +28,12 @@ func AuthCookieSecureFromEnv() (bool, error) {
 
 	return secure, nil
 }
+
+func GitHubTokenEncryptionSecretFromEnv() (string, error) {
+	secret := os.Getenv("GITHUB_TOKEN_ENCRYPTION_SECRET")
+	if secret == "" {
+		return "", fmt.Errorf("GITHUB_TOKEN_ENCRYPTION_SECRET must be set")
+	}
+
+	return secret, nil
+}
