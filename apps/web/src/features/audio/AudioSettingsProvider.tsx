@@ -49,13 +49,17 @@ export function AudioSettingsProvider({ children }: AudioSettingsProviderProps) 
   const [settings, setSettings] = useState(readStoredAudioSettings);
 
   useEffect(() => {
-    window.localStorage.setItem(
-      audioSettingsKey,
-      JSON.stringify({
-        bgmEnabled: settings.bgmEnabled,
-        seEnabled: settings.seEnabled,
-      }),
-    );
+    try {
+      window.localStorage.setItem(
+        audioSettingsKey,
+        JSON.stringify({
+          bgmEnabled: settings.bgmEnabled,
+          seEnabled: settings.seEnabled,
+        }),
+      );
+    } catch (error) {
+      console.error("failed to persist audio settings", error);
+    }
   }, [settings.bgmEnabled, settings.seEnabled]);
 
   const toggleBgm = useCallback(() => {
