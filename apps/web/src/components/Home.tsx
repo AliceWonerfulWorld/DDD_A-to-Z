@@ -2,8 +2,10 @@ import { useState } from "react";
 import { HomeHud } from "./HomeHud";
 import { HomeNav } from "./HomeNav";
 import { ReturnTitleDialog } from "./ReturnTitleDialog";
+import { AudioTogglePanel } from "./AudioTogglePanel";
 import { WalkingGopher } from "./WalkingGopher";
 import { useHomeAudio } from "../hooks/useHomeAudio";
+import { AUDIO_ASSETS } from "../features/audio/audioAssets";
 
 interface HomeProps {
   onNavigate: (path: string) => void | Promise<void>;
@@ -35,6 +37,8 @@ export function Home({ onNavigate }: HomeProps) {
   const {
     audioRefs,
     audioError,
+    isBgmEnabled,
+    isSeEnabled,
     playGopherTalk,
     playModalCancel,
     playModalOpen,
@@ -69,33 +73,38 @@ export function Home({ onNavigate }: HomeProps) {
     >
       <audio
         ref={audioRefs.homeBgmRef}
-        src="/bgm/home_bgm.ogg"
+        src={AUDIO_ASSETS.bgm.home}
         loop
         preload="auto"
+        muted={!isBgmEnabled}
         aria-hidden="true"
       />
       <audio
         ref={audioRefs.confirmModalSeRef}
-        src="/SE/confirm-modal.wav"
+        src={AUDIO_ASSETS.se.confirmModal}
         preload="none"
+        muted={!isSeEnabled}
         aria-hidden="true"
       />
       <audio
         ref={audioRefs.modalCancelSeRef}
-        src="/SE/modal-cancel.wav"
+        src={AUDIO_ASSETS.se.modalCancel}
         preload="none"
+        muted={!isSeEnabled}
         aria-hidden="true"
       />
       <audio
         ref={audioRefs.returnTitleSeRef}
-        src="/SE/return-title.wav"
+        src={AUDIO_ASSETS.se.returnTitle}
         preload="none"
+        muted={!isSeEnabled}
         aria-hidden="true"
       />
       <audio
         ref={audioRefs.gopherTalkSeRef}
-        src="/SE/gopher-talk.wav"
+        src={AUDIO_ASSETS.se.gopherTalk}
         preload="none"
+        muted={!isSeEnabled}
         aria-hidden="true"
       />
 
@@ -122,6 +131,8 @@ export function Home({ onNavigate }: HomeProps) {
           zIndex: 2,
         }}
       />
+
+      <AudioTogglePanel position="bottom-left" />
 
       <div
         style={{
@@ -151,10 +162,7 @@ export function Home({ onNavigate }: HomeProps) {
       </div>
 
       {isReturnTitleDialogOpen && (
-        <ReturnTitleDialog
-          onCancel={cancelReturnTitle}
-          onConfirm={playReturnTitle}
-        />
+        <ReturnTitleDialog onCancel={cancelReturnTitle} onConfirm={playReturnTitle} />
       )}
 
       {audioError && (

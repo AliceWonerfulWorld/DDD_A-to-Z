@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAudioSettings } from "../features/audio/useAudioSettings";
 
 const loadOnDemand = (audio: HTMLAudioElement) => {
   if (audio.preload === "none" && audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
@@ -7,6 +8,7 @@ const loadOnDemand = (audio: HTMLAudioElement) => {
 };
 
 export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>) {
+  const { isBgmEnabled, isSeEnabled } = useAudioSettings();
   const homeBgmRef = useRef<HTMLAudioElement | null>(null);
   const confirmModalSeRef = useRef<HTMLAudioElement | null>(null);
   const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
@@ -58,44 +60,60 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
     };
   }, []);
 
-  const playSe = useCallback((audio: HTMLAudioElement | null) => {
-    if (!audio) {
-      return;
+  useEffect(() => {
+    if (homeBgmRef.current) {
+      homeBgmRef.current.muted = !isBgmEnabled;
+
+      if (isBgmEnabled) {
+        void homeBgmRef.current.play().catch(() => {});
+      }
     }
+  }, [isBgmEnabled]);
 
-    loadOnDemand(audio);
-    audio.currentTime = 0;
-    void audio.play().catch(() => {
-      // Browser autoplay restrictions can still block sound in unusual navigation paths.
-    });
-  }, []);
-
-  const playSeUntilEnd = useCallback((audio: HTMLAudioElement | null) => {
-    if (!audio) {
-      return Promise.resolve();
-    }
-
-    return new Promise<void>((resolve) => {
-      let timeoutId: number | undefined;
-
-      const finish = () => {
-        audio.removeEventListener("ended", finish);
-        audio.removeEventListener("error", finish);
-        if (timeoutId !== undefined) {
-          window.clearTimeout(timeoutId);
-        }
-        resolve();
-      };
+  const playSe = useCallback(
+    (audio: HTMLAudioElement | null) => {
+      if (!audio || !isSeEnabled) {
+        return;
+      }
 
       loadOnDemand(audio);
       audio.currentTime = 0;
-      audio.addEventListener("ended", finish, { once: true });
-      audio.addEventListener("error", finish, { once: true });
-      timeoutId = window.setTimeout(finish, 500);
+      void audio.play().catch(() => {
+        // Browser autoplay restrictions can still block sound in unusual navigation paths.
+      });
+    },
+    [isSeEnabled],
+  );
 
-      void audio.play().catch(finish);
-    });
-  }, []);
+  const playSeUntilEnd = useCallback(
+    (audio: HTMLAudioElement | null) => {
+      if (!audio || !isSeEnabled) {
+        return Promise.resolve();
+      }
+
+      return new Promise<void>((resolve) => {
+        let timeoutId: number | undefined;
+
+        const finish = () => {
+          audio.removeEventListener("ended", finish);
+          audio.removeEventListener("error", finish);
+          if (timeoutId !== undefined) {
+            window.clearTimeout(timeoutId);
+          }
+          resolve();
+        };
+
+        loadOnDemand(audio);
+        audio.currentTime = 0;
+        audio.addEventListener("ended", finish, { once: true });
+        audio.addEventListener("error", finish, { once: true });
+        timeoutId = window.setTimeout(finish, 500);
+
+        void audio.play().catch(finish);
+      });
+    },
+    [isSeEnabled],
+  );
 
   const playModalOpen = useCallback(() => {
     playSe(confirmModalSeRef.current);
@@ -129,6 +147,8 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
       gopherTalkSeRef,
     },
     audioError,
+    isBgmEnabled,
+    isSeEnabled,
     playGopherTalk,
     playModalCancel,
     playModalOpen,
