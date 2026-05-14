@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { useAudioSettings } from "../features/audio/useAudioSettings";
 
 export function useTitleAudio() {
+  const { isBgmEnabled, isSeEnabled } = useAudioSettings();
   const titleBgmRef = useRef<HTMLAudioElement | null>(null);
   const confirmModalSeRef = useRef<HTMLAudioElement | null>(null);
   const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
   const modalConfirmSeRef = useRef<HTMLAudioElement | null>(null);
   const titleStartSeRef = useRef<HTMLAudioElement | null>(null);
-  const [isBgmMuted, setIsBgmMuted] = useState(false);
-  const [isSeMuted, setIsSeMuted] = useState(false);
 
   useEffect(() => {
     const audio = titleBgmRef.current;
@@ -55,9 +55,13 @@ export function useTitleAudio() {
 
   useEffect(() => {
     if (titleBgmRef.current) {
-      titleBgmRef.current.muted = isBgmMuted;
+      titleBgmRef.current.muted = !isBgmEnabled;
+
+      if (isBgmEnabled) {
+        void titleBgmRef.current.play().catch(() => {});
+      }
     }
-  }, [isBgmMuted]);
+  }, [isBgmEnabled]);
 
   useEffect(() => {
     const seAudios = [
@@ -69,63 +73,53 @@ export function useTitleAudio() {
 
     for (const audio of seAudios) {
       if (audio) {
-        audio.muted = isSeMuted;
+        audio.muted = !isSeEnabled;
       }
     }
-  }, [isSeMuted]);
+  }, [isSeEnabled]);
 
-  const playSe = useCallback((audio: HTMLAudioElement | null) => {
-    if (!audio || isSeMuted) {
-      return;
-    }
-
-    audio.currentTime = 0;
-    void audio.play().catch(() => {
-      // Browser autoplay restrictions can still block sound in unusual navigation paths.
-    });
-  }, [isSeMuted]);
-
-  const playSeUntilEnd = useCallback((audio: HTMLAudioElement | null) => {
-    if (!audio || isSeMuted) {
-      return Promise.resolve();
-    }
-
-    return new Promise<void>((resolve) => {
-      let timeoutId: number | undefined;
-
-      const finish = () => {
-        audio.removeEventListener("ended", finish);
-        audio.removeEventListener("error", finish);
-        if (timeoutId !== undefined) {
-          window.clearTimeout(timeoutId);
-        }
-        resolve();
-      };
+  const playSe = useCallback(
+    (audio: HTMLAudioElement | null) => {
+      if (!audio || !isSeEnabled) {
+        return;
+      }
 
       audio.currentTime = 0;
-      audio.addEventListener("ended", finish, { once: true });
-      audio.addEventListener("error", finish, { once: true });
-      timeoutId = window.setTimeout(finish, 700);
+      void audio.play().catch(() => {
+        // Browser autoplay restrictions can still block sound in unusual navigation paths.
+      });
+    },
+    [isSeEnabled],
+  );
 
-      void audio.play().catch(finish);
-    });
-  }, [isSeMuted]);
-
-  const toggleBgm = useCallback(() => {
-    setIsBgmMuted((current) => {
-      const shouldMute = !current;
-
-      if (!shouldMute) {
-        void titleBgmRef.current?.play().catch(() => {});
+  const playSeUntilEnd = useCallback(
+    (audio: HTMLAudioElement | null) => {
+      if (!audio || !isSeEnabled) {
+        return Promise.resolve();
       }
 
-      return shouldMute;
-    });
-  }, []);
+      return new Promise<void>((resolve) => {
+        let timeoutId: number | undefined;
 
-  const toggleSe = useCallback(() => {
-    setIsSeMuted((current) => !current);
-  }, []);
+        const finish = () => {
+          audio.removeEventListener("ended", finish);
+          audio.removeEventListener("error", finish);
+          if (timeoutId !== undefined) {
+            window.clearTimeout(timeoutId);
+          }
+          resolve();
+        };
+
+        audio.currentTime = 0;
+        audio.addEventListener("ended", finish, { once: true });
+        audio.addEventListener("error", finish, { once: true });
+        timeoutId = window.setTimeout(finish, 700);
+
+        void audio.play().catch(finish);
+      });
+    },
+    [isSeEnabled],
+  );
 
   const playModalCancel = useCallback(() => {
     playSe(modalCancelSeRef.current);
@@ -151,13 +145,11 @@ export function useTitleAudio() {
       modalConfirmSeRef,
       titleStartSeRef,
     },
-    isBgmMuted,
-    isSeMuted,
+    isBgmEnabled,
+    isSeEnabled,
     playModalCancel,
     playModalConfirm,
     playModalOpen,
     playTitleStart,
-    toggleBgm,
-    toggleSe,
   };
 }
