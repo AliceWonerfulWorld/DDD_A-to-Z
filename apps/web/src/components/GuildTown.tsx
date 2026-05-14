@@ -1,6 +1,14 @@
 import { motion, useMotionValue } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type WheelEvent } from "react";
 import { steppedEase } from "../lib/animationUtils";
+
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 2.5;
+const ZOOM_STEP = 0.15;
+
+function clampValue(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
 
 interface GuildTownProps {
   onNavigate: (path: string) => void;
@@ -23,8 +31,15 @@ export function GuildTown({
 }: GuildTownProps) {
   const progress = Math.min(100, Math.max(0, (currentCp / nextLevelCp) * 100));
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [scale, setScale] = useState(1);
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
+  const dragConstraints = {
+    left: Math.min(0, viewport.width - viewport.width * 2 * scale),
+    right: 0,
+    top: Math.min(0, viewport.height - viewport.height * 2 * scale),
+    bottom: 0,
+  };
 
   useEffect(() => {
     const updateViewport = () => {
@@ -44,9 +59,31 @@ export function GuildTown({
     mapY.set(-viewport.height * 0.5);
   }, [mapX, mapY, viewport.height, viewport.width]);
 
+  useEffect(() => {
+    mapX.set(clampValue(mapX.get(), dragConstraints.left, dragConstraints.right));
+    mapY.set(clampValue(mapY.get(), dragConstraints.top, dragConstraints.bottom));
+  }, [
+    dragConstraints.bottom,
+    dragConstraints.left,
+    dragConstraints.right,
+    dragConstraints.top,
+    mapX,
+    mapY,
+  ]);
+
+  const handleZoom = (delta: number) => {
+    setScale((currentScale) => clampValue(currentScale + delta, MIN_SCALE, MAX_SCALE));
+  };
+
+  const handleWheel = (event: WheelEvent<HTMLElement>) => {
+    event.preventDefault();
+    handleZoom(-event.deltaY * 0.0015);
+  };
+
   return (
     <main
       className="relative h-screen w-full overflow-hidden"
+      onWheel={handleWheel}
       style={{
         background: "#112b1a",
         fontFamily: '"Press Start 2P", "DotGothic16", monospace',
@@ -56,15 +93,17 @@ export function GuildTown({
       <motion.div
         className="absolute left-0 top-0 h-[200vh] w-[200vw] cursor-grab active:cursor-grabbing"
         drag
-        dragConstraints={{
-          left: -viewport.width,
-          right: 0,
-          top: -viewport.height,
-          bottom: 0,
-        }}
+        dragConstraints={dragConstraints}
         dragElastic={0.08}
         dragMomentum={false}
-        style={{ x: mapX, y: mapY, touchAction: "none", userSelect: "none" }}
+        style={{
+          x: mapX,
+          y: mapY,
+          scale,
+          touchAction: "none",
+          transformOrigin: "top left",
+          userSelect: "none",
+        }}
       >
         <img
           className="pixelated"
@@ -203,11 +242,10 @@ export function GuildTown({
         transition={{ duration: 0.32, ease: steppedEase(6) }}
         style={{
           position: "fixed",
-          top: "calc(env(safe-area-inset-top, 0px) + clamp(68px, 7vw, 86px))",
-          left: "50%",
+          top: "calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.2vw, 28px))",
+          right: "clamp(14px, 2.2vw, 28px)",
           zIndex: 5,
-          width: "min(calc(100vw - 32px), 560px)",
-          transform: "translateX(-50%)",
+          width: "min(calc(100vw - 150px), 720px)",
           border: "3px solid rgba(255, 248, 215, 0.76)",
           borderBottomColor: "rgba(55, 44, 35, 0.96)",
           borderRightColor: "rgba(55, 44, 35, 0.96)",
@@ -307,6 +345,57 @@ export function GuildTown({
       >
         &lt; BACK
       </motion.button>
+
+      <div className="absolute bottom-6 right-6 z-[6] flex flex-col gap-3">
+        <motion.button
+          type="button"
+          aria-label="Zoom in"
+          whileHover={{ y: -2, scale: 1.04, backgroundColor: "rgba(255, 217, 102, 0.2)" }}
+          whileTap={{ y: 2, scale: 0.96 }}
+          onClick={() => handleZoom(ZOOM_STEP)}
+          style={{
+            width: "46px",
+            height: "46px",
+            border: "2px solid rgba(255, 217, 102, 0.78)",
+            borderBottomColor: "rgba(96, 62, 22, 0.95)",
+            borderRightColor: "rgba(96, 62, 22, 0.95)",
+            background: "rgba(3, 10, 24, 0.82)",
+            boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 5px 5px 0 rgba(0,0,0,0.34)",
+            color: "#fff8d7",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: "1.1rem",
+            lineHeight: 1,
+            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+          }}
+        >
+          +
+        </motion.button>
+        <motion.button
+          type="button"
+          aria-label="Zoom out"
+          whileHover={{ y: -2, scale: 1.04, backgroundColor: "rgba(255, 217, 102, 0.2)" }}
+          whileTap={{ y: 2, scale: 0.96 }}
+          onClick={() => handleZoom(-ZOOM_STEP)}
+          style={{
+            width: "46px",
+            height: "46px",
+            border: "2px solid rgba(255, 217, 102, 0.78)",
+            borderBottomColor: "rgba(96, 62, 22, 0.95)",
+            borderRightColor: "rgba(96, 62, 22, 0.95)",
+            background: "rgba(3, 10, 24, 0.82)",
+            boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 5px 5px 0 rgba(0,0,0,0.34)",
+            color: "#fff8d7",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: "1.1rem",
+            lineHeight: 1,
+            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+          }}
+        >
+          -
+        </motion.button>
+      </div>
 
       <div
         aria-hidden="true"
