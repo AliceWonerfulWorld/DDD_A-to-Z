@@ -1,4 +1,12 @@
 import { motion } from "framer-motion";
+import { useEffect, useRef } from "react";
+
+const getTabbableElements = (element: HTMLElement) =>
+  Array.from(
+    element.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((target) => !target.hasAttribute("disabled") && !target.getAttribute("aria-hidden"));
 
 export function ReturnTitleDialog({
   onCancel,
@@ -7,6 +15,55 @@ export function ReturnTitleDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    cancelButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) {
+        return;
+      }
+
+      const tabbableElements = getTabbableElements(dialogRef.current);
+      const firstElement = tabbableElements[0];
+      const lastElement = tabbableElements.at(-1);
+
+      if (!firstElement || !lastElement) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+        return;
+      }
+
+      if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [onCancel]);
+
   return (
     <motion.div
       role="presentation"
@@ -25,9 +82,11 @@ export function ReturnTitleDialog({
       onClick={onCancel}
     >
       <motion.div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="return-title-dialog-title"
+        tabIndex={-1}
         initial={{ opacity: 0, y: 18, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.18, ease: "easeOut" }}
@@ -75,6 +134,7 @@ export function ReturnTitleDialog({
           }}
         >
           <motion.button
+            ref={cancelButtonRef}
             type="button"
             whileHover={{ scale: 1.03 }}
             whileTap={{ y: 2, scale: 0.98 }}
