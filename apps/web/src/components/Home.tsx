@@ -260,7 +260,7 @@ function ReturnTitleDialog({
   );
 }
 
-function WalkingGopher() {
+function WalkingGopher({ onTalk }: { onTalk: () => void }) {
   const lastXRef = useRef<number | null>(null);
   const talkTimeoutRef = useRef<number | null>(null);
   const [direction, setDirection] = useState<"right" | "left">("right");
@@ -281,6 +281,8 @@ function WalkingGopher() {
   }, []);
 
   const reactToClick = () => {
+    onTalk();
+
     const nextLine = gopherTalkLines[reactionCount % gopherTalkLines.length];
     setReactionCount((current) => current + 1);
     setTalkLine(nextLine);
@@ -423,9 +425,55 @@ function WalkingGopher() {
 
 export function Home({ onNavigate }: HomeProps) {
   const [isReturnTitleDialogOpen, setIsReturnTitleDialogOpen] = useState(false);
+  const homeBgmRef = useRef<HTMLAudioElement | null>(null);
   const confirmModalSeRef = useRef<HTMLAudioElement | null>(null);
   const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
   const returnTitleSeRef = useRef<HTMLAudioElement | null>(null);
+  const gopherTalkSeRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = homeBgmRef.current;
+    if (!audio) {
+      return;
+    }
+
+    let isUnlocked = false;
+    audio.volume = 0.34;
+
+    const removeUnlockListeners = () => {
+      window.removeEventListener("pointerdown", unlockBgm);
+      window.removeEventListener("keydown", unlockBgm);
+    };
+
+    const playBgm = () => {
+      if (isUnlocked) {
+        return;
+      }
+
+      void audio
+        .play()
+        .then(() => {
+          isUnlocked = true;
+          removeUnlockListeners();
+        })
+        .catch(() => {
+          // ブラウザの自動再生制限で止められた場合は、最初のユーザー操作で再試行する。
+        });
+    };
+
+    const unlockBgm = () => {
+      playBgm();
+    };
+
+    playBgm();
+    window.addEventListener("pointerdown", unlockBgm);
+    window.addEventListener("keydown", unlockBgm);
+
+    return () => {
+      removeUnlockListeners();
+      audio.pause();
+    };
+  }, []);
 
   const playSe = useCallback((audio: HTMLAudioElement | null) => {
     if (!audio) {
@@ -479,6 +527,10 @@ export function Home({ onNavigate }: HomeProps) {
     onNavigate("/");
   };
 
+  const playGopherTalk = () => {
+    playSe(gopherTalkSeRef.current);
+  };
+
   return (
     <main
       style={{
@@ -496,6 +548,13 @@ export function Home({ onNavigate }: HomeProps) {
       }}
     >
       <audio
+        ref={homeBgmRef}
+        src="/bgm/home_bgm.ogg"
+        loop
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
         ref={confirmModalSeRef}
         src="/SE/confirm-modal.wav"
         preload="auto"
@@ -510,6 +569,12 @@ export function Home({ onNavigate }: HomeProps) {
       <audio
         ref={returnTitleSeRef}
         src="/SE/return-title.wav"
+        preload="auto"
+        aria-hidden="true"
+      />
+      <audio
+        ref={gopherTalkSeRef}
+        src="/SE/gopher-talk.wav"
         preload="auto"
         aria-hidden="true"
       />
@@ -612,7 +677,7 @@ export function Home({ onNavigate }: HomeProps) {
             overflow: "visible",
           }}
         >
-          <WalkingGopher />
+          <WalkingGopher onTalk={playGopherTalk} />
         </section>
 
         <nav
