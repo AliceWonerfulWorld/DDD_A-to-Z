@@ -1,13 +1,62 @@
-import { motion, useMotionValue } from "framer-motion";
-import { useEffect, useState, type WheelEvent } from "react";
+import { motion, useMotionValue, type PanInfo } from "framer-motion";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent,
+} from "react";
 import { steppedEase } from "../lib/animationUtils";
 
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.5;
 const ZOOM_STEP = 0.15;
 
+type InventoryItemType = "tent" | "bonfire";
+
+interface InventoryItem {
+  type: InventoryItemType;
+  name: string;
+  count: number;
+  src: string;
+  mapWidth: number;
+}
+
+interface PlacedItem {
+  id: string;
+  type: InventoryItemType;
+  name: string;
+  src: string;
+  x: number;
+  y: number;
+  width: number;
+}
+
+const INITIAL_INVENTORY: InventoryItem[] = [
+  {
+    type: "tent",
+    name: "TENT",
+    count: 2,
+    src: "/town/tent.png",
+    mapWidth: 180,
+  },
+  {
+    type: "bonfire",
+    name: "BONFIRE",
+    count: 3,
+    src: "/town/bonfire.png",
+    mapWidth: 92,
+  },
+];
+
 function clampValue(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function isPointInsideRect(point: PanInfo["point"], rect: DOMRect) {
+  return (
+    point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom
+  );
 }
 
 interface GuildTownProps {
@@ -32,6 +81,10 @@ export function GuildTown({
   const progress = Math.min(100, Math.max(0, (currentCp / nextLevelCp) * 100));
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [scale, setScale] = useState(1);
+  const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
+  const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const inventoryRef = useRef<HTMLDivElement>(null);
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
   const dragConstraints = {
@@ -80,6 +133,77 @@ export function GuildTown({
     handleZoom(-event.deltaY * 0.0015);
   };
 
+  const stopNestedDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    event.stopPropagation();
+  };
+
+  const getMapDropPoint = (point: PanInfo["point"], itemWidth: number) => {
+    const mapElement = mapRef.current;
+    if (!mapElement) return null;
+
+    const mapRect = mapElement.getBoundingClientRect();
+    if (!isPointInsideRect(point, mapRect)) return null;
+
+    const inventoryRect = inventoryRef.current?.getBoundingClientRect();
+    if (inventoryRect && isPointInsideRect(point, inventoryRect)) return null;
+
+    const mapWidth = mapRect.width / scale;
+    const mapHeight = mapRect.height / scale;
+    const x = (point.x - mapRect.left) / scale - itemWidth / 2;
+    const y = (point.y - mapRect.top) / scale - itemWidth / 2;
+
+    return {
+      x: clampValue(x, 0, Math.max(0, mapWidth - itemWidth)),
+      y: clampValue(y, 0, Math.max(0, mapHeight - itemWidth)),
+    };
+  };
+
+  const handleInventoryDragEnd = (
+    item: InventoryItem,
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo,
+  ) => {
+    if (item.count <= 0) return;
+
+    const dropPoint = getMapDropPoint(info.point, item.mapWidth);
+    if (!dropPoint) return;
+
+    setPlacedItems((currentItems) => [
+      ...currentItems,
+      {
+        id: `${item.type}-${Date.now()}-${currentItems.length}`,
+        type: item.type,
+        name: item.name,
+        src: item.src,
+        x: dropPoint.x,
+        y: dropPoint.y,
+        width: item.mapWidth,
+      },
+    ]);
+    setInventory((currentInventory) =>
+      currentInventory.map((inventoryItem) =>
+        inventoryItem.type === item.type
+          ? { ...inventoryItem, count: Math.max(0, inventoryItem.count - 1) }
+          : inventoryItem,
+      ),
+    );
+  };
+
+  const handlePlacedItemDragEnd = (
+    item: PlacedItem,
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo,
+  ) => {
+    const dropPoint = getMapDropPoint(info.point, item.width);
+    if (!dropPoint) return;
+
+    setPlacedItems((currentItems) =>
+      currentItems.map((placedItem) =>
+        placedItem.id === item.id ? { ...placedItem, x: dropPoint.x, y: dropPoint.y } : placedItem,
+      ),
+    );
+  };
+
   return (
     <main
       className="relative h-screen w-full overflow-hidden"
@@ -91,6 +215,7 @@ export function GuildTown({
       }}
     >
       <motion.div
+        ref={mapRef}
         className="absolute left-0 top-0 h-[200vh] w-[200vw] cursor-grab active:cursor-grabbing"
         drag
         dragConstraints={dragConstraints}
@@ -234,6 +359,34 @@ export function GuildTown({
             }}
           />
         </div>
+
+        {placedItems.map((item) => (
+          <motion.img
+            key={item.id}
+            className="pixelated"
+            src={item.src}
+            alt={item.name}
+            drag
+            dragSnapToOrigin
+            dragElastic={0}
+            dragMomentum={false}
+            onPointerDown={stopNestedDrag}
+            onDragEnd={(event, info) => handlePlacedItemDragEnd(item, event, info)}
+            whileDrag={{ scale: 1.05, zIndex: 12 }}
+            style={{
+              position: "absolute",
+              left: item.x,
+              top: item.y,
+              width: item.width,
+              height: "auto",
+              cursor: "grab",
+              filter: "drop-shadow(10px 14px 0 rgba(0,0,0,0.3))",
+              mixBlendMode: "screen",
+              touchAction: "none",
+              zIndex: 8,
+            }}
+          />
+        ))}
       </motion.div>
 
       <motion.header
@@ -346,7 +499,125 @@ export function GuildTown({
         &lt; BACK
       </motion.button>
 
-      <div className="absolute bottom-6 right-6 z-[6] flex flex-col gap-3">
+      <motion.div
+        ref={inventoryRef}
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.32, ease: steppedEase(6) }}
+        style={{
+          position: "fixed",
+          left: "50%",
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(14px, 2vw, 24px))",
+          transform: "translateX(-50%)",
+          zIndex: 8,
+          display: "flex",
+          width: "min(calc(100vw - 160px), 620px)",
+          minHeight: "104px",
+          alignItems: "stretch",
+          gap: "10px",
+          overflowX: "auto",
+          border: "3px solid rgba(255, 248, 215, 0.8)",
+          borderBottomColor: "rgba(55, 44, 35, 0.98)",
+          borderRightColor: "rgba(55, 44, 35, 0.98)",
+          background: "rgba(3, 7, 14, 0.88)",
+          boxShadow:
+            "0 0 0 2px rgba(0,0,0,0.72), 6px 6px 0 rgba(0,0,0,0.4), inset 0 0 18px rgba(255,248,215,0.08)",
+          padding: "10px",
+          backdropFilter: "blur(2px)",
+        }}
+      >
+        {inventory.map((item) => {
+          const isAvailable = item.count > 0;
+
+          return (
+            <motion.div
+              key={item.type}
+              role="button"
+              aria-label={`${item.name} inventory item. ${item.count} remaining.`}
+              aria-disabled={!isAvailable}
+              tabIndex={isAvailable ? 0 : -1}
+              drag={isAvailable}
+              dragSnapToOrigin
+              dragElastic={0}
+              dragMomentum={false}
+              onPointerDown={stopNestedDrag}
+              onDragEnd={(event, info) => handleInventoryDragEnd(item, event, info)}
+              whileHover={
+                isAvailable ? { y: -2, backgroundColor: "rgba(255, 217, 102, 0.12)" } : undefined
+              }
+              whileTap={isAvailable ? { y: 2, scale: 0.98 } : undefined}
+              whileDrag={{ scale: 1.06, zIndex: 20 }}
+              style={{
+                position: "relative",
+                display: "grid",
+                gridTemplateRows: "52px auto",
+                width: "116px",
+                flex: "0 0 116px",
+                alignItems: "center",
+                justifyItems: "center",
+                gap: "6px",
+                border: "2px solid rgba(116, 247, 161, 0.62)",
+                borderBottomColor: "rgba(24, 83, 45, 0.95)",
+                borderRightColor: "rgba(24, 83, 45, 0.95)",
+                background: isAvailable ? "rgba(1, 12, 24, 0.78)" : "rgba(18, 18, 18, 0.68)",
+                boxShadow: "inset 0 0 12px rgba(0,0,0,0.62)",
+                color: isAvailable ? "#fff8d7" : "rgba(255, 248, 215, 0.42)",
+                cursor: isAvailable ? "grab" : "not-allowed",
+                fontFamily: "inherit",
+                fontSize: "0.52rem",
+                lineHeight: 1.35,
+                padding: "8px 7px",
+                textAlign: "center",
+                textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+                touchAction: "none",
+              }}
+            >
+              <img
+                className="pixelated"
+                src={item.src}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                style={{
+                  display: "block",
+                  maxWidth: "64px",
+                  maxHeight: "52px",
+                  opacity: isAvailable ? 1 : 0.38,
+                  pointerEvents: "none",
+                  filter: "drop-shadow(4px 5px 0 rgba(0,0,0,0.34))",
+                  mixBlendMode: "screen",
+                }}
+              />
+              <span>{item.name}</span>
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  right: "6px",
+                  top: "6px",
+                  minWidth: "24px",
+                  border: "2px solid rgba(255, 217, 102, 0.78)",
+                  background: isAvailable ? "rgba(62, 26, 8, 0.92)" : "rgba(8, 8, 8, 0.92)",
+                  color: isAvailable ? "#ffd966" : "rgba(255, 248, 215, 0.46)",
+                  fontSize: "0.52rem",
+                  lineHeight: 1,
+                  padding: "4px 5px",
+                  boxShadow: "0 0 0 1px rgba(0,0,0,0.72)",
+                }}
+              >
+                x{item.count}
+              </span>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+
+      <div
+        className="absolute right-6 z-[6] flex flex-col gap-3"
+        style={{
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 142px)",
+        }}
+      >
         <motion.button
           type="button"
           aria-label="Zoom in"
