@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { SPRITE_ASSETS } from "../constants/assets";
+import { SPRITE_ASSETS } from "../../constants/assets";
 
 interface RustSamuraiProps {
   className?: string;

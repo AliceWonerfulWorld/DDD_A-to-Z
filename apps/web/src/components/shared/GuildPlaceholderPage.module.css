@@ -5,7 +5,8 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background-image: linear-gradient(180deg, rgba(4, 8, 18, 0.28), rgba(4, 8, 18, 0.68)),
+  background-image:
+    linear-gradient(180deg, rgba(4, 8, 18, 0.28), rgba(4, 8, 18, 0.68)),
     url("/pixel-town-night.png");
   background-size: cover;
   background-position: center;

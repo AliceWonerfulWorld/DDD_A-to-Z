@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { CurrentUser } from "../features/auth/types";
+import type { CurrentUser } from "../../features/auth/types";
 
 interface TitleUserBadgeProps {
   user: CurrentUser;

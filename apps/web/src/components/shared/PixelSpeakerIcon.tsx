@@ -34,10 +34,18 @@ export function PixelSpeakerIcon({ muted }: PixelSpeakerIconProps) {
       )}
       {muted && (
         <>
-          <span style={{ ...pixel, left: 13, top: 3, width: 2, height: 2, background: "#ffb0aa" }} />
-          <span style={{ ...pixel, left: 15, top: 5, width: 2, height: 2, background: "#ffb0aa" }} />
-          <span style={{ ...pixel, left: 13, top: 7, width: 2, height: 2, background: "#ffb0aa" }} />
-          <span style={{ ...pixel, left: 11, top: 9, width: 2, height: 2, background: "#ffb0aa" }} />
+          <span
+            style={{ ...pixel, left: 13, top: 3, width: 2, height: 2, background: "#ffb0aa" }}
+          />
+          <span
+            style={{ ...pixel, left: 15, top: 5, width: 2, height: 2, background: "#ffb0aa" }}
+          />
+          <span
+            style={{ ...pixel, left: 13, top: 7, width: 2, height: 2, background: "#ffb0aa" }}
+          />
+          <span
+            style={{ ...pixel, left: 11, top: 9, width: 2, height: 2, background: "#ffb0aa" }}
+          />
         </>
       )}
     </span>

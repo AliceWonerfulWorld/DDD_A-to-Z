@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ParticleBackground } from "./ParticleBackground";
+import { ParticleBackground } from "../shared/ParticleBackground";
 import { AnalyzingPanel } from "./AnalyzingPanel";
 import { CompletePanel, type AnalysisResult } from "./CompletePanel";
 

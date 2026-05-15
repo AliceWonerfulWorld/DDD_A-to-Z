@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
-import { useAudioSettings } from "../features/audio/useAudioSettings";
+import { useAudioSettings } from "../../features/audio/useAudioSettings";
 import { PixelSpeakerIcon } from "./PixelSpeakerIcon";
 
 type AudioTogglePanelPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
