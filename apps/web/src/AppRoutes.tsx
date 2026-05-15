@@ -2,11 +2,11 @@ import { Navigate, Route, Routes, useNavigate } from "react-router";
 import App from "./App.tsx";
 import { ContributionAnalysis } from "./components/ContributionAnalysis.tsx";
 import { GuildDashboard } from "./components/GuildDashboard.tsx";
-import { GuildPlaceholderPage } from "./components/GuildPlaceholderPage.tsx";
 import { GuildTown } from "./components/GuildTown.tsx";
 import { Home } from "./components/Home.tsx";
 import { InitialProfile } from "./components/InitialProfile.tsx";
 import { MyPage } from "./components/MyPage.tsx";
+import { MyGuildDetails } from "./components/MyGuildDetails.tsx";
 import { fetchMe } from "./features/auth/api.ts";
 import { markInitialProfileCompleted } from "./features/profile/initialProfile.ts";
 
@@ -43,16 +43,8 @@ export function AppRoutes() {
       <Route path="/home" element={<Home onNavigate={navigate} />} />
       <Route path="/mypage" element={<MyPage onNavigate={navigate} />} />
       <Route path="/guild" element={<GuildDashboard onNavigate={navigate} />} />
-      <Route
-        path="/guild/details"
-        element={
-          <GuildPlaceholderPage
-            title="GUILD DETAILS"
-            caption="ギルド詳細画面は準備中です。"
-            onNavigate={navigate}
-          />
-        }
-      />
+      <Route path="/guild/details" element={<MyGuildDetails onNavigate={navigate} />} />
+      <Route path="/guild/my-guild" element={<MyGuildDetails onNavigate={navigate} />} />
       <Route path="/guild/town" element={<GuildTown onNavigate={navigate} />} />
       <Route path="/war" element={<Navigate to="/mypage" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
