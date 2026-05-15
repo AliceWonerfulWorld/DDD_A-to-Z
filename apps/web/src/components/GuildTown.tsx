@@ -19,7 +19,9 @@ interface InventoryItem {
   name: string;
   count: number;
   src: string;
-  mapWidth: number;
+  minMapWidth: number;
+  mapWidthVw: number;
+  maxMapWidth: number;
 }
 
 interface PlacedItem {
@@ -38,14 +40,18 @@ const INITIAL_INVENTORY: InventoryItem[] = [
     name: "TENT",
     count: 2,
     src: "/town/tent.png",
-    mapWidth: 180,
+    minMapWidth: 210,
+    mapWidthVw: 29,
+    maxMapWidth: 430,
   },
   {
     type: "bonfire",
     name: "BONFIRE",
     count: 3,
     src: "/town/bonfire.png",
-    mapWidth: 92,
+    minMapWidth: 92,
+    mapWidthVw: 12,
+    maxMapWidth: 164,
   },
 ];
 
@@ -56,6 +62,14 @@ function clampValue(value: number, min: number, max: number) {
 function isPointInsideRect(point: PanInfo["point"], rect: DOMRect) {
   return (
     point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom
+  );
+}
+
+function getInventoryMapWidth(item: InventoryItem, viewportWidth: number) {
+  return clampValue(
+    viewportWidth * (item.mapWidthVw / 100),
+    item.minMapWidth,
+    item.maxMapWidth,
   );
 }
 
@@ -165,7 +179,8 @@ export function GuildTown({
   ) => {
     if (item.count <= 0) return;
 
-    const dropPoint = getMapDropPoint(info.point, item.mapWidth);
+    const itemWidth = getInventoryMapWidth(item, viewport.width);
+    const dropPoint = getMapDropPoint(info.point, itemWidth);
     if (!dropPoint) return;
 
     setPlacedItems((currentItems) => [
@@ -177,7 +192,7 @@ export function GuildTown({
         src: item.src,
         x: dropPoint.x,
         y: dropPoint.y,
-        width: item.mapWidth,
+        width: itemWidth,
       },
     ]);
     setInventory((currentInventory) =>
@@ -381,7 +396,6 @@ export function GuildTown({
               height: "auto",
               cursor: "grab",
               filter: "drop-shadow(10px 14px 0 rgba(0,0,0,0.3))",
-              mixBlendMode: "screen",
               touchAction: "none",
               zIndex: 8,
             }}
