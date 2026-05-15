@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { steppedEase } from "../lib/animationUtils";
+import { GuildBgm } from "./GuildBgm";
 import styles from "./GuildPlaceholderPage.module.css";
 
 interface GuildPlaceholderPageProps {
@@ -17,6 +18,8 @@ export function GuildPlaceholderPage({
 }: GuildPlaceholderPageProps) {
   return (
     <main className={styles.mainContainer}>
+      <GuildBgm />
+
       <motion.section
         className={styles.panel}
         initial={{ opacity: 0, y: 16 }}

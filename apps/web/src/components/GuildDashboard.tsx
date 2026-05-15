@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { steppedEase } from "../lib/animationUtils";
+import { GuildBgm } from "./GuildBgm";
 
 interface GuildDashboardProps {
   onNavigate: (path: string) => void;
@@ -279,6 +280,8 @@ function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
         overflow: "hidden",
       }}
     >
+      <GuildBgm />
+
       <div
         style={{
           display: "flex",

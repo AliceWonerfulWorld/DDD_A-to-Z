@@ -15,6 +15,7 @@ import { MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS, INITIAL_INVENTORY } from "./g
 import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./guild-town/townMath";
 import type { InventoryItem, PlacedItem, ViewportSize } from "./guild-town/types";
 import { ZoomControls } from "./guild-town/ZoomControls";
+import { GuildBgm } from "./GuildBgm";
 
 interface GuildTownProps {
   onNavigate: (path: string) => void;
@@ -229,6 +230,8 @@ export function GuildTown({
         color: "#fff8d7",
       }}
     >
+      <GuildBgm />
+
       <TownMap
         baseSrc={baseSrc}
         dragConstraints={dragConstraints}
