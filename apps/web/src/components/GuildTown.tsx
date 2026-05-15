@@ -97,6 +97,7 @@ export function GuildTown({
   const [scale, setScale] = useState(1);
   const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
+  const [inventoryVisible, setInventoryVisible] = useState(true);
   const mapRef = useRef<HTMLDivElement>(null);
   const inventoryRef = useRef<HTMLDivElement>(null);
   const mapX = useMotionValue(0);
@@ -513,34 +514,73 @@ export function GuildTown({
         &lt; BACK
       </motion.button>
 
-      <motion.div
+      <motion.aside
         ref={inventoryRef}
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, x: -18 }}
+        animate={{
+          opacity: 1,
+          x: inventoryVisible ? 0 : "calc(-100% - 14px)",
+        }}
         transition={{ duration: 0.32, ease: steppedEase(6) }}
+        aria-label="Build inventory"
         style={{
           position: "fixed",
-          left: "50%",
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(14px, 2vw, 24px))",
-          transform: "translateX(-50%)",
+          left: "clamp(14px, 2vw, 24px)",
+          top: "calc(env(safe-area-inset-top, 0px) + 94px)",
           zIndex: 8,
           display: "flex",
-          width: "min(calc(100vw - 160px), 620px)",
-          minHeight: "104px",
+          width: "148px",
+          maxHeight:
+            "calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 118px)",
           alignItems: "stretch",
+          flexDirection: "column",
           gap: "10px",
-          overflowX: "auto",
-          border: "3px solid rgba(255, 248, 215, 0.8)",
-          borderBottomColor: "rgba(55, 44, 35, 0.98)",
-          borderRightColor: "rgba(55, 44, 35, 0.98)",
-          background: "rgba(3, 7, 14, 0.88)",
-          boxShadow:
-            "0 0 0 2px rgba(0,0,0,0.72), 6px 6px 0 rgba(0,0,0,0.4), inset 0 0 18px rgba(255,248,215,0.08)",
+          overflow: "visible",
+          border: inventoryVisible
+            ? "3px solid rgba(255, 248, 215, 0.8)"
+            : "3px solid transparent",
+          borderBottomColor: inventoryVisible ? "rgba(55, 44, 35, 0.98)" : "transparent",
+          borderRightColor: inventoryVisible ? "rgba(55, 44, 35, 0.98)" : "transparent",
+          background: inventoryVisible ? "rgba(3, 7, 14, 0.88)" : "transparent",
+          boxShadow: inventoryVisible
+            ? "0 0 0 2px rgba(0,0,0,0.72), 6px 6px 0 rgba(0,0,0,0.4), inset 0 0 18px rgba(255,248,215,0.08)"
+            : "none",
           padding: "10px",
           backdropFilter: "blur(2px)",
         }}
       >
-        {inventory.map((item) => {
+        <motion.button
+          type="button"
+          aria-label={inventoryVisible ? "Hide build inventory" : "Show build inventory"}
+          aria-expanded={inventoryVisible}
+          onPointerDown={stopNestedDrag}
+          onClick={() => setInventoryVisible((currentVisible) => !currentVisible)}
+          whileHover={{ x: 2, backgroundColor: "rgba(255, 217, 102, 0.18)" }}
+          whileTap={{ x: -1, scale: 0.98 }}
+          style={{
+            position: "absolute",
+            right: "-48px",
+            top: "12px",
+            width: "42px",
+            height: "42px",
+            border: "2px solid rgba(255, 217, 102, 0.78)",
+            borderBottomColor: "rgba(96, 62, 22, 0.95)",
+            borderRightColor: "rgba(96, 62, 22, 0.95)",
+            background: "rgba(3, 10, 24, 0.86)",
+            boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 4px 4px 0 rgba(0,0,0,0.34)",
+            color: "#fff8d7",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: "0.82rem",
+            lineHeight: 1,
+            padding: "0",
+            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+          }}
+        >
+          {inventoryVisible ? "<<" : ">>"}
+        </motion.button>
+
+        {inventoryVisible && inventory.map((item) => {
           const isAvailable = item.count > 0;
 
           return (
@@ -564,9 +604,9 @@ export function GuildTown({
               style={{
                 position: "relative",
                 display: "grid",
-                gridTemplateRows: "52px auto",
-                width: "116px",
-                flex: "0 0 116px",
+                gridTemplateRows: "58px auto",
+                width: "100%",
+                minHeight: "116px",
                 alignItems: "center",
                 justifyItems: "center",
                 gap: "6px",
@@ -594,8 +634,8 @@ export function GuildTown({
                 draggable={false}
                 style={{
                   display: "block",
-                  maxWidth: "64px",
-                  maxHeight: "52px",
+                  maxWidth: "74px",
+                  maxHeight: "58px",
                   opacity: isAvailable ? 1 : 0.38,
                   pointerEvents: "none",
                   filter: "drop-shadow(4px 5px 0 rgba(0,0,0,0.34))",
@@ -624,7 +664,7 @@ export function GuildTown({
             </motion.div>
           );
         })}
-      </motion.div>
+      </motion.aside>
 
       <div
         className="absolute right-6 z-[6] flex flex-col gap-3"
