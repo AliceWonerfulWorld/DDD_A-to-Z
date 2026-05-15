@@ -10,6 +10,7 @@ const loadOnDemand = (audio: HTMLAudioElement) => {
 export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>) {
   const { isBgmEnabled, isSeEnabled } = useAudioSettings();
   const homeBgmRef = useRef<HTMLAudioElement | null>(null);
+  const homeNavSelectSeRef = useRef<HTMLAudioElement | null>(null);
   const confirmModalSeRef = useRef<HTMLAudioElement | null>(null);
   const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
   const returnTitleSeRef = useRef<HTMLAudioElement | null>(null);
@@ -138,9 +139,24 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
     playSe(gopherTalkSeRef.current);
   }, [playSe]);
 
+  const playHomeNavSelect = useCallback(
+    async (path: string) => {
+      try {
+        setAudioError(null);
+        await playSeUntilEnd(homeNavSelectSeRef.current);
+        await onNavigate(path);
+      } catch (error) {
+        console.error("failed to navigate from home", error);
+        setAudioError("画面移動に失敗しました。");
+      }
+    },
+    [onNavigate, playSeUntilEnd],
+  );
+
   return {
     audioRefs: {
       homeBgmRef,
+      homeNavSelectSeRef,
       confirmModalSeRef,
       modalCancelSeRef,
       returnTitleSeRef,
@@ -150,6 +166,7 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
     isBgmEnabled,
     isSeEnabled,
     playGopherTalk,
+    playHomeNavSelect,
     playModalCancel,
     playModalOpen,
     playReturnTitle,
