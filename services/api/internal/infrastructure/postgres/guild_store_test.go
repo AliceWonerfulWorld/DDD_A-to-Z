@@ -49,7 +49,7 @@ func TestGuildStoreListGuilds(t *testing.T) {
 
 	guilds, err := store.ListGuilds(ctx)
 	if err != nil {
-		if isMissingAuthSchemaError(err) {
+		if isMissingSchemaError(err) {
 			t.Skipf("PostgreSQL 結合テストをスキップします: guild schema が migrate されていません: %v", err)
 		}
 		t.Fatalf("ListGuilds() がエラーを返しました: %v", err)
@@ -139,7 +139,7 @@ func insertPostgresTestGuild(t *testing.T, ctx context.Context, tx *gorm.DB, gui
 		INSERT INTO guilds (id, slug, name, description, icon, color, sort_order, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, guild.ID, guild.Slug, guild.Name, guild.Description, guild.Icon, guild.Color, guild.SortOrder, guild.CreatedAt, guild.UpdatedAt).Error; err != nil {
-		if isMissingAuthSchemaError(err) {
+		if isMissingSchemaError(err) {
 			t.Skipf("PostgreSQL 結合テストをスキップします: guild schema が migrate されていません: %v", err)
 		}
 		t.Fatalf("guilds INSERT でエラーが発生しました: %v", err)
@@ -153,7 +153,7 @@ func insertPostgresTestMembership(t *testing.T, ctx context.Context, tx *gorm.DB
 		INSERT INTO guild_memberships (id, user_id, guild_id, joined_at, left_at, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`, id, userID, guildID, joinedAt, leftAt, joinedAt, joinedAt).Error; err != nil {
-		if isMissingAuthSchemaError(err) {
+		if isMissingSchemaError(err) {
 			t.Skipf("PostgreSQL 結合テストをスキップします: guild membership schema が migrate されていません: %v", err)
 		}
 		t.Fatalf("guild_memberships INSERT でエラーが発生しました: %v", err)
