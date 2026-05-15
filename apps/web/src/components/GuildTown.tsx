@@ -1,4 +1,4 @@
-import { motion, useMotionValue, type PanInfo } from "framer-motion";
+import { useMotionValue, type PanInfo } from "framer-motion";
 import {
   useEffect,
   useRef,
@@ -6,81 +6,15 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent,
 } from "react";
-import { steppedEase } from "../lib/animationUtils";
-
-const MIN_SCALE = 0.5;
-const MAX_SCALE = 2.5;
-const ZOOM_STEP = 0.15;
-const STORE_ANIMATION_MS = 260;
-
-type InventoryItemType = "tent" | "bonfire";
-
-interface InventoryItem {
-  type: InventoryItemType;
-  name: string;
-  title: string;
-  description: string;
-  count: number;
-  src: string;
-  minMapWidth: number;
-  mapWidthVw: number;
-  maxMapWidth: number;
-}
-
-interface PlacedItem {
-  id: string;
-  type: InventoryItemType;
-  name: string;
-  title: string;
-  description: string;
-  src: string;
-  x: number;
-  y: number;
-  width: number;
-}
-
-const INITIAL_INVENTORY: InventoryItem[] = [
-  {
-    type: "tent",
-    name: "TENT",
-    title: "旅人のテント",
-    description: "ギルドの仲間が遠征前に集う簡易拠点。休息と作戦会議に使われる。",
-    count: 2,
-    src: "/town/tent.png",
-    minMapWidth: 210,
-    mapWidthVw: 29,
-    maxMapWidth: 430,
-  },
-  {
-    type: "bonfire",
-    name: "BONFIRE",
-    title: "団らんの焚き火",
-    description: "夜のギルドタウンを照らす小さな火。仲間の士気をじんわり温める。",
-    count: 3,
-    src: "/town/bonfire.png",
-    minMapWidth: 92,
-    mapWidthVw: 12,
-    maxMapWidth: 164,
-  },
-];
-
-function clampValue(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function isPointInsideRect(point: PanInfo["point"], rect: DOMRect) {
-  return (
-    point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom
-  );
-}
-
-function getInventoryMapWidth(item: InventoryItem, viewportWidth: number) {
-  return clampValue(
-    viewportWidth * (item.mapWidthVw / 100),
-    item.minMapWidth,
-    item.maxMapWidth,
-  );
-}
+import { BackButton } from "./guild-town/BackButton";
+import { BuildInventory } from "./guild-town/BuildInventory";
+import { BuildingInfoPanel } from "./guild-town/BuildingInfoPanel";
+import { TownMap } from "./guild-town/TownMap";
+import { TownStatusHeader } from "./guild-town/TownStatusHeader";
+import { MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS, INITIAL_INVENTORY } from "./guild-town/townData";
+import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./guild-town/townMath";
+import type { InventoryItem, PlacedItem, ViewportSize } from "./guild-town/types";
+import { ZoomControls } from "./guild-town/ZoomControls";
 
 interface GuildTownProps {
   onNavigate: (path: string) => void;
@@ -101,8 +35,7 @@ export function GuildTown({
   mainStructureSrc = "/town/tent.png",
   bonfireSrc = "/town/bonfire.png",
 }: GuildTownProps) {
-  const progress = Math.min(100, Math.max(0, (currentCp / nextLevelCp) * 100));
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height: 0 });
   const [scale, setScale] = useState(1);
   const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
@@ -114,14 +47,15 @@ export function GuildTown({
   const seededInitialBuildingsRef = useRef(false);
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
+  const progress = Math.min(100, Math.max(0, (currentCp / nextLevelCp) * 100));
+  const selectedPlacedItem =
+    placedItems.find((placedItem) => placedItem.id === selectedPlacedItemId) ?? null;
   const dragConstraints = {
     left: Math.min(0, viewport.width - viewport.width * 2 * scale),
     right: 0,
     top: Math.min(0, viewport.height - viewport.height * 2 * scale),
     bottom: 0,
   };
-  const selectedPlacedItem =
-    placedItems.find((placedItem) => placedItem.id === selectedPlacedItemId) ?? null;
 
   useEffect(() => {
     const updateViewport = () => {
@@ -154,28 +88,20 @@ export function GuildTown({
     const bonfireWidth = getInventoryMapWidth(bonfire, viewport.width);
 
     setPlacedItems([
-      {
+      createPlacedItem(tent, {
         id: "initial-tent",
-        type: tent.type,
-        name: tent.name,
-        title: tent.title,
-        description: tent.description,
         src: mainStructureSrc,
+        width: tentWidth,
         x: viewport.width - tentWidth * 0.64,
         y: viewport.height - tentWidth * 0.28,
-        width: tentWidth,
-      },
-      {
+      }),
+      createPlacedItem(bonfire, {
         id: "initial-bonfire",
-        type: bonfire.type,
-        name: bonfire.name,
-        title: bonfire.title,
-        description: bonfire.description,
         src: bonfireSrc,
+        width: bonfireWidth,
         x: viewport.width + bonfireWidth * 0.42,
         y: viewport.height + bonfireWidth * 0.62,
-        width: bonfireWidth,
-      },
+      }),
     ]);
     seededInitialBuildingsRef.current = true;
   }, [bonfireSrc, mainStructureSrc, viewport.height, viewport.width]);
@@ -239,25 +165,15 @@ export function GuildTown({
 
     setPlacedItems((currentItems) => [
       ...currentItems,
-      {
+      createPlacedItem(item, {
         id: `${item.type}-${Date.now()}-${currentItems.length}`,
-        type: item.type,
-        name: item.name,
-        title: item.title,
-        description: item.description,
         src: item.src,
+        width: itemWidth,
         x: dropPoint.x,
         y: dropPoint.y,
-        width: itemWidth,
-      },
+      }),
     ]);
-    setInventory((currentInventory) =>
-      currentInventory.map((inventoryItem) =>
-        inventoryItem.type === item.type
-          ? { ...inventoryItem, count: Math.max(0, inventoryItem.count - 1) }
-          : inventoryItem,
-      ),
-    );
+    setInventoryCount(item.type, -1);
   };
 
   const handlePlacedItemDragEnd = (
@@ -286,17 +202,21 @@ export function GuildTown({
       setPlacedItems((currentItems) =>
         currentItems.filter((placedItem) => placedItem.id !== item.id),
       );
-      setInventory((currentInventory) =>
-        currentInventory.map((inventoryItem) =>
-          inventoryItem.type === item.type
-            ? { ...inventoryItem, count: inventoryItem.count + 1 }
-            : inventoryItem,
-        ),
-      );
+      setInventoryCount(item.type, 1);
       setStoringPlacedItemIds((currentIds) =>
         currentIds.filter((storingItemId) => storingItemId !== item.id),
       );
     }, STORE_ANIMATION_MS);
+  };
+
+  const setInventoryCount = (type: InventoryItem["type"], delta: number) => {
+    setInventory((currentInventory) =>
+      currentInventory.map((inventoryItem) =>
+        inventoryItem.type === type
+          ? { ...inventoryItem, count: Math.max(0, inventoryItem.count + delta) }
+          : inventoryItem,
+      ),
+    );
   };
 
   return (
@@ -309,596 +229,39 @@ export function GuildTown({
         color: "#fff8d7",
       }}
     >
-      <motion.div
-        ref={mapRef}
-        className="absolute left-0 top-0 h-[200vh] w-[200vw] cursor-grab active:cursor-grabbing"
-        drag
+      <TownMap
+        baseSrc={baseSrc}
         dragConstraints={dragConstraints}
-        dragElastic={0.08}
-        dragMomentum={false}
-        style={{
-          x: mapX,
-          y: mapY,
-          scale,
-          touchAction: "none",
-          transformOrigin: "top left",
-          userSelect: "none",
-        }}
-      >
-        <img
-          className="pixelated"
-          src={baseSrc}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center bottom",
-            pointerEvents: "none",
-          }}
-        />
+        mapRef={mapRef}
+        mapX={mapX}
+        mapY={mapY}
+        onMoveItem={handlePlacedItemDragEnd}
+        onSelectItem={setSelectedPlacedItemId}
+        onStoreItem={handleStorePlacedItem}
+        placedItems={placedItems}
+        scale={scale}
+        selectedPlacedItemId={selectedPlacedItemId}
+        stopNestedDrag={stopNestedDrag}
+        storingPlacedItemIds={storingPlacedItemIds}
+      />
 
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(4, 18, 18, 0.1) 0%, rgba(5, 16, 12, 0.04) 48%, rgba(6, 15, 10, 0.3) 100%)",
-            pointerEvents: "none",
-            zIndex: 1,
-          }}
-        />
-
-        <div
-          aria-hidden="true"
-          className="bg-[radial-gradient(ellipse_at_center,_transparent_20%,_rgba(0,0,0,0.6)_100%)]"
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            zIndex: 2,
-          }}
-        />
-
-        {placedItems.map((item) => {
-          const isSelected = selectedPlacedItemId === item.id;
-          const isStoring = storingPlacedItemIds.includes(item.id);
-
-          return (
-            <motion.div
-              key={item.id}
-              animate={{
-                opacity: isStoring ? 0 : 1,
-                scale: isStoring ? 0.72 : 1,
-                y: isStoring ? -22 : 0,
-              }}
-              transition={{ duration: 0.24, ease: steppedEase(6) }}
-              style={{
-                position: "absolute",
-                left: item.x,
-                top: item.y,
-                width: item.width,
-                height: "fit-content",
-                outline: isSelected ? "3px solid rgba(255, 217, 102, 0.82)" : "3px solid transparent",
-                outlineOffset: "4px",
-                pointerEvents: isStoring ? "none" : "auto",
-                transformOrigin: "50% 80%",
-                zIndex: isSelected || isStoring ? 10 : 8,
-              }}
-            >
-            <motion.img
-              className="pixelated"
-              src={item.src}
-              alt={item.name}
-              drag
-              dragSnapToOrigin
-              dragElastic={0}
-              dragMomentum={false}
-              onPointerDown={stopNestedDrag}
-              onClick={() => setSelectedPlacedItemId(item.id)}
-              onDragEnd={(event, info) => handlePlacedItemDragEnd(item, event, info)}
-              whileHover={{ scale: 1.02 }}
-              whileDrag={{ scale: 1.05, zIndex: 12 }}
-              style={{
-                display: "block",
-                width: "100%",
-                height: "auto",
-                cursor: "grab",
-                touchAction: "none",
-                userSelect: "none",
-                filter:
-                  isSelected
-                    ? "drop-shadow(10px 14px 0 rgba(0,0,0,0.3)) drop-shadow(0 0 12px rgba(255,217,102,0.72))"
-                    : "drop-shadow(10px 14px 0 rgba(0,0,0,0.3))",
-              }}
-            />
-            {isSelected && (
-              <motion.button
-                type="button"
-                aria-label={`Store ${item.name}`}
-                onPointerDown={stopNestedDrag}
-                onClick={() => handleStorePlacedItem(item)}
-                initial={{ opacity: 0, y: 6, scale: 0.92 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.18, ease: steppedEase(4) }}
-                whileHover={{ y: -2, backgroundColor: "rgba(255, 217, 102, 0.22)" }}
-                whileTap={{ y: 1, scale: 0.96 }}
-                style={{
-                  position: "absolute",
-                  right: "-10px",
-                  top: "-44px",
-                  minWidth: "74px",
-                  minHeight: "34px",
-                  border: "2px solid rgba(255, 217, 102, 0.86)",
-                  borderBottomColor: "rgba(96, 62, 22, 0.98)",
-                  borderRightColor: "rgba(96, 62, 22, 0.98)",
-                  background: "rgba(3, 10, 24, 0.9)",
-                  boxShadow:
-                    "0 0 0 2px rgba(0,0,0,0.68), 4px 4px 0 rgba(0,0,0,0.34)",
-                  color: "#fff8d7",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: "0.52rem",
-                  lineHeight: 1,
-                  padding: "8px 9px",
-                  textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-                  touchAction: "none",
-                }}
-              >
-                STORE
-              </motion.button>
-            )}
-          </motion.div>
-          );
-        })}
-      </motion.div>
-
-      <motion.header
-        initial={{ opacity: 0, y: -14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.32, ease: steppedEase(6) }}
-        style={{
-          position: "fixed",
-          top: "calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.2vw, 28px))",
-          right: "clamp(14px, 2.2vw, 28px)",
-          zIndex: 5,
-          width: "min(calc(100vw - 150px), 720px)",
-          border: "3px solid rgba(255, 248, 215, 0.76)",
-          borderBottomColor: "rgba(55, 44, 35, 0.96)",
-          borderRightColor: "rgba(55, 44, 35, 0.96)",
-          background: "rgba(3, 10, 24, 0.72)",
-          boxShadow:
-            "0 0 0 2px rgba(0,0,0,0.68), 6px 6px 0 rgba(0,0,0,0.34), inset 0 0 18px rgba(116,247,161,0.1)",
-          padding: "clamp(10px, 2vw, 14px)",
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "auto 1fr",
-            alignItems: "center",
-            gap: "clamp(10px, 2vw, 16px)",
-          }}
-        >
-          <strong
-            style={{
-              color: "#ffd966",
-              fontSize: "clamp(0.62rem, 1.45vw, 0.86rem)",
-              lineHeight: 1.5,
-              whiteSpace: "nowrap",
-              textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-            }}
-          >
-            TOWN LEVEL {townLevel}
-          </strong>
-          <div style={{ minWidth: 0 }}>
-            <div
-              aria-label={`${currentCp.toLocaleString()} / ${nextLevelCp.toLocaleString()} CP`}
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={nextLevelCp}
-              aria-valuenow={currentCp}
-              style={{
-                height: "14px",
-                border: "2px solid rgba(116, 247, 161, 0.72)",
-                background: "rgba(1, 8, 22, 0.8)",
-                boxShadow: "inset 0 0 10px rgba(0,0,0,0.64)",
-                overflow: "hidden",
-              }}
-            >
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.52, ease: steppedEase(8) }}
-                style={{
-                  height: "100%",
-                  background:
-                    "repeating-linear-gradient(90deg, #74f7a1 0, #74f7a1 10px, #39ff14 10px, #39ff14 20px)",
-                  boxShadow: "0 0 12px rgba(116,247,161,0.72)",
-                }}
-              />
-            </div>
-            <p
-              style={{
-                margin: "7px 0 0",
-                color: "#f4ecd0",
-                fontFamily: '"DotGothic16", monospace',
-                fontSize: "clamp(0.72rem, 1.45vw, 0.95rem)",
-                lineHeight: 1.4,
-                textAlign: "right",
-              }}
-            >
-              {currentCp.toLocaleString()} / {nextLevelCp.toLocaleString()} CP
-            </p>
-          </div>
-        </div>
-      </motion.header>
-
-      <motion.button
-        type="button"
-        whileHover={{ y: -2, scale: 1.02 }}
-        whileTap={{ y: 2, scale: 0.98 }}
-        onClick={() => onNavigate("/guild")}
-        style={{
-          position: "fixed",
-          top: "calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.2vw, 28px))",
-          left: "clamp(14px, 2.2vw, 28px)",
-          zIndex: 6,
-          minHeight: "42px",
-          border: "2px solid rgba(255, 217, 102, 0.78)",
-          borderBottomColor: "rgba(96, 62, 22, 0.95)",
-          borderRightColor: "rgba(96, 62, 22, 0.95)",
-          background: "rgba(3, 10, 24, 0.74)",
-          boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 5px 5px 0 rgba(0,0,0,0.34)",
-          color: "#fff8d7",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          fontSize: "clamp(0.56rem, 1.3vw, 0.78rem)",
-          lineHeight: 1.5,
-          padding: "10px 12px",
-          textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-        }}
-      >
-        &lt; BACK
-      </motion.button>
-
-      <motion.aside
-        ref={inventoryRef}
-        initial={{ opacity: 0, x: -18 }}
-        animate={{
-          opacity: 1,
-          x: inventoryVisible ? 0 : "calc(-100% - 14px)",
-        }}
-        transition={{ duration: 0.32, ease: steppedEase(6) }}
-        aria-label="Build inventory"
-        style={{
-          position: "fixed",
-          left: "clamp(14px, 2vw, 24px)",
-          top: "calc(env(safe-area-inset-top, 0px) + 94px)",
-          zIndex: 8,
-          display: "flex",
-          width: "148px",
-          maxHeight:
-            "calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 118px)",
-          alignItems: "stretch",
-          flexDirection: "column",
-          gap: "10px",
-          overflow: "visible",
-          border: inventoryVisible
-            ? "3px solid rgba(255, 248, 215, 0.8)"
-            : "3px solid transparent",
-          borderBottomColor: inventoryVisible ? "rgba(55, 44, 35, 0.98)" : "transparent",
-          borderRightColor: inventoryVisible ? "rgba(55, 44, 35, 0.98)" : "transparent",
-          background: inventoryVisible ? "rgba(3, 7, 14, 0.88)" : "transparent",
-          boxShadow: inventoryVisible
-            ? "0 0 0 2px rgba(0,0,0,0.72), 6px 6px 0 rgba(0,0,0,0.4), inset 0 0 18px rgba(255,248,215,0.08)"
-            : "none",
-          padding: "10px",
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        <motion.button
-          type="button"
-          aria-label={inventoryVisible ? "Hide build inventory" : "Show build inventory"}
-          aria-expanded={inventoryVisible}
-          onPointerDown={stopNestedDrag}
-          onClick={() => setInventoryVisible((currentVisible) => !currentVisible)}
-          whileHover={{ x: 2, backgroundColor: "rgba(255, 217, 102, 0.18)" }}
-          whileTap={{ x: -1, scale: 0.98 }}
-          style={{
-            position: "absolute",
-            right: "-48px",
-            top: "12px",
-            width: "42px",
-            height: "42px",
-            border: "2px solid rgba(255, 217, 102, 0.78)",
-            borderBottomColor: "rgba(96, 62, 22, 0.95)",
-            borderRightColor: "rgba(96, 62, 22, 0.95)",
-            background: "rgba(3, 10, 24, 0.86)",
-            boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 4px 4px 0 rgba(0,0,0,0.34)",
-            color: "#fff8d7",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            fontSize: "0.82rem",
-            lineHeight: 1,
-            padding: "0",
-            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-          }}
-        >
-          {inventoryVisible ? "<<" : ">>"}
-        </motion.button>
-
-        {inventoryVisible && inventory.map((item) => {
-          const isAvailable = item.count > 0;
-
-          return (
-            <motion.div
-              key={item.type}
-              role="button"
-              aria-label={`${item.name} inventory item. ${item.count} remaining.`}
-              aria-disabled={!isAvailable}
-              tabIndex={isAvailable ? 0 : -1}
-              drag={isAvailable}
-              dragSnapToOrigin
-              dragElastic={0}
-              dragMomentum={false}
-              onPointerDown={stopNestedDrag}
-              onDragEnd={(event, info) => handleInventoryDragEnd(item, event, info)}
-              whileHover={
-                isAvailable ? { y: -2, backgroundColor: "rgba(255, 217, 102, 0.12)" } : undefined
-              }
-              whileTap={isAvailable ? { y: 2, scale: 0.98 } : undefined}
-              whileDrag={{ scale: 1.06, zIndex: 20 }}
-              style={{
-                position: "relative",
-                display: "grid",
-                gridTemplateRows: "58px auto",
-                width: "100%",
-                minHeight: "116px",
-                alignItems: "center",
-                justifyItems: "center",
-                gap: "6px",
-                border: "2px solid rgba(116, 247, 161, 0.62)",
-                borderBottomColor: "rgba(24, 83, 45, 0.95)",
-                borderRightColor: "rgba(24, 83, 45, 0.95)",
-                background: isAvailable ? "rgba(1, 12, 24, 0.78)" : "rgba(18, 18, 18, 0.68)",
-                boxShadow: "inset 0 0 12px rgba(0,0,0,0.62)",
-                color: isAvailable ? "#fff8d7" : "rgba(255, 248, 215, 0.42)",
-                cursor: isAvailable ? "grab" : "not-allowed",
-                fontFamily: "inherit",
-                fontSize: "0.52rem",
-                lineHeight: 1.35,
-                padding: "8px 7px",
-                textAlign: "center",
-                textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-                touchAction: "none",
-              }}
-            >
-              <img
-                className="pixelated"
-                src={item.src}
-                alt=""
-                aria-hidden="true"
-                draggable={false}
-                style={{
-                  display: "block",
-                  maxWidth: "74px",
-                  maxHeight: "58px",
-                  opacity: isAvailable ? 1 : 0.38,
-                  pointerEvents: "none",
-                  filter: "drop-shadow(4px 5px 0 rgba(0,0,0,0.34))",
-                  mixBlendMode: "screen",
-                }}
-              />
-              <span>{item.name}</span>
-              <span
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  right: "6px",
-                  top: "6px",
-                  minWidth: "24px",
-                  border: "2px solid rgba(255, 217, 102, 0.78)",
-                  background: isAvailable ? "rgba(62, 26, 8, 0.92)" : "rgba(8, 8, 8, 0.92)",
-                  color: isAvailable ? "#ffd966" : "rgba(255, 248, 215, 0.46)",
-                  fontSize: "0.52rem",
-                  lineHeight: 1,
-                  padding: "4px 5px",
-                  boxShadow: "0 0 0 1px rgba(0,0,0,0.72)",
-                }}
-              >
-                x{item.count}
-              </span>
-            </motion.div>
-          );
-        })}
-      </motion.aside>
-
-      {selectedPlacedItem && (
-        <motion.section
-          key={selectedPlacedItem.id}
-          initial={{ opacity: 0, y: 18, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 12, scale: 0.98 }}
-          transition={{ duration: 0.28, ease: steppedEase(6) }}
-          aria-live="polite"
-          style={{
-            position: "fixed",
-            left: "50%",
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(14px, 2vw, 24px))",
-            zIndex: 9,
-            display: "grid",
-            gridTemplateColumns: "76px minmax(0, 1fr)",
-            width: "min(calc(100vw - 210px), 720px)",
-            minHeight: "96px",
-            alignItems: "center",
-            gap: "14px",
-            transform: "translateX(-50%)",
-            border: "3px solid rgba(255, 248, 215, 0.82)",
-            borderBottomColor: "rgba(55, 44, 35, 0.98)",
-            borderRightColor: "rgba(55, 44, 35, 0.98)",
-            background:
-              "linear-gradient(180deg, rgba(4, 10, 22, 0.94), rgba(3, 7, 14, 0.9))",
-            boxShadow:
-              "0 0 0 2px rgba(0,0,0,0.76), 7px 7px 0 rgba(0,0,0,0.36), inset 0 0 22px rgba(116,247,161,0.09)",
-            color: "#fff8d7",
-            padding: "12px 14px",
-            backdropFilter: "blur(2px)",
-          }}
-        >
-          <motion.button
-            type="button"
-            aria-label="Close building info"
-            onClick={() => setSelectedPlacedItemId(null)}
-            whileHover={{ y: -1, backgroundColor: "rgba(255, 217, 102, 0.16)" }}
-            whileTap={{ y: 1, scale: 0.96 }}
-            style={{
-              position: "absolute",
-              right: "8px",
-              top: "8px",
-              width: "28px",
-              height: "28px",
-              border: "2px solid rgba(255, 217, 102, 0.72)",
-              borderBottomColor: "rgba(96, 62, 22, 0.95)",
-              borderRightColor: "rgba(96, 62, 22, 0.95)",
-              background: "rgba(3, 10, 24, 0.78)",
-              boxShadow: "0 0 0 1px rgba(0,0,0,0.62)",
-              color: "#fff8d7",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              fontSize: "0.64rem",
-              lineHeight: 1,
-              padding: 0,
-              textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-            }}
-          >
-            x
-          </motion.button>
-
-          <div
-            aria-hidden="true"
-            style={{
-              display: "grid",
-              width: "76px",
-              height: "68px",
-              placeItems: "center",
-              border: "2px solid rgba(116, 247, 161, 0.58)",
-              background: "rgba(1, 12, 24, 0.72)",
-              boxShadow: "inset 0 0 14px rgba(0,0,0,0.68)",
-            }}
-          >
-            <img
-              className="pixelated"
-              src={selectedPlacedItem.src}
-              alt=""
-              draggable={false}
-              style={{
-                display: "block",
-                maxWidth: "58px",
-                maxHeight: "54px",
-                filter: "drop-shadow(4px 5px 0 rgba(0,0,0,0.34))",
-              }}
-            />
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <p
-              style={{
-                margin: "0 0 6px",
-                color: "#74f7a1",
-                fontSize: "0.52rem",
-                lineHeight: 1.4,
-                textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-              }}
-            >
-              BUILDING DATA
-            </p>
-            <h2
-              style={{
-                margin: "0 0 7px",
-                color: "#ffd966",
-                fontSize: "clamp(0.72rem, 1.6vw, 0.95rem)",
-                lineHeight: 1.5,
-                textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-              }}
-            >
-              {selectedPlacedItem.title}
-            </h2>
-            <p
-              style={{
-                margin: 0,
-                color: "#f4ecd0",
-                fontFamily: '"DotGothic16", monospace',
-                fontSize: "clamp(0.78rem, 1.45vw, 0.98rem)",
-                lineHeight: 1.45,
-              }}
-            >
-              {selectedPlacedItem.description}
-            </p>
-          </div>
-        </motion.section>
-      )}
-
-      <div
-        className="absolute right-6 z-[6] flex flex-col gap-3"
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 142px)",
-        }}
-      >
-        <motion.button
-          type="button"
-          aria-label="Zoom in"
-          whileHover={{ y: -2, scale: 1.04, backgroundColor: "rgba(255, 217, 102, 0.2)" }}
-          whileTap={{ y: 2, scale: 0.96 }}
-          onClick={() => handleZoom(ZOOM_STEP)}
-          style={{
-            width: "46px",
-            height: "46px",
-            border: "2px solid rgba(255, 217, 102, 0.78)",
-            borderBottomColor: "rgba(96, 62, 22, 0.95)",
-            borderRightColor: "rgba(96, 62, 22, 0.95)",
-            background: "rgba(3, 10, 24, 0.82)",
-            boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 5px 5px 0 rgba(0,0,0,0.34)",
-            color: "#fff8d7",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            fontSize: "1.1rem",
-            lineHeight: 1,
-            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-          }}
-        >
-          +
-        </motion.button>
-        <motion.button
-          type="button"
-          aria-label="Zoom out"
-          whileHover={{ y: -2, scale: 1.04, backgroundColor: "rgba(255, 217, 102, 0.2)" }}
-          whileTap={{ y: 2, scale: 0.96 }}
-          onClick={() => handleZoom(-ZOOM_STEP)}
-          style={{
-            width: "46px",
-            height: "46px",
-            border: "2px solid rgba(255, 217, 102, 0.78)",
-            borderBottomColor: "rgba(96, 62, 22, 0.95)",
-            borderRightColor: "rgba(96, 62, 22, 0.95)",
-            background: "rgba(3, 10, 24, 0.82)",
-            boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 5px 5px 0 rgba(0,0,0,0.34)",
-            color: "#fff8d7",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            fontSize: "1.1rem",
-            lineHeight: 1,
-            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-          }}
-        >
-          -
-        </motion.button>
-      </div>
+      <TownStatusHeader
+        currentCp={currentCp}
+        nextLevelCp={nextLevelCp}
+        progress={progress}
+        townLevel={townLevel}
+      />
+      <BackButton onNavigate={onNavigate} />
+      <BuildInventory
+        inventory={inventory}
+        inventoryRef={inventoryRef}
+        onDragEnd={handleInventoryDragEnd}
+        onToggleVisible={() => setInventoryVisible((currentVisible) => !currentVisible)}
+        stopNestedDrag={stopNestedDrag}
+        visible={inventoryVisible}
+      />
+      <BuildingInfoPanel item={selectedPlacedItem} onClose={() => setSelectedPlacedItemId(null)} />
+      <ZoomControls onZoom={handleZoom} />
 
       <div
         aria-hidden="true"
@@ -913,4 +276,21 @@ export function GuildTown({
       />
     </main>
   );
+}
+
+function createPlacedItem(
+  item: InventoryItem,
+  placement: { id: string; src: string; width: number; x: number; y: number },
+): PlacedItem {
+  return {
+    id: placement.id,
+    type: item.type,
+    name: item.name,
+    title: item.title,
+    description: item.description,
+    src: placement.src,
+    x: placement.x,
+    y: placement.y,
+    width: placement.width,
+  };
 }
