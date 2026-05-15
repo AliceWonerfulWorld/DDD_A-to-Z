@@ -13,7 +13,10 @@ import (
 func TestGuildStoreListGuilds(t *testing.T) {
 	ctx := context.Background()
 	tx := beginPostgresTestTransaction(t, ctx)
-	store := NewGuildStore(tx)
+	store, err := NewGuildStore(tx)
+	if err != nil {
+		t.Fatalf("NewGuildStore() がエラーを返しました: %v", err)
+	}
 
 	now := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
 	rustID := fmt.Sprintf("guild_rust_test_%d", uniqueGitHubID())
@@ -144,6 +147,19 @@ func TestGuildsRejectInvalidColor(t *testing.T) {
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`, "guild_invalid_color_"+validGuildID, "invalid_color_"+validGuildID, "Invalid Color", "不正な色を持つテストギルド。", "I", "3178c6", 2, now, now).Error
 	})
+}
+
+func TestNewGuildStoreRejectsNilDB(t *testing.T) {
+	store, err := NewGuildStore(nil)
+	if err == nil {
+		t.Fatal("NewGuildStore(nil) error = nil, 期待値 エラー")
+	}
+	if err.Error() != "db is nil" {
+		t.Fatalf("NewGuildStore(nil) error = %q, 期待値 db is nil", err.Error())
+	}
+	if store != nil {
+		t.Fatalf("NewGuildStore(nil) store = %#v, 期待値 nil", store)
+	}
 }
 
 type testGuild struct {

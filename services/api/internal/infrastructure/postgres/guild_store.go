@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
@@ -12,8 +13,12 @@ type GuildStore struct {
 	db *gorm.DB
 }
 
-func NewGuildStore(db *gorm.DB) *GuildStore {
-	return &GuildStore{db: db}
+func NewGuildStore(db *gorm.DB) (*GuildStore, error) {
+	if db == nil {
+		return nil, errors.New("db is nil")
+	}
+
+	return &GuildStore{db: db}, nil
 }
 
 func (s *GuildStore) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error) {

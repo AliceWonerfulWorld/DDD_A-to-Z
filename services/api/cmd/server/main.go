@@ -95,7 +95,10 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController
 	repositoryClient := infragithub.NewRepositoryClient(nil)
 	authStore := postgres.NewAuthStore(db, tokenCipher)
 	repositoryStore := postgres.NewRepositoryStore(db)
-	guildStore := postgres.NewGuildStore(db)
+	guildStore, err := postgres.NewGuildStore(db)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	usecase := authapp.NewUseCase(
 		oauthClient,
 		authStore,
