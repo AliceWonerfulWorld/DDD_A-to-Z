@@ -35,7 +35,7 @@ func TestRepositoryStoreUpsertAndListRepositories(t *testing.T) {
 	}
 
 	if err := store.UpsertRepositories(ctx, []repositoryanalysis.Repository{repository}); err != nil {
-		if isMissingAuthSchemaError(err) {
+		if isMissingSchemaError(err) {
 			t.Skipf("PostgreSQL 結合テストをスキップします: repository schema が migrate されていません: %v", err)
 		}
 		t.Fatalf("UpsertRepositories() の作成でエラーが発生しました: %v", err)
@@ -88,7 +88,7 @@ func insertRepositoryTestUser(t *testing.T, ctx context.Context, tx *gorm.DB) us
 		INSERT INTO github_accounts (github_id, user_id, username, avatar_url, access_token_ciphertext, created_at, updated_at)
 		VALUES (?, ?, ?, ?, '', ?, ?)
 	`, appUser.GitHubAccount.GitHubID, appUser.ID, appUser.GitHubAccount.Username, appUser.GitHubAccount.AvatarURL, now, now).Error; err != nil {
-		if isMissingAuthSchemaError(err) {
+		if isMissingSchemaError(err) {
 			t.Skipf("PostgreSQL 結合テストをスキップします: repository schema が migrate されていません: %v", err)
 		}
 		t.Fatalf("github_accounts INSERT でエラーが発生しました: %v", err)

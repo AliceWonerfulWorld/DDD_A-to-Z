@@ -32,7 +32,7 @@ func TestAuthStoreFindOrCreateByGitHub(t *testing.T) {
 
 		created, err := store.FindOrCreateByGitHub(ctx, authapp.GitHubLogin{Profile: profile}, now)
 		if err != nil {
-			if isMissingAuthSchemaError(err) {
+			if isMissingSchemaError(err) {
 				t.Skipf("PostgreSQL 結合テストをスキップします: auth schema が migrate されていません: %v", err)
 			}
 			t.Fatalf("FindOrCreateByGitHub() の作成でエラーが発生しました: %v", err)
@@ -55,7 +55,7 @@ func TestAuthStoreFindOrCreateByGitHub(t *testing.T) {
 
 		updated, err := store.FindOrCreateByGitHub(ctx, authapp.GitHubLogin{Profile: updatedProfile}, updatedAt)
 		if err != nil {
-			if isMissingAuthSchemaError(err) {
+			if isMissingSchemaError(err) {
 				t.Skipf("PostgreSQL 結合テストをスキップします: auth schema が migrate されていません: %v", err)
 			}
 			t.Fatalf("FindOrCreateByGitHub() の更新でエラーが発生しました: %v", err)
@@ -95,7 +95,7 @@ func TestAuthStoreSessionLifecycle(t *testing.T) {
 		}
 		appUser, err := store.FindOrCreateByGitHub(ctx, authapp.GitHubLogin{Profile: profile}, now)
 		if err != nil {
-			if isMissingAuthSchemaError(err) {
+			if isMissingSchemaError(err) {
 				t.Skipf("PostgreSQL 結合テストをスキップします: auth schema が migrate されていません: %v", err)
 			}
 			t.Fatalf("FindOrCreateByGitHub() がエラーを返しました: %v", err)
@@ -160,7 +160,7 @@ func TestAuthStoreGitHubAccessToken(t *testing.T) {
 			AccessToken: "secret-github-token",
 		}, now)
 		if err != nil {
-			if isMissingAuthSchemaError(err) {
+			if isMissingSchemaError(err) {
 				t.Skipf("PostgreSQL 結合テストをスキップします: token schema が migrate されていません: %v", err)
 			}
 			t.Fatalf("FindOrCreateByGitHub() がエラーを返しました: %v", err)
@@ -214,7 +214,7 @@ func beginPostgresTestTransaction(t *testing.T, ctx context.Context) *gorm.DB {
 
 	tx := db.WithContext(ctx).Begin()
 	if tx.Error != nil {
-		if isMissingAuthSchemaError(tx.Error) {
+		if isMissingSchemaError(tx.Error) {
 			t.Skipf("PostgreSQL 結合テストをスキップします: auth schema が migrate されていません: %v", tx.Error)
 		}
 		t.Fatalf("Begin() がエラーを返しました: %v", tx.Error)
@@ -226,7 +226,7 @@ func beginPostgresTestTransaction(t *testing.T, ctx context.Context) *gorm.DB {
 	})
 
 	if err := verifyAuthSchema(tx); err != nil {
-		if isMissingAuthSchemaError(err) {
+		if isMissingSchemaError(err) {
 			t.Skipf("PostgreSQL 結合テストをスキップします: auth schema が migrate されていません: %v", err)
 		}
 		t.Fatalf("auth schema の検証でエラーが発生しました: %v", err)
@@ -260,12 +260,14 @@ func newTestTokenCipher(t *testing.T) *security.TokenCipher {
 	return cipher
 }
 
-func isMissingAuthSchemaError(err error) bool {
+func isMissingSchemaError(err error) bool {
 	message := err.Error()
 	return strings.Contains(message, `relation "users" does not exist`) ||
 		strings.Contains(message, `relation "contribution_point_accounts" does not exist`) ||
 		strings.Contains(message, `relation "contribution_point_ledger" does not exist`) ||
 		strings.Contains(message, `relation "github_repositories" does not exist`) ||
+		strings.Contains(message, `relation "guilds" does not exist`) ||
+		strings.Contains(message, `relation "guild_memberships" does not exist`) ||
 		strings.Contains(message, `column "access_token_ciphertext" does not exist`) ||
 		strings.Contains(message, "SQLSTATE 42P01") ||
 		strings.Contains(message, "SQLSTATE 42703")
