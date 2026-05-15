@@ -11,6 +11,7 @@ export const BACK_NAVIGATION_SE_SRC = AUDIO_ASSETS.se.modalCancel;
 export function useBackNavigationSe(onNavigate: Navigate) {
   const { isSeEnabled } = useAudioSettings();
   const backNavigationSeRef = useRef<HTMLAudioElement | null>(null);
+  const navigationInProgressRef = useRef(false);
 
   const playBackNavigationSe = useCallback(() => {
     const audio = backNavigationSeRef.current;
@@ -45,8 +46,17 @@ export function useBackNavigationSe(onNavigate: Navigate) {
 
   const navigateBackWithSe = useCallback(
     async (path: string) => {
-      await playBackNavigationSe();
-      await onNavigate(path);
+      if (navigationInProgressRef.current) {
+        return;
+      }
+
+      navigationInProgressRef.current = true;
+      try {
+        await playBackNavigationSe();
+        await onNavigate(path);
+      } finally {
+        navigationInProgressRef.current = false;
+      }
     },
     [onNavigate, playBackNavigationSe],
   );

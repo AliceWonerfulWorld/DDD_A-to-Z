@@ -9,6 +9,7 @@ const loadOnDemand = (audio: HTMLAudioElement) => {
 
 export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>) {
   const { isSeEnabled } = useAudioSettings();
+  const navigationInProgressRef = useRef(false);
   const homeNavSelectSeRef = useRef<HTMLAudioElement | null>(null);
   const confirmModalSeRef = useRef<HTMLAudioElement | null>(null);
   const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
@@ -70,6 +71,11 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
   }, [playSe]);
 
   const playReturnTitle = useCallback(async () => {
+    if (navigationInProgressRef.current) {
+      return;
+    }
+
+    navigationInProgressRef.current = true;
     try {
       setAudioError(null);
       await playSeUntilEnd(returnTitleSeRef.current);
@@ -77,6 +83,8 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
     } catch (error) {
       console.error("failed to return to title from home", error);
       setAudioError("タイトル画面への移動に失敗しました。");
+    } finally {
+      navigationInProgressRef.current = false;
     }
   }, [onNavigate, playSeUntilEnd]);
 
@@ -86,6 +94,11 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
 
   const playHomeNavSelect = useCallback(
     async (path: string) => {
+      if (navigationInProgressRef.current) {
+        return;
+      }
+
+      navigationInProgressRef.current = true;
       try {
         setAudioError(null);
         await playSeUntilEnd(homeNavSelectSeRef.current);
@@ -93,6 +106,8 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
       } catch (error) {
         console.error("failed to navigate from home", error);
         setAudioError("画面移動に失敗しました。");
+      } finally {
+        navigationInProgressRef.current = false;
       }
     },
     [onNavigate, playSeUntilEnd],

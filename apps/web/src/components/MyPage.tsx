@@ -1,6 +1,7 @@
 import { useState, useMemo, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../hooks/useBackNavigationSe";
+import { useGuardedNavigation } from "../hooks/useGuardedNavigation";
 
 interface MyPageProps {
   onNavigate: (path: string) => void;
@@ -229,6 +230,7 @@ function ProgressBarFill({
 export function MyPage({ onNavigate }: MyPageProps) {
   const contribs = useMemo(() => generateContributions(), []);
   const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
+  const guardedNavigate = useGuardedNavigation(onNavigate);
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -675,7 +677,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
             </div>
 
             <button
-              onClick={() => onNavigate("/guild")}
+              onClick={() => void guardedNavigate("/guild")}
               style={{
                 marginTop: "10px",
                 width: "100%",

@@ -7,7 +7,7 @@ import { steppedEase } from "../../lib/animationUtils";
 const GUILD_NAV_SE_TIMEOUT_MS = 500;
 
 interface GuildNavigationProps {
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string) => void | Promise<void>;
 }
 
 const destinations = [
@@ -18,6 +18,7 @@ const destinations = [
 export function GuildNavigation({ onNavigate }: GuildNavigationProps) {
   const { isSeEnabled } = useAudioSettings();
   const guildNavSelectSeRef = useRef<HTMLAudioElement | null>(null);
+  const navigationInProgressRef = useRef(false);
 
   const playSelectSeUntilEnd = useCallback(() => {
     const audio = guildNavSelectSeRef.current;
@@ -52,8 +53,17 @@ export function GuildNavigation({ onNavigate }: GuildNavigationProps) {
 
   const navigateWithSe = useCallback(
     async (path: string) => {
-      await playSelectSeUntilEnd();
-      onNavigate(path);
+      if (navigationInProgressRef.current) {
+        return;
+      }
+
+      navigationInProgressRef.current = true;
+      try {
+        await playSelectSeUntilEnd();
+        await onNavigate(path);
+      } finally {
+        navigationInProgressRef.current = false;
+      }
     },
     [onNavigate, playSelectSeUntilEnd],
   );
