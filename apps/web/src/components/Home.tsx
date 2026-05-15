@@ -37,7 +37,6 @@ export function Home({ onNavigate }: HomeProps) {
   const {
     audioRefs,
     audioError,
-    isBgmEnabled,
     isSeEnabled,
     playGopherTalk,
     playHomeNavSelect,
@@ -72,14 +71,6 @@ export function Home({ onNavigate }: HomeProps) {
         color: "#f4ecd0",
       }}
     >
-      <audio
-        ref={audioRefs.homeBgmRef}
-        src={AUDIO_ASSETS.bgm.home}
-        loop
-        preload="auto"
-        muted={!isBgmEnabled}
-        aria-hidden="true"
-      />
       <audio
         ref={audioRefs.homeNavSelectSeRef}
         src={AUDIO_ASSETS.se.homeNavSelect}

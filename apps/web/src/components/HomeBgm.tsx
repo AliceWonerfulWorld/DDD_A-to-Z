@@ -2,14 +2,10 @@ import { useEffect, useRef } from "react";
 import { AUDIO_ASSETS } from "../features/audio/audioAssets";
 import { useAudioSettings } from "../features/audio/useAudioSettings";
 
-const GUILD_BGM_VOLUME = 0.36;
-const GUILD_BGM_FADE_IN_MS = 620;
+const HOME_BGM_VOLUME = 0.34;
+const HOME_BGM_FADE_IN_MS = 520;
 
-interface GuildBgmProps {
-  src?: string;
-}
-
-export function GuildBgm({ src = AUDIO_ASSETS.bgm.guild }: GuildBgmProps) {
+export function HomeBgm() {
   const { isBgmEnabled } = useAudioSettings();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasAttemptedPlayRef = useRef(false);
@@ -25,8 +21,8 @@ export function GuildBgm({ src = AUDIO_ASSETS.bgm.guild }: GuildBgmProps) {
     const fadeInBgm = () => {
       const startedAt = performance.now();
       const tick = (now: number) => {
-        const progress = Math.min(1, (now - startedAt) / GUILD_BGM_FADE_IN_MS);
-        audio.volume = GUILD_BGM_VOLUME * progress;
+        const progress = Math.min(1, (now - startedAt) / HOME_BGM_FADE_IN_MS);
+        audio.volume = HOME_BGM_VOLUME * progress;
 
         if (progress < 1) {
           fadeFrameId = window.requestAnimationFrame(tick);
@@ -82,7 +78,7 @@ export function GuildBgm({ src = AUDIO_ASSETS.bgm.guild }: GuildBgmProps) {
 
     if (isBgmEnabled && !hasAttemptedPlayRef.current) {
       hasAttemptedPlayRef.current = true;
-      audio.volume = GUILD_BGM_VOLUME;
+      audio.volume = HOME_BGM_VOLUME;
       void audio.play().catch(() => {});
     }
   }, [isBgmEnabled]);
@@ -90,7 +86,7 @@ export function GuildBgm({ src = AUDIO_ASSETS.bgm.guild }: GuildBgmProps) {
   return (
     <audio
       ref={audioRef}
-      src={src}
+      src={AUDIO_ASSETS.bgm.home}
       loop
       preload="auto"
       muted={!isBgmEnabled}

@@ -3,6 +3,7 @@ export const AUDIO_ASSETS = {
     title: "/bgm/title_bgm.mp3",
     home: "/bgm/home_bgm.ogg",
     guild: "/bgm/guild.ogg",
+    guildTown: "/bgm/guild-town.ogg",
   },
   se: {
     confirmModal: "/SE/confirm-modal.wav",

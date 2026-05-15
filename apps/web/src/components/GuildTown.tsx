@@ -1,4 +1,5 @@
 import { useMotionValue, type PanInfo } from "framer-motion";
+import { AUDIO_ASSETS } from "../features/audio/audioAssets";
 import {
   useEffect,
   useRef,
@@ -230,7 +231,7 @@ export function GuildTown({
         color: "#fff8d7",
       }}
     >
-      <GuildBgm />
+      <GuildBgm src={AUDIO_ASSETS.bgm.guildTown} />
 
       <TownMap
         baseSrc={baseSrc}

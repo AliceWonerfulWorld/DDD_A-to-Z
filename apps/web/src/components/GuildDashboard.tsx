@@ -480,9 +480,39 @@ function RankingsPanel() {
 }
 
 export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
+  const { isSeEnabled } = useAudioSettings();
   const [activeTab, setActiveTab] = useState<GuildTab>("activity");
   const [logs, setLogs] = useState<ActivityLog[]>(INITIAL_LOGS);
   const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
+  const tabSwitchSeRef = useRef<HTMLAudioElement | null>(null);
+
+  const playTabSwitchSe = useCallback(() => {
+    const audio = tabSwitchSeRef.current;
+    if (!audio || !isSeEnabled) {
+      return;
+    }
+
+    if (audio.preload === "none" && audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+      audio.load();
+    }
+
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  }, [isSeEnabled]);
+
+  const switchTab = useCallback(
+    (tab: GuildTab) => {
+      setActiveTab((current) => {
+        if (current === tab) {
+          return current;
+        }
+
+        playTabSwitchSe();
+        return tab;
+      });
+    },
+    [playTabSwitchSe],
+  );
 
   useEffect(() => {
     let nextId = INITIAL_LOGS[0].id + 1;
@@ -516,6 +546,13 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
         ref={backNavigationSeRef}
         src={BACK_NAVIGATION_SE_SRC}
         preload="none"
+        aria-hidden="true"
+      />
+      <audio
+        ref={tabSwitchSeRef}
+        src={AUDIO_ASSETS.se.buttonClick}
+        preload="none"
+        muted={!isSeEnabled}
         aria-hidden="true"
       />
       <div
@@ -602,7 +639,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => switchTab(tab.id)}
                     style={{
                       minHeight: "34px",
                       border: `2px solid ${isActive ? "#00f5ff" : "rgba(0, 245, 255, 0.28)"}`,

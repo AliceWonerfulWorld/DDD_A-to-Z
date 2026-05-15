@@ -5,6 +5,7 @@ import { GuildBgm } from "./components/GuildBgm.tsx";
 import { GuildDashboard } from "./components/GuildDashboard.tsx";
 import { GuildTown } from "./components/GuildTown.tsx";
 import { Home } from "./components/Home.tsx";
+import { HomeBgm } from "./components/HomeBgm.tsx";
 import { InitialProfile } from "./components/InitialProfile.tsx";
 import { MyPage } from "./components/MyPage.tsx";
 import { MyGuildDetails } from "./components/MyGuildDetails.tsx";
@@ -18,6 +19,7 @@ export function AppRoutes() {
     location.pathname === "/guild" ||
     location.pathname === "/guild/details" ||
     location.pathname === "/guild/my-guild";
+  const usesSharedHomeBgm = location.pathname === "/home" || location.pathname === "/mypage";
   const completeInitialProfile = async (username: string) => {
     if (username.trim() === "") return;
 
@@ -35,6 +37,7 @@ export function AppRoutes() {
 
   return (
     <>
+      {usesSharedHomeBgm && <HomeBgm />}
       {usesSharedGuildBgm && <GuildBgm />}
       <Routes>
         <Route path="/" element={<App />} />
