@@ -41,6 +41,7 @@ export function Home({ onNavigate }: HomeProps) {
     isBgmEnabled,
     isSeEnabled,
     playGopherTalk,
+    playHomeNavSelect,
     playModalCancel,
     playModalOpen,
     playReturnTitle,
@@ -84,6 +85,13 @@ export function Home({ onNavigate }: HomeProps) {
         loop
         preload="auto"
         muted={!isBgmEnabled}
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefs.homeNavSelectSeRef}
+        src={AUDIO_ASSETS.se.homeNavSelect}
+        preload="none"
+        muted={!isSeEnabled}
         aria-hidden="true"
       />
       <audio
@@ -169,7 +177,7 @@ export function Home({ onNavigate }: HomeProps) {
           <WalkingGopher onTalk={playGopherTalk} />
         </section>
 
-        <HomeNav items={navItems} onNavigate={onNavigate} />
+        <HomeNav items={navItems} onNavigate={playHomeNavSelect} />
       </div>
 
       {isReturnTitleDialogOpen && (

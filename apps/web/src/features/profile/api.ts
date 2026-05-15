@@ -15,7 +15,7 @@ export async function fetchProfile(): Promise<Profile | null> {
   try {
     const data = await apiFetch<Profile>("/profile");
     return data;
-  } catch (e) {
+  } catch {
     // 401 や 404 の場合は null を返す
     return null;
   }

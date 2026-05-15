@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	authapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/auth"
 	githubapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/github"
+	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
 	mypageapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/mypage"
 	profileapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/profile"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
@@ -47,7 +48,7 @@ func main() {
 		}
 	}()
 
-	authController, repositoryController, mypageController, profileController, err := buildControllers(logger, db)
+	authController, repositoryController, guildController, mypageController, profileController, err := buildControllers(logger, db)
 	if err != nil {
 		logger.Error("failed to build controllers", "error", err)
 		os.Exit(1)
@@ -58,7 +59,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              ":" + addr,
-		Handler:           httpapi.NewRouter(logger, authController, repositoryController, mypageController, profileController),
+		Handler:           httpapi.NewRouter(logger, authController, repositoryController, guildController, mypageController, profileController),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -70,26 +71,26 @@ func main() {
 	}
 }
 
-func buildControllers(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController, *httpapi.RepositoryController, *httpapi.MypageController, *httpapi.ProfileController, error) {
+func buildControllers(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController, *httpapi.RepositoryController, *httpapi.GuildController, *httpapi.MypageController, *httpapi.ProfileController, error) {
 	oauthConfig, err := config.GitHubOAuthFromEnv()
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	cookieSecret, err := config.AuthCookieSecretFromEnv()
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	cookieSecure, err := config.AuthCookieSecureFromEnv()
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	tokenSecret, err := config.GitHubTokenEncryptionSecretFromEnv()
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	tokenCipher, err := security.NewTokenCipher(tokenSecret)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	frontendURL := config.EnvOrDefault("FRONTEND_URL", "http://localhost:5173")
 
@@ -100,6 +101,10 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController
 	contributionPointStore := postgres.NewContributionPointStore(db)
 	mypageStore := postgres.NewMyPageStore(db)
 	profileStore := postgres.NewProfileStore(db)
+	guildStore, err := postgres.NewGuildStore(db)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	usecase := authapp.NewUseCase(
 		oauthClient,
 		authStore,
@@ -113,6 +118,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController
 		repositoryClient,
 		repositoryStore,
 	)
+	guildUseCase := guildapp.NewUseCase(guildStore)
 
 	// MyPage use case: compose CP reader from existing ContributionPointStore (balance)
 	// and MyPageStore (total earned/spent, repository summary).
@@ -138,10 +144,11 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController
 		frontendURL,
 	)
 	repositoryController := httpapi.NewRepositoryController(repositoryUseCase, logger)
+	guildController := httpapi.NewGuildController(guildUseCase, logger)
 	mypageController := httpapi.NewMypageController(mypageUseCase, logger)
 	profileController := httpapi.NewProfileController(profileUseCase, logger)
 
-	return authController, repositoryController, mypageController, profileController, nil
+	return authController, repositoryController, guildController, mypageController, profileController, nil
 }
 
 // compositeCPReader combines the existing ContributionPointStore (for balance)

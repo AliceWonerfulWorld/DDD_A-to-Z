@@ -1,14 +1,21 @@
-import { motion, useMotionValue } from "framer-motion";
-import { useEffect, useState, type WheelEvent } from "react";
-import { steppedEase } from "../lib/animationUtils";
-
-const MIN_SCALE = 0.5;
-const MAX_SCALE = 2.5;
-const ZOOM_STEP = 0.15;
-
-function clampValue(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
+import { useMotionValue, type PanInfo } from "framer-motion";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent,
+} from "react";
+import { BackButton } from "./guild-town/BackButton";
+import { BuildInventory } from "./guild-town/BuildInventory";
+import { BuildingInfoPanel } from "./guild-town/BuildingInfoPanel";
+import { TownMap } from "./guild-town/TownMap";
+import { TownStatusHeader } from "./guild-town/TownStatusHeader";
+import { MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS, INITIAL_INVENTORY } from "./guild-town/townData";
+import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./guild-town/townMath";
+import type { InventoryItem, PlacedItem, ViewportSize } from "./guild-town/types";
+import { ZoomControls } from "./guild-town/ZoomControls";
+import { GuildBgm } from "./GuildBgm";
 
 interface GuildTownProps {
   onNavigate: (path: string) => void;
@@ -29,11 +36,21 @@ export function GuildTown({
   mainStructureSrc = "/town/tent.png",
   bonfireSrc = "/town/bonfire.png",
 }: GuildTownProps) {
-  const progress = Math.min(100, Math.max(0, (currentCp / nextLevelCp) * 100));
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height: 0 });
   const [scale, setScale] = useState(1);
+  const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
+  const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
+  const [inventoryVisible, setInventoryVisible] = useState(true);
+  const [selectedPlacedItemId, setSelectedPlacedItemId] = useState<string | null>(null);
+  const [storingPlacedItemIds, setStoringPlacedItemIds] = useState<string[]>([]);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const inventoryRef = useRef<HTMLDivElement>(null);
+  const seededInitialBuildingsRef = useRef(false);
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
+  const progress = Math.min(100, Math.max(0, (currentCp / nextLevelCp) * 100));
+  const selectedPlacedItem =
+    placedItems.find((placedItem) => placedItem.id === selectedPlacedItemId) ?? null;
   const dragConstraints = {
     left: Math.min(0, viewport.width - viewport.width * 2 * scale),
     right: 0,
@@ -60,6 +77,37 @@ export function GuildTown({
   }, [mapX, mapY, viewport.height, viewport.width]);
 
   useEffect(() => {
+    if (seededInitialBuildingsRef.current || viewport.width === 0 || viewport.height === 0) {
+      return;
+    }
+
+    const tent = INITIAL_INVENTORY.find((item) => item.type === "tent");
+    const bonfire = INITIAL_INVENTORY.find((item) => item.type === "bonfire");
+    if (!tent || !bonfire) return;
+
+    const tentWidth = getInventoryMapWidth(tent, viewport.width);
+    const bonfireWidth = getInventoryMapWidth(bonfire, viewport.width);
+
+    setPlacedItems([
+      createPlacedItem(tent, {
+        id: "initial-tent",
+        src: mainStructureSrc,
+        width: tentWidth,
+        x: viewport.width - tentWidth * 0.64,
+        y: viewport.height - tentWidth * 0.28,
+      }),
+      createPlacedItem(bonfire, {
+        id: "initial-bonfire",
+        src: bonfireSrc,
+        width: bonfireWidth,
+        x: viewport.width + bonfireWidth * 0.42,
+        y: viewport.height + bonfireWidth * 0.62,
+      }),
+    ]);
+    seededInitialBuildingsRef.current = true;
+  }, [bonfireSrc, mainStructureSrc, viewport.height, viewport.width]);
+
+  useEffect(() => {
     mapX.set(clampValue(mapX.get(), dragConstraints.left, dragConstraints.right));
     mapY.set(clampValue(mapY.get(), dragConstraints.top, dragConstraints.bottom));
   }, [
@@ -80,6 +128,98 @@ export function GuildTown({
     handleZoom(-event.deltaY * 0.0015);
   };
 
+  const stopNestedDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    event.stopPropagation();
+  };
+
+  const getMapDropPoint = (point: PanInfo["point"], itemWidth: number) => {
+    const mapElement = mapRef.current;
+    if (!mapElement) return null;
+
+    const mapRect = mapElement.getBoundingClientRect();
+    if (!isPointInsideRect(point, mapRect)) return null;
+
+    const inventoryRect = inventoryRef.current?.getBoundingClientRect();
+    if (inventoryRect && isPointInsideRect(point, inventoryRect)) return null;
+
+    const mapWidth = mapRect.width / scale;
+    const mapHeight = mapRect.height / scale;
+    const x = (point.x - mapRect.left) / scale - itemWidth / 2;
+    const y = (point.y - mapRect.top) / scale - itemWidth / 2;
+
+    return {
+      x: clampValue(x, 0, Math.max(0, mapWidth - itemWidth)),
+      y: clampValue(y, 0, Math.max(0, mapHeight - itemWidth)),
+    };
+  };
+
+  const handleInventoryDragEnd = (
+    item: InventoryItem,
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo,
+  ) => {
+    if (item.count <= 0) return;
+
+    const itemWidth = getInventoryMapWidth(item, viewport.width);
+    const dropPoint = getMapDropPoint(info.point, itemWidth);
+    if (!dropPoint) return;
+
+    setPlacedItems((currentItems) => [
+      ...currentItems,
+      createPlacedItem(item, {
+        id: `${item.type}-${Date.now()}-${currentItems.length}`,
+        src: item.src,
+        width: itemWidth,
+        x: dropPoint.x,
+        y: dropPoint.y,
+      }),
+    ]);
+    setInventoryCount(item.type, -1);
+  };
+
+  const handlePlacedItemDragEnd = (
+    item: PlacedItem,
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo,
+  ) => {
+    const dropPoint = getMapDropPoint(info.point, item.width);
+    if (!dropPoint) return;
+
+    setPlacedItems((currentItems) =>
+      currentItems.map((placedItem) =>
+        placedItem.id === item.id ? { ...placedItem, x: dropPoint.x, y: dropPoint.y } : placedItem,
+      ),
+    );
+    setSelectedPlacedItemId(item.id);
+  };
+
+  const handleStorePlacedItem = (item: PlacedItem) => {
+    if (storingPlacedItemIds.includes(item.id)) return;
+
+    setStoringPlacedItemIds((currentIds) => [...currentIds, item.id]);
+    setSelectedPlacedItemId(null);
+
+    window.setTimeout(() => {
+      setPlacedItems((currentItems) =>
+        currentItems.filter((placedItem) => placedItem.id !== item.id),
+      );
+      setInventoryCount(item.type, 1);
+      setStoringPlacedItemIds((currentIds) =>
+        currentIds.filter((storingItemId) => storingItemId !== item.id),
+      );
+    }, STORE_ANIMATION_MS);
+  };
+
+  const setInventoryCount = (type: InventoryItem["type"], delta: number) => {
+    setInventory((currentInventory) =>
+      currentInventory.map((inventoryItem) =>
+        inventoryItem.type === type
+          ? { ...inventoryItem, count: Math.max(0, inventoryItem.count + delta) }
+          : inventoryItem,
+      ),
+    );
+  };
+
   return (
     <main
       className="relative h-screen w-full overflow-hidden"
@@ -90,312 +230,41 @@ export function GuildTown({
         color: "#fff8d7",
       }}
     >
-      <motion.div
-        className="absolute left-0 top-0 h-[200vh] w-[200vw] cursor-grab active:cursor-grabbing"
-        drag
+      <GuildBgm />
+
+      <TownMap
+        baseSrc={baseSrc}
         dragConstraints={dragConstraints}
-        dragElastic={0.08}
-        dragMomentum={false}
-        style={{
-          x: mapX,
-          y: mapY,
-          scale,
-          touchAction: "none",
-          transformOrigin: "top left",
-          userSelect: "none",
-        }}
-      >
-        <img
-          className="pixelated"
-          src={baseSrc}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center bottom",
-            pointerEvents: "none",
-          }}
-        />
+        mapRef={mapRef}
+        mapX={mapX}
+        mapY={mapY}
+        onMoveItem={handlePlacedItemDragEnd}
+        onSelectItem={setSelectedPlacedItemId}
+        onStoreItem={handleStorePlacedItem}
+        placedItems={placedItems}
+        scale={scale}
+        selectedPlacedItemId={selectedPlacedItemId}
+        stopNestedDrag={stopNestedDrag}
+        storingPlacedItemIds={storingPlacedItemIds}
+      />
 
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(4, 18, 18, 0.1) 0%, rgba(5, 16, 12, 0.04) 48%, rgba(6, 15, 10, 0.3) 100%)",
-            pointerEvents: "none",
-            zIndex: 1,
-          }}
-        />
-
-        <div
-          aria-hidden="true"
-          className="bg-[radial-gradient(ellipse_at_center,_transparent_20%,_rgba(0,0,0,0.6)_100%)]"
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            zIndex: 2,
-          }}
-        />
-
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            width: "clamp(210px, 29vw, 430px)",
-            transform: "translate(-64%, -28%)",
-            zIndex: 3,
-            pointerEvents: "none",
-          }}
-        >
-          <motion.img
-            className="pixelated drop-shadow-[18px_22px_0_rgba(0,0,0,0.28)]"
-            src={mainStructureSrc}
-            alt=""
-            aria-hidden="true"
-            initial={{ opacity: 0, y: 18, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.36, ease: steppedEase(7) }}
-            style={{
-              display: "block",
-              width: "100%",
-              height: "auto",
-              mixBlendMode: "screen",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            width: "clamp(92px, 12vw, 164px)",
-            transform: "translate(42%, 62%)",
-            zIndex: 4,
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "46%",
-              width: "68%",
-              aspectRatio: "1 / 1",
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            <motion.div
-              className="bg-orange-500/30 blur-2xl"
-              animate={{
-                opacity: [0.58, 0.88, 0.66, 0.8, 0.58],
-                scale: [0.92, 1.08, 0.98, 1.04, 0.92],
-              }}
-              transition={{ duration: 1.45, ease: "easeInOut", repeat: Infinity }}
-              style={{
-                width: "100%",
-                height: "100%",
-                clipPath: "circle(50% at 50% 50%)",
-              }}
-            />
-          </div>
-          <motion.img
-            className="pixelated drop-shadow-[10px_14px_0_rgba(0,0,0,0.26)]"
-            src={bonfireSrc}
-            alt=""
-            aria-hidden="true"
-            initial={{ opacity: 0, scale: 0.86 }}
-            animate={{
-              opacity: 1,
-              scale: [1, 1.035, 0.98, 1.02, 1],
-              y: [0, -2, 1, -1, 0],
-            }}
-            transition={{
-              opacity: { duration: 0.26, ease: steppedEase(5) },
-              scale: { duration: 1.25, ease: "easeInOut", repeat: Infinity },
-              y: { duration: 1.25, ease: "easeInOut", repeat: Infinity },
-            }}
-            style={{
-              display: "block",
-              position: "relative",
-              width: "100%",
-              height: "auto",
-              mixBlendMode: "screen",
-            }}
-          />
-        </div>
-      </motion.div>
-
-      <motion.header
-        initial={{ opacity: 0, y: -14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.32, ease: steppedEase(6) }}
-        style={{
-          position: "fixed",
-          top: "calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.2vw, 28px))",
-          right: "clamp(14px, 2.2vw, 28px)",
-          zIndex: 5,
-          width: "min(calc(100vw - 150px), 720px)",
-          border: "3px solid rgba(255, 248, 215, 0.76)",
-          borderBottomColor: "rgba(55, 44, 35, 0.96)",
-          borderRightColor: "rgba(55, 44, 35, 0.96)",
-          background: "rgba(3, 10, 24, 0.72)",
-          boxShadow:
-            "0 0 0 2px rgba(0,0,0,0.68), 6px 6px 0 rgba(0,0,0,0.34), inset 0 0 18px rgba(116,247,161,0.1)",
-          padding: "clamp(10px, 2vw, 14px)",
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "auto 1fr",
-            alignItems: "center",
-            gap: "clamp(10px, 2vw, 16px)",
-          }}
-        >
-          <strong
-            style={{
-              color: "#ffd966",
-              fontSize: "clamp(0.62rem, 1.45vw, 0.86rem)",
-              lineHeight: 1.5,
-              whiteSpace: "nowrap",
-              textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-            }}
-          >
-            TOWN LEVEL {townLevel}
-          </strong>
-          <div style={{ minWidth: 0 }}>
-            <div
-              aria-label={`${currentCp.toLocaleString()} / ${nextLevelCp.toLocaleString()} CP`}
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={nextLevelCp}
-              aria-valuenow={currentCp}
-              style={{
-                height: "14px",
-                border: "2px solid rgba(116, 247, 161, 0.72)",
-                background: "rgba(1, 8, 22, 0.8)",
-                boxShadow: "inset 0 0 10px rgba(0,0,0,0.64)",
-                overflow: "hidden",
-              }}
-            >
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.52, ease: steppedEase(8) }}
-                style={{
-                  height: "100%",
-                  background:
-                    "repeating-linear-gradient(90deg, #74f7a1 0, #74f7a1 10px, #39ff14 10px, #39ff14 20px)",
-                  boxShadow: "0 0 12px rgba(116,247,161,0.72)",
-                }}
-              />
-            </div>
-            <p
-              style={{
-                margin: "7px 0 0",
-                color: "#f4ecd0",
-                fontFamily: '"DotGothic16", monospace',
-                fontSize: "clamp(0.72rem, 1.45vw, 0.95rem)",
-                lineHeight: 1.4,
-                textAlign: "right",
-              }}
-            >
-              {currentCp.toLocaleString()} / {nextLevelCp.toLocaleString()} CP
-            </p>
-          </div>
-        </div>
-      </motion.header>
-
-      <motion.button
-        type="button"
-        whileHover={{ y: -2, scale: 1.02 }}
-        whileTap={{ y: 2, scale: 0.98 }}
-        onClick={() => onNavigate("/guild")}
-        style={{
-          position: "fixed",
-          top: "calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.2vw, 28px))",
-          left: "clamp(14px, 2.2vw, 28px)",
-          zIndex: 6,
-          minHeight: "42px",
-          border: "2px solid rgba(255, 217, 102, 0.78)",
-          borderBottomColor: "rgba(96, 62, 22, 0.95)",
-          borderRightColor: "rgba(96, 62, 22, 0.95)",
-          background: "rgba(3, 10, 24, 0.74)",
-          boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 5px 5px 0 rgba(0,0,0,0.34)",
-          color: "#fff8d7",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          fontSize: "clamp(0.56rem, 1.3vw, 0.78rem)",
-          lineHeight: 1.5,
-          padding: "10px 12px",
-          textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-        }}
-      >
-        &lt; BACK
-      </motion.button>
-
-      <div className="absolute bottom-6 right-6 z-[6] flex flex-col gap-3">
-        <motion.button
-          type="button"
-          aria-label="Zoom in"
-          whileHover={{ y: -2, scale: 1.04, backgroundColor: "rgba(255, 217, 102, 0.2)" }}
-          whileTap={{ y: 2, scale: 0.96 }}
-          onClick={() => handleZoom(ZOOM_STEP)}
-          style={{
-            width: "46px",
-            height: "46px",
-            border: "2px solid rgba(255, 217, 102, 0.78)",
-            borderBottomColor: "rgba(96, 62, 22, 0.95)",
-            borderRightColor: "rgba(96, 62, 22, 0.95)",
-            background: "rgba(3, 10, 24, 0.82)",
-            boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 5px 5px 0 rgba(0,0,0,0.34)",
-            color: "#fff8d7",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            fontSize: "1.1rem",
-            lineHeight: 1,
-            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-          }}
-        >
-          +
-        </motion.button>
-        <motion.button
-          type="button"
-          aria-label="Zoom out"
-          whileHover={{ y: -2, scale: 1.04, backgroundColor: "rgba(255, 217, 102, 0.2)" }}
-          whileTap={{ y: 2, scale: 0.96 }}
-          onClick={() => handleZoom(-ZOOM_STEP)}
-          style={{
-            width: "46px",
-            height: "46px",
-            border: "2px solid rgba(255, 217, 102, 0.78)",
-            borderBottomColor: "rgba(96, 62, 22, 0.95)",
-            borderRightColor: "rgba(96, 62, 22, 0.95)",
-            background: "rgba(3, 10, 24, 0.82)",
-            boxShadow: "0 0 0 2px rgba(0,0,0,0.62), 5px 5px 0 rgba(0,0,0,0.34)",
-            color: "#fff8d7",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            fontSize: "1.1rem",
-            lineHeight: 1,
-            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-          }}
-        >
-          -
-        </motion.button>
-      </div>
+      <TownStatusHeader
+        currentCp={currentCp}
+        nextLevelCp={nextLevelCp}
+        progress={progress}
+        townLevel={townLevel}
+      />
+      <BackButton onNavigate={onNavigate} />
+      <BuildInventory
+        inventory={inventory}
+        inventoryRef={inventoryRef}
+        onDragEnd={handleInventoryDragEnd}
+        onToggleVisible={() => setInventoryVisible((currentVisible) => !currentVisible)}
+        stopNestedDrag={stopNestedDrag}
+        visible={inventoryVisible}
+      />
+      <BuildingInfoPanel item={selectedPlacedItem} onClose={() => setSelectedPlacedItemId(null)} />
+      <ZoomControls onZoom={handleZoom} />
 
       <div
         aria-hidden="true"
@@ -410,4 +279,21 @@ export function GuildTown({
       />
     </main>
   );
+}
+
+function createPlacedItem(
+  item: InventoryItem,
+  placement: { id: string; src: string; width: number; x: number; y: number },
+): PlacedItem {
+  return {
+    id: placement.id,
+    type: item.type,
+    name: item.name,
+    title: item.title,
+    description: item.description,
+    src: placement.src,
+    x: placement.x,
+    y: placement.y,
+    width: placement.width,
+  };
 }
