@@ -2,6 +2,7 @@ package guild
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -49,8 +50,8 @@ func TestNewUseCasePanicsWithoutRepository(t *testing.T) {
 		if recovered == nil {
 			t.Fatal("NewUseCase() panic = nil, 期待値 panic")
 		}
-		if recovered != "guild repository is required" {
-			t.Fatalf("NewUseCase() panic = %v, 期待値 guild repository is required", recovered)
+		if message := fmt.Sprint(recovered); message != "guild repository is required" {
+			t.Fatalf("NewUseCase() panic = %q, 期待値 guild repository is required", message)
 		}
 	}()
 
