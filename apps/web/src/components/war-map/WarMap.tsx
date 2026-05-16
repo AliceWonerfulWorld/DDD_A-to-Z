@@ -39,8 +39,14 @@ export function WarMap({ onNavigate }: WarMapProps) {
 
   const selectGuild = useCallback(
     (guild: WarGuild) => {
-      playSe(guildScoutSeRef.current);
-      setSelectedGuild(guild);
+      setSelectedGuild((current) => {
+        if (current?.id === guild.id) {
+          return null; 
+        }
+
+        playSe(guildScoutSeRef.current);
+        return guild;
+      });
     },
     [playSe],
   );
@@ -63,8 +69,8 @@ export function WarMap({ onNavigate }: WarMapProps) {
     const target = event.target;
     if (!(target instanceof Element)) return;
     if (target.closest("[data-war-interactive='true']")) return;
-
     closeScout();
+    setIsRankingOpen(false);
   };
 
   return (
