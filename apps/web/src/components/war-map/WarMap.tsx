@@ -52,8 +52,8 @@ export function WarMap({ onNavigate }: WarMapProps) {
   useEffect(() => {
     if (viewport.width === 0 || viewport.height === 0) return;
 
-    mapX.set(-viewport.width * 0.5);
-    mapY.set(-viewport.height * 0.5);
+    mapX.set(0);
+    mapY.set(0);
   }, [mapX, mapY, viewport.height, viewport.width]);
 
   useEffect(() => {
@@ -114,7 +114,7 @@ export function WarMap({ onNavigate }: WarMapProps) {
 
       <motion.div
         ref={mapRef}
-        className="absolute left-0 top-0 h-[200vh] w-[200vw] cursor-grab active:cursor-grabbing"
+        className="absolute left-0 top-0 h-screen w-screen cursor-grab active:cursor-grabbing"
         drag
         dragConstraints={dragConstraints}
         dragElastic={0.08}
@@ -202,8 +202,8 @@ export function WarMap({ onNavigate }: WarMapProps) {
 }
 
 function getFocusedPosition(guild: WarGuild, viewport: ViewportSize, scale: number) {
-  const mapWidth = viewport.width * 2;
-  const mapHeight = viewport.height * 2;
+  const mapWidth = viewport.width;
+  const mapHeight = viewport.height;
   const targetX = (mapWidth * guild.x) / 100;
   const targetY = (mapHeight * guild.y) / 100;
   const constraints = getDragConstraints(viewport, scale);
@@ -216,9 +216,9 @@ function getFocusedPosition(guild: WarGuild, viewport: ViewportSize, scale: numb
 
 function getDragConstraints(viewport: ViewportSize, scale: number) {
   return {
-    left: Math.min(0, viewport.width - viewport.width * 2 * scale),
+    left: Math.min(0, viewport.width - viewport.width * scale),
     right: 0,
-    top: Math.min(0, viewport.height - viewport.height * 2 * scale),
+    top: Math.min(0, viewport.height - viewport.height * scale),
     bottom: 0,
   };
 }
