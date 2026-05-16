@@ -1,6 +1,6 @@
 env "local" {
   url = getenv("DATABASE_URL")
-  src = "file://db/schema.sql"
+  src = "file://db/schema"
   dev = "docker://postgres/17/dev?search_path=public"
 
   migration {
@@ -8,12 +8,12 @@ env "local" {
   }
 
   schema {
-    src = "file://db/schema.sql"
+    src = "file://db/schema"
   }
 }
 
 env "ci" {
-  src = "file://db/schema.sql"
+  src = "file://db/schema"
   dev = "docker://postgres/17/dev?search_path=public"
 
   migration {
@@ -21,7 +21,7 @@ env "ci" {
   }
 
   schema {
-    src = "file://db/schema.sql"
+    src = "file://db/schema"
   }
 
   lint {

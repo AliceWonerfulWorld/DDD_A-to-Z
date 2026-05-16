@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { HomeHud } from "./HomeHud";
 import { HomeNav } from "./HomeNav";
 import { ReturnTitleDialog } from "./ReturnTitleDialog";
-import { AudioTogglePanel } from "./AudioTogglePanel";
+import { AudioTogglePanel } from "../shared/AudioTogglePanel";
 import { WalkingGopher } from "./WalkingGopher";
-import { useHomeAudio } from "../hooks/useHomeAudio";
-import { AUDIO_ASSETS } from "../features/audio/audioAssets";
-import { fetchProfile, type Profile } from "../features/profile/api";
+import { useHomeAudio } from "../../hooks/useHomeAudio";
+import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { fetchProfile, type Profile } from "../../features/profile/api";
 
 interface HomeProps {
   onNavigate: (path: string) => void | Promise<void>;

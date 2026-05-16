@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ParticleBackground } from "./ParticleBackground";
-import { GopherSprite } from "./GopherSprite";
+import { ParticleBackground } from "../shared/ParticleBackground";
+import { GopherSprite } from "../shared/GopherSprite";
 
 interface InitialProfileProps {
   onComplete: (username: string) => void;

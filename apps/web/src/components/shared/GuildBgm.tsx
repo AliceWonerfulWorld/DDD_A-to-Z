@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { AUDIO_ASSETS } from "../features/audio/audioAssets";
-import { useAudioSettings } from "../features/audio/useAudioSettings";
+import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { useAudioSettings } from "../../features/audio/useAudioSettings";
 
 const GUILD_BGM_VOLUME = 0.36;
 const GUILD_BGM_FADE_IN_MS = 620;

@@ -14,7 +14,7 @@ CREATE INDEX "point_ledger_source_idx" ON "point_ledger" ("source_type", "source
 -- Create index "point_ledger_user_id_created_at_idx" to table: "point_ledger"
 CREATE INDEX "point_ledger_user_id_created_at_idx" ON "point_ledger" ("user_id", "point_type", "created_at" DESC);
 -- Triggers: reject non-zero initial balance on point_accounts
-CREATE FUNCTION reject_nonzero_point_account_insert()
+CREATE OR REPLACE FUNCTION reject_nonzero_point_account_insert()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW.balance <> 0 THEN
@@ -28,7 +28,7 @@ CREATE TRIGGER point_accounts_reject_nonzero_insert
 BEFORE INSERT ON point_accounts
 FOR EACH ROW EXECUTE FUNCTION reject_nonzero_point_account_insert();
 -- Triggers: only point_ledger trigger may update account balances directly
-CREATE FUNCTION reject_direct_point_account_balance_update()
+CREATE OR REPLACE FUNCTION reject_direct_point_account_balance_update()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   IF OLD.balance IS DISTINCT FROM NEW.balance
@@ -43,7 +43,7 @@ CREATE TRIGGER point_accounts_reject_direct_balance_update
 BEFORE UPDATE OF balance ON point_accounts
 FOR EACH ROW EXECUTE FUNCTION reject_direct_point_account_balance_update();
 -- Triggers: apply ledger entry — compute balance_after and update point_accounts atomically
-CREATE FUNCTION apply_point_ledger_entry()
+CREATE OR REPLACE FUNCTION apply_point_ledger_entry()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
   next_balance BIGINT;
@@ -77,7 +77,7 @@ CREATE TRIGGER point_ledger_apply_before_insert
 BEFORE INSERT ON point_ledger
 FOR EACH ROW EXECUTE FUNCTION apply_point_ledger_entry();
 -- Triggers: keep point_ledger append-only
-CREATE FUNCTION reject_point_ledger_mutation()
+CREATE OR REPLACE FUNCTION reject_point_ledger_mutation()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION 'point_ledger is append-only'

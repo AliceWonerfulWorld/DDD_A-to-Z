@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AUDIO_ASSETS } from "../features/audio/audioAssets";
-import { useAudioSettings } from "../features/audio/useAudioSettings";
-import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../hooks/useBackNavigationSe";
-import { DashboardMonitor } from "./guild-dashboard/DashboardMonitor";
-import { createLog, GUILD_TABS, INITIAL_LOGS } from "./guild-dashboard/data";
-import { GuildBadge } from "./guild-dashboard/GuildBadge";
-import { GuildNavigation } from "./guild-dashboard/GuildNavigation";
-import type { GuildTab } from "./guild-dashboard/types";
+import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { useAudioSettings } from "../../features/audio/useAudioSettings";
+import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
+import { DashboardMonitor } from "./DashboardMonitor";
+import { createLog, GUILD_TABS, INITIAL_LOGS } from "./data";
+import { GuildBadge } from "./GuildBadge";
+import { GuildNavigation } from "./GuildNavigation";
+import type { GuildTab } from "./types";
 
 interface GuildDashboardProps {
   onNavigate: (path: string) => void;

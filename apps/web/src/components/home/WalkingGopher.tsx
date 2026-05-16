@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { steppedEase } from "../lib/animationUtils";
-import { GopherSprite } from "./GopherSprite";
+import { steppedEase } from "../../lib/animationUtils";
+import { GopherSprite } from "../shared/GopherSprite";
 
 const gopherTalkLines = [
   "今日もコード日和！",

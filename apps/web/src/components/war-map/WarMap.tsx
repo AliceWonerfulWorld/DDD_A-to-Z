@@ -3,7 +3,7 @@ import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { useAudioSettings } from "../../features/audio/useAudioSettings";
 import { PATHS } from "../../constants/paths";
 import { BackButton } from "../guild-town/BackButton";
-import { GuildBgm } from "../GuildBgm";
+import { GuildBgm } from "../shared/GuildBgm";
 import { RankingPanel } from "./RankingPanel";
 import { ScoutPanel } from "./ScoutPanel";
 import { WAR_GUILDS, type WarGuild } from "./WarMapData";
