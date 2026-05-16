@@ -28,7 +28,7 @@ func (r *fakeLedgerRepository) Record(ctx context.Context, entry contributionpoi
 	return entry.WithBalanceAfter(r.balance), nil
 }
 
-func (r *fakeLedgerRepository) GetBalance(ctx context.Context, userID user.ID) (int64, error) {
+func (r *fakeLedgerRepository) GetBalance(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType) (int64, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
@@ -44,7 +44,79 @@ func (g fakeIDGenerator) NewID() (string, error) {
 	return g.id, nil
 }
 
+type fakeIDGeneratorError struct{}
+
+func (g fakeIDGeneratorError) NewID() (string, error) {
+	return "", errors.New("ID生成に失敗しました")
+}
+
 func TestUseCaseApply(t *testing.T) {
+	t.Run("コンテキストがキャンセル済みならエラーを返し履歴を残さない", func(t *testing.T) {
+		ledger := &fakeLedgerRepository{}
+		usecase := NewUseCase(ledger, fakeIDGenerator{id: "contribution_point_ledger_1"})
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := usecase.Apply(ctx, ApplyCommand{
+			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
+			Amount:     100,
+			Type:       contributionpointdomain.EntryTypeEarn,
+			Reason:     "reward",
+			SourceType: "test",
+			SourceID:   "source_1",
+		})
+		if err == nil {
+			t.Fatal("Apply() error = nil, エラーを期待")
+		}
+		if len(ledger.recorded) != 0 {
+			t.Fatalf("記録された履歴数 = %d, 期待値 0", len(ledger.recorded))
+		}
+	})
+
+	t.Run("ID生成に失敗したらエラーを返し履歴を残さない", func(t *testing.T) {
+		ledger := &fakeLedgerRepository{}
+		usecase := NewUseCase(ledger, fakeIDGeneratorError{})
+
+		_, err := usecase.Apply(context.Background(), ApplyCommand{
+			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
+			Amount:     100,
+			Type:       contributionpointdomain.EntryTypeEarn,
+			Reason:     "reward",
+			SourceType: "test",
+			SourceID:   "source_1",
+		})
+		if err == nil {
+			t.Fatal("Apply() error = nil, エラーを期待")
+		}
+		if len(ledger.recorded) != 0 {
+			t.Fatalf("記録された履歴数 = %d, 期待値 0", len(ledger.recorded))
+		}
+	})
+
+	t.Run("ドメインバリデーションエラーは呼び出し元に伝播する", func(t *testing.T) {
+		ledger := &fakeLedgerRepository{}
+		usecase := NewUseCase(ledger, fakeIDGenerator{id: "contribution_point_ledger_1"})
+
+		_, err := usecase.Apply(context.Background(), ApplyCommand{
+			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
+			Amount:     0,
+			Type:       contributionpointdomain.EntryTypeEarn,
+			Reason:     "reward",
+			SourceType: "test",
+			SourceID:   "source_1",
+		})
+		if err == nil {
+			t.Fatal("Apply() error = nil, エラーを期待")
+		}
+		if len(ledger.recorded) != 0 {
+			t.Fatalf("記録された履歴数 = %d, 期待値 0", len(ledger.recorded))
+		}
+	})
+
 	t.Run("ContributionPoint増減を履歴として記録しDBが確定した残高を返す", func(t *testing.T) {
 		ledger := &fakeLedgerRepository{}
 		usecase := NewUseCase(ledger, fakeIDGenerator{id: "contribution_point_ledger_1"})
@@ -54,6 +126,7 @@ func TestUseCaseApply(t *testing.T) {
 
 		entry, err := usecase.Apply(context.Background(), ApplyCommand{
 			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
 			Amount:     120,
 			Type:       contributionpointdomain.EntryTypeEarn,
 			Reason:     "repository analysis reward",
@@ -86,6 +159,7 @@ func TestUseCaseEarn(t *testing.T) {
 
 		entry, err := service.Earn(context.Background(), EarnCommand{
 			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
 			Amount:     10,
 			Reason:     "service api test",
 			SourceType: "test",
@@ -108,6 +182,7 @@ func TestUseCaseEarn(t *testing.T) {
 
 		entry, err := usecase.Earn(context.Background(), EarnCommand{
 			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
 			Amount:     120,
 			Reason:     "repository analysis reward",
 			SourceType: "repository_analysis",
@@ -127,6 +202,52 @@ func TestUseCaseEarn(t *testing.T) {
 			t.Fatalf("entry.BalanceAfter = %d, 期待値 130", entry.BalanceAfter)
 		}
 	})
+
+	t.Run("コンテキストがキャンセル済みなら Earn はエラーを返す", func(t *testing.T) {
+		ledger := &fakeLedgerRepository{}
+		usecase := NewUseCase(ledger, fakeIDGenerator{id: "contribution_point_ledger_earn_cancel"})
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := usecase.Earn(ctx, EarnCommand{
+			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
+			Amount:     10,
+			Reason:     "reward",
+			SourceType: "test",
+			SourceID:   "source_1",
+		})
+		if err == nil {
+			t.Fatal("Earn() error = nil, エラーを期待")
+		}
+		if len(ledger.recorded) != 0 {
+			t.Fatalf("記録された履歴数 = %d, 期待値 0", len(ledger.recorded))
+		}
+	})
+
+	t.Run("Golang_SP の獲得は CP とは独立して記録される", func(t *testing.T) {
+		ledger := &fakeLedgerRepository{}
+		usecase := NewUseCase(ledger, fakeIDGenerator{id: "point_ledger_golang_sp_1"})
+
+		entry, err := usecase.Earn(context.Background(), EarnCommand{
+			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeGolangSP,
+			Amount:     50,
+			Reason:     "golang commit reward",
+			SourceType: "commit",
+			SourceID:   "commit_1",
+		})
+		if err != nil {
+			t.Fatalf("Earn() がエラーを返しました: %v", err)
+		}
+		if entry.PointType != contributionpointdomain.PointTypeGolangSP {
+			t.Fatalf("entry.PointType = %q, 期待値 %q", entry.PointType, contributionpointdomain.PointTypeGolangSP)
+		}
+		if entry.BalanceAfter != 50 {
+			t.Fatalf("entry.BalanceAfter = %d, 期待値 50", entry.BalanceAfter)
+		}
+	})
 }
 
 func TestUseCaseSpend(t *testing.T) {
@@ -139,6 +260,7 @@ func TestUseCaseSpend(t *testing.T) {
 
 		entry, err := usecase.Spend(context.Background(), SpendCommand{
 			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
 			Amount:     40,
 			Reason:     "guild build",
 			SourceType: "guild",
@@ -165,6 +287,7 @@ func TestUseCaseSpend(t *testing.T) {
 
 		_, err := usecase.Spend(context.Background(), SpendCommand{
 			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
 			Amount:     40,
 			Reason:     "guild build",
 			SourceType: "guild",
@@ -177,14 +300,50 @@ func TestUseCaseSpend(t *testing.T) {
 			t.Fatalf("記録された履歴数 = %d, 期待値 0", len(ledger.recorded))
 		}
 	})
+
+	t.Run("コンテキストがキャンセル済みなら Spend はエラーを返す", func(t *testing.T) {
+		ledger := &fakeLedgerRepository{balance: 100}
+		usecase := NewUseCase(ledger, fakeIDGenerator{id: "contribution_point_ledger_spend_cancel"})
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := usecase.Spend(ctx, SpendCommand{
+			UserID:     user.ID("user_1"),
+			PointType:  contributionpointdomain.PointTypeCP,
+			Amount:     10,
+			Reason:     "cost",
+			SourceType: "test",
+			SourceID:   "source_1",
+		})
+		if err == nil {
+			t.Fatal("Spend() error = nil, エラーを期待")
+		}
+		if len(ledger.recorded) != 0 {
+			t.Fatalf("記録された履歴数 = %d, 期待値 0", len(ledger.recorded))
+		}
+	})
 }
 
 func TestUseCaseGetBalance(t *testing.T) {
+	t.Run("コンテキストがキャンセル済みなら GetBalance はエラーを返す", func(t *testing.T) {
+		ledger := &fakeLedgerRepository{balance: 75}
+		usecase := NewUseCase(ledger, fakeIDGenerator{id: "contribution_point_ledger_1"})
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := usecase.GetBalance(ctx, user.ID("user_1"), contributionpointdomain.PointTypeCP)
+		if err == nil {
+			t.Fatal("GetBalance() error = nil, エラーを期待")
+		}
+	})
+
 	t.Run("現在残高を共通サービス経由で取得する", func(t *testing.T) {
 		ledger := &fakeLedgerRepository{balance: 75}
 		usecase := NewUseCase(ledger, fakeIDGenerator{id: "contribution_point_ledger_1"})
 
-		balance, err := usecase.GetBalance(context.Background(), user.ID("user_1"))
+		balance, err := usecase.GetBalance(context.Background(), user.ID("user_1"), contributionpointdomain.PointTypeCP)
 		if err != nil {
 			t.Fatalf("GetBalance() がエラーを返しました: %v", err)
 		}

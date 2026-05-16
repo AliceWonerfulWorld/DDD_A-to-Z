@@ -135,9 +135,9 @@ MyPage
 | User | 実装済 | `services/api/internal/domain/user/user.go` |
 | GitHubAccount | 実装済 | `services/api/internal/domain/user/user.go` |
 | ContributionPoint / LedgerEntry | 実装済 | `services/api/internal/domain/contributionpoint/` |
+| SkillPoint / LedgerEntry | 実装済（point_ledger に統合） | `services/api/internal/domain/contributionpoint/` |
 | Guild | 未実装（企画定義済） | — |
 | Season | 未実装（企画定義済） | — |
-| SkillPoint | 未実装（企画定義済） | — |
 | WorldMap | 未実装（企画定義済） | — |
 | Character / CharacterGrowth | 未実装（企画定義済） | — |
 | Battle | 未実装（MVP 後） | — |

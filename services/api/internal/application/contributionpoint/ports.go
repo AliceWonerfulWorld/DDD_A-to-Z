@@ -9,7 +9,7 @@ import (
 
 type LedgerRepository interface {
 	Record(ctx context.Context, entry contributionpointdomain.LedgerEntry) (contributionpointdomain.LedgerEntry, error)
-	GetBalance(ctx context.Context, userID user.ID) (int64, error)
+	GetBalance(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType) (int64, error)
 }
 
 type IDGenerator interface {

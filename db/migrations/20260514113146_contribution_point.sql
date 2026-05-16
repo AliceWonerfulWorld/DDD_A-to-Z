@@ -12,3 +12,8 @@ DROP TABLE "cp_accounts";
 -- atlas:nolint DS102
 -- Drop "cp_ledger" table (renamed to contribution_point_ledger; table is empty at migration time)
 DROP TABLE "cp_ledger";
+-- Drop orphaned cp_* functions (triggers were removed with their tables above)
+DROP FUNCTION IF EXISTS reject_nonzero_cp_account_insert() CASCADE;
+DROP FUNCTION IF EXISTS reject_direct_cp_account_balance_update() CASCADE;
+DROP FUNCTION IF EXISTS apply_cp_ledger_entry() CASCADE;
+DROP FUNCTION IF EXISTS reject_cp_ledger_mutation() CASCADE;

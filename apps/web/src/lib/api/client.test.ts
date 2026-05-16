@@ -56,7 +56,9 @@ describe("apiFetch", () => {
 
   it("credentials: include が設定されている", async () => {
     mockFetch(200, {});
-    const spy = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
+    const spy = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
     vi.stubGlobal("fetch", spy);
     await apiFetch("/me");
     expect(spy).toHaveBeenCalledWith(
@@ -66,7 +68,9 @@ describe("apiFetch", () => {
   });
 
   it("GET リクエストには Content-Type を付けない", async () => {
-    const spy = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
+    const spy = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
     vi.stubGlobal("fetch", spy);
     await apiFetch("/me");
     const headers = spy.mock.calls[0][1].headers as Headers;
@@ -74,7 +78,9 @@ describe("apiFetch", () => {
   });
 
   it("POST リクエストには Content-Type: application/json を付ける", async () => {
-    const spy = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
+    const spy = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
     vi.stubGlobal("fetch", spy);
     await apiFetch("/items", { method: "POST", body: JSON.stringify({ x: 1 }) });
     const headers = spy.mock.calls[0][1].headers as Headers;
@@ -82,7 +88,9 @@ describe("apiFetch", () => {
   });
 
   it("呼び出し元が Content-Type を上書きできる", async () => {
-    const spy = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
+    const spy = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
     vi.stubGlobal("fetch", spy);
     await apiFetch("/upload", {
       method: "POST",
@@ -93,7 +101,9 @@ describe("apiFetch", () => {
   });
 
   it("tuple array 形式の headers を渡せる", async () => {
-    const spy = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
+    const spy = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
     vi.stubGlobal("fetch", spy);
     await apiFetch("/items", {
       headers: [["Accept", "application/json"]],

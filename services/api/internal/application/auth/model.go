@@ -1,4 +1,4 @@
-// Package auth owns login use cases and their ports.
+// Package auth はログインユースケースとそのポートを管理する。
 package auth
 
 import (

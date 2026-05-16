@@ -44,6 +44,7 @@ func (u *UseCase) Apply(ctx context.Context, command ApplyCommand) (contribution
 	entry, err := contributionpointdomain.NewLedgerEntry(
 		id,
 		command.UserID,
+		command.PointType,
 		command.Amount,
 		command.Type,
 		command.Reason,
@@ -61,6 +62,7 @@ func (u *UseCase) Apply(ctx context.Context, command ApplyCommand) (contribution
 func (u *UseCase) Earn(ctx context.Context, command EarnCommand) (contributionpointdomain.LedgerEntry, error) {
 	return u.Apply(ctx, ApplyCommand{
 		UserID:     command.UserID,
+		PointType:  command.PointType,
 		Amount:     command.Amount,
 		Type:       contributionpointdomain.EntryTypeEarn,
 		Reason:     command.Reason,
@@ -72,6 +74,7 @@ func (u *UseCase) Earn(ctx context.Context, command EarnCommand) (contributionpo
 func (u *UseCase) Spend(ctx context.Context, command SpendCommand) (contributionpointdomain.LedgerEntry, error) {
 	return u.Apply(ctx, ApplyCommand{
 		UserID:     command.UserID,
+		PointType:  command.PointType,
 		Amount:     -command.Amount,
 		Type:       contributionpointdomain.EntryTypeSpend,
 		Reason:     command.Reason,
@@ -80,16 +83,17 @@ func (u *UseCase) Spend(ctx context.Context, command SpendCommand) (contribution
 	})
 }
 
-func (u *UseCase) GetBalance(ctx context.Context, userID user.ID) (int64, error) {
+func (u *UseCase) GetBalance(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType) (int64, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
 
-	return u.ledger.GetBalance(ctx, userID)
+	return u.ledger.GetBalance(ctx, userID, pointType)
 }
 
 type ApplyCommand struct {
 	UserID     user.ID
+	PointType  contributionpointdomain.PointType
 	Amount     int64
 	Type       contributionpointdomain.EntryType
 	Reason     string
@@ -99,6 +103,7 @@ type ApplyCommand struct {
 
 type EarnCommand struct {
 	UserID     user.ID
+	PointType  contributionpointdomain.PointType
 	Amount     int64
 	Reason     string
 	SourceType string
@@ -107,6 +112,7 @@ type EarnCommand struct {
 
 type SpendCommand struct {
 	UserID     user.ID
+	PointType  contributionpointdomain.PointType
 	Amount     int64
 	Reason     string
 	SourceType string

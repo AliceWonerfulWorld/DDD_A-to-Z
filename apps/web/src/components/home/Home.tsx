@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HomeHud } from "./HomeHud";
 import { HomeNav } from "./HomeNav";
 import { ReturnTitleDialog } from "./ReturnTitleDialog";
@@ -6,6 +6,7 @@ import { AudioTogglePanel } from "../shared/AudioTogglePanel";
 import { WalkingGopher } from "./WalkingGopher";
 import { useHomeAudio } from "../../hooks/useHomeAudio";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { fetchProfile, type Profile } from "../../features/profile/api";
 
 interface HomeProps {
   onNavigate: (path: string) => void | Promise<void>;
@@ -44,6 +45,12 @@ export function Home({ onNavigate }: HomeProps) {
     playModalOpen,
     playReturnTitle,
   } = useHomeAudio(onNavigate);
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    fetchProfile().then(setProfile).catch(console.error);
+  }, []);
 
   const cancelReturnTitle = () => {
     playModalCancel();
@@ -144,7 +151,11 @@ export function Home({ onNavigate }: HomeProps) {
           gap: "20px",
         }}
       >
-        <HomeHud guild={guild} player={player} onReturnTitle={openReturnTitleDialog} />
+        <HomeHud
+          guild={guild}
+          player={{ ...player, name: profile?.display_name || player.name }}
+          onReturnTitle={openReturnTitleDialog}
+        />
 
         <section
           aria-label="Character placement area"

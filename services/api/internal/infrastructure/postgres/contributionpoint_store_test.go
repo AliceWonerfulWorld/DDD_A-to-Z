@@ -19,12 +19,13 @@ func TestContributionPointStoreRecord(t *testing.T) {
 		tx := beginPostgresTestTransaction(t, ctx)
 		store := NewContributionPointStore(tx)
 
-		appUser := createPostgresTestUserWithContributionPointAccount(t, ctx, tx)
+		appUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
 		now := time.Date(2026, 5, 13, 9, 0, 0, 0, time.UTC)
 
 		earned, err := contributionpointdomain.NewLedgerEntry(
-			"contribution_point_ledger_earn_"+string(appUser.ID),
+			"point_ledger_earn_"+string(appUser.ID),
 			appUser.ID,
+			contributionpointdomain.PointTypeCP,
 			150,
 			contributionpointdomain.EntryTypeEarn,
 			"repository analysis reward",
@@ -45,8 +46,9 @@ func TestContributionPointStoreRecord(t *testing.T) {
 		}
 
 		spent, err := contributionpointdomain.NewLedgerEntry(
-			"contribution_point_ledger_spend_"+string(appUser.ID),
+			"point_ledger_spend_"+string(appUser.ID),
 			appUser.ID,
+			contributionpointdomain.PointTypeCP,
 			-40,
 			contributionpointdomain.EntryTypeSpend,
 			"guild join fee",
@@ -67,11 +69,11 @@ func TestContributionPointStoreRecord(t *testing.T) {
 		}
 
 		var balance int64
-		if err := tx.WithContext(ctx).Raw("SELECT balance FROM contribution_point_accounts WHERE user_id = ?", appUser.ID).Scan(&balance).Error; err != nil {
-			t.Fatalf("contribution_point_accounts の残高取得でエラーが発生しました: %v", err)
+		if err := tx.WithContext(ctx).Raw("SELECT balance FROM point_accounts WHERE user_id = ? AND point_type = ?", appUser.ID, contributionpointdomain.PointTypeCP).Scan(&balance).Error; err != nil {
+			t.Fatalf("point_accounts の残高取得でエラーが発生しました: %v", err)
 		}
 		if balance != 110 {
-			t.Fatalf("contribution_point_accounts.balance = %d, 期待値 110", balance)
+			t.Fatalf("point_accounts.balance = %d, 期待値 110", balance)
 		}
 	})
 
@@ -80,12 +82,13 @@ func TestContributionPointStoreRecord(t *testing.T) {
 		tx := beginPostgresTestTransaction(t, ctx)
 		store := NewContributionPointStore(tx)
 
-		appUser := createPostgresTestUserWithContributionPointAccount(t, ctx, tx)
+		appUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
 		now := time.Date(2026, 5, 13, 10, 0, 0, 0, time.UTC)
 
 		spent, err := contributionpointdomain.NewLedgerEntry(
-			"contribution_point_ledger_overdraw_"+string(appUser.ID),
+			"point_ledger_overdraw_"+string(appUser.ID),
 			appUser.ID,
+			contributionpointdomain.PointTypeCP,
 			-1,
 			contributionpointdomain.EntryTypeSpend,
 			"overdraw test",
@@ -106,77 +109,60 @@ func TestContributionPointStoreRecord(t *testing.T) {
 		}
 
 		var balance int64
-		if err := tx.WithContext(ctx).Raw("SELECT balance FROM contribution_point_accounts WHERE user_id = ?", appUser.ID).Scan(&balance).Error; err != nil {
-			t.Fatalf("contribution_point_accounts の残高取得でエラーが発生しました: %v", err)
+		if err := tx.WithContext(ctx).Raw("SELECT balance FROM point_accounts WHERE user_id = ? AND point_type = ?", appUser.ID, contributionpointdomain.PointTypeCP).Scan(&balance).Error; err != nil {
+			t.Fatalf("point_accounts の残高取得でエラーが発生しました: %v", err)
 		}
 		if balance != 0 {
-			t.Fatalf("残高不足後 contribution_point_accounts.balance = %d, 期待値 0", balance)
+			t.Fatalf("残高不足後 point_accounts.balance = %d, 期待値 0", balance)
 		}
 
 		var count int64
-		if err := tx.WithContext(ctx).Raw("SELECT COUNT(*) FROM contribution_point_ledger WHERE user_id = ?", appUser.ID).Scan(&count).Error; err != nil {
-			t.Fatalf("contribution_point_ledger 件数取得でエラーが発生しました: %v", err)
+		if err := tx.WithContext(ctx).Raw("SELECT COUNT(*) FROM point_ledger WHERE user_id = ?", appUser.ID).Scan(&count).Error; err != nil {
+			t.Fatalf("point_ledger 件数取得でエラーが発生しました: %v", err)
 		}
 		if count != 0 {
-			t.Fatalf("残高不足後 contribution_point_ledger 件数 = %d, 期待値 0", count)
+			t.Fatalf("残高不足後 point_ledger 件数 = %d, 期待値 0", count)
 		}
 	})
 
-	t.Run("contribution_point_accounts の残高は直接更新できない", func(t *testing.T) {
+	t.Run("point_accounts の残高は直接更新できない", func(t *testing.T) {
 		ctx := context.Background()
 		tx := beginPostgresTestTransaction(t, ctx)
 
-		appUser := createPostgresTestUserWithContributionPointAccount(t, ctx, tx)
+		appUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
 		expectPostgresStatementError(t, tx, func() error {
 			return tx.WithContext(ctx).Exec(`
-			UPDATE contribution_point_accounts
+			UPDATE point_accounts
 			SET balance = 999
-			WHERE user_id = ?
-		`, appUser.ID).Error
+			WHERE user_id = ? AND point_type = ?
+		`, appUser.ID, contributionpointdomain.PointTypeCP).Error
 		})
 	})
 
-	t.Run("session 設定を変更しても contribution_point_accounts の残高は直接更新できない", func(t *testing.T) {
-		ctx := context.Background()
-		tx := beginPostgresTestTransaction(t, ctx)
-
-		appUser := createPostgresTestUserWithContributionPointAccount(t, ctx, tx)
-		if err := tx.WithContext(ctx).Exec("SELECT set_config('app.allow_contribution_point_account_balance_update', 'on', true)").Error; err != nil {
-			t.Fatalf("set_config() がエラーを返しました: %v", err)
-		}
-
-		expectPostgresStatementError(t, tx, func() error {
-			return tx.WithContext(ctx).Exec(`
-			UPDATE contribution_point_accounts
-			SET balance = 999
-			WHERE user_id = ?
-		`, appUser.ID).Error
-		})
-	})
-
-	t.Run("contribution_point_accounts は非ゼロ初期残高で作成できない", func(t *testing.T) {
+	t.Run("point_accounts は非ゼロ初期残高で作成できない", func(t *testing.T) {
 		ctx := context.Background()
 		tx := beginPostgresTestTransaction(t, ctx)
 
 		appUser := createPostgresTestUser(t, ctx, tx)
 		expectPostgresStatementError(t, tx, func() error {
 			return tx.WithContext(ctx).Exec(`
-				INSERT INTO contribution_point_accounts (user_id, balance, created_at, updated_at)
-				VALUES (?, 10, ?, ?)
-			`, appUser.ID, appUser.CreatedAt, appUser.UpdatedAt).Error
+				INSERT INTO point_accounts (user_id, point_type, balance, created_at, updated_at)
+				VALUES (?, ?, 10, ?, ?)
+			`, appUser.ID, contributionpointdomain.PointTypeCP, appUser.CreatedAt, appUser.UpdatedAt).Error
 		})
 	})
 
-	t.Run("contribution_point_ledger は更新も削除もできない", func(t *testing.T) {
+	t.Run("point_ledger は更新も削除もできない", func(t *testing.T) {
 		ctx := context.Background()
 		tx := beginPostgresTestTransaction(t, ctx)
 		store := NewContributionPointStore(tx)
 
-		appUser := createPostgresTestUserWithContributionPointAccount(t, ctx, tx)
+		appUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
 		now := time.Date(2026, 5, 13, 11, 0, 0, 0, time.UTC)
 		earned, err := contributionpointdomain.NewLedgerEntry(
-			"contribution_point_ledger_append_only_"+string(appUser.ID),
+			"point_ledger_append_only_"+string(appUser.ID),
 			appUser.ID,
+			contributionpointdomain.PointTypeCP,
 			10,
 			contributionpointdomain.EntryTypeEarn,
 			"append only test",
@@ -192,10 +178,10 @@ func TestContributionPointStoreRecord(t *testing.T) {
 		}
 
 		expectPostgresStatementError(t, tx, func() error {
-			return tx.WithContext(ctx).Exec("UPDATE contribution_point_ledger SET reason = ? WHERE id = ?", "tampered", earned.ID).Error
+			return tx.WithContext(ctx).Exec("UPDATE point_ledger SET reason = ? WHERE id = ?", "tampered", earned.ID).Error
 		})
 		expectPostgresStatementError(t, tx, func() error {
-			return tx.WithContext(ctx).Exec("DELETE FROM contribution_point_ledger WHERE id = ?", earned.ID).Error
+			return tx.WithContext(ctx).Exec("DELETE FROM point_ledger WHERE id = ?", earned.ID).Error
 		})
 	})
 
@@ -203,16 +189,16 @@ func TestContributionPointStoreRecord(t *testing.T) {
 		ctx := context.Background()
 		tx := beginPostgresTestTransaction(t, ctx)
 
-		appUser := createPostgresTestUserWithContributionPointAccount(t, ctx, tx)
+		appUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
 		now := time.Date(2026, 5, 13, 12, 0, 0, 0, time.UTC)
 
 		var balanceAfter int64
 		if err := tx.WithContext(ctx).Raw(`
-			INSERT INTO contribution_point_ledger (id, user_id, amount, type, reason, source_type, source_id, balance_after, created_at)
-			VALUES (?, ?, 25, 'earn', 'override test', 'test', ?, 999, ?)
+			INSERT INTO point_ledger (id, user_id, point_type, amount, type, reason, source_type, source_id, balance_after, created_at)
+			VALUES (?, ?, ?, 25, 'earn', 'override test', 'test', ?, 999, ?)
 			RETURNING balance_after
-		`, "contribution_point_ledger_override_"+string(appUser.ID), appUser.ID, "override_"+string(appUser.ID), now).Scan(&balanceAfter).Error; err != nil {
-			t.Fatalf("contribution_point_ledger INSERT でエラーが発生しました: %v", err)
+		`, "point_ledger_override_"+string(appUser.ID), appUser.ID, contributionpointdomain.PointTypeCP, "override_"+string(appUser.ID), now).Scan(&balanceAfter).Error; err != nil {
+			t.Fatalf("point_ledger INSERT でエラーが発生しました: %v", err)
 		}
 		if balanceAfter != 25 {
 			t.Fatalf("balance_after = %d, 期待値 25", balanceAfter)
@@ -221,16 +207,17 @@ func TestContributionPointStoreRecord(t *testing.T) {
 }
 
 func TestContributionPointStoreGetBalance(t *testing.T) {
-	t.Run("contribution_point_accounts から現在残高を取得する", func(t *testing.T) {
+	t.Run("point_accounts から現在残高を取得する", func(t *testing.T) {
 		ctx := context.Background()
 		tx := beginPostgresTestTransaction(t, ctx)
 		store := NewContributionPointStore(tx)
 
-		appUser := createPostgresTestUserWithContributionPointAccount(t, ctx, tx)
+		appUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
 		now := time.Date(2026, 5, 13, 13, 0, 0, 0, time.UTC)
 		earned, err := contributionpointdomain.NewLedgerEntry(
-			"contribution_point_ledger_balance_"+string(appUser.ID),
+			"point_ledger_balance_"+string(appUser.ID),
 			appUser.ID,
+			contributionpointdomain.PointTypeCP,
 			70,
 			contributionpointdomain.EntryTypeEarn,
 			"balance test",
@@ -245,7 +232,7 @@ func TestContributionPointStoreGetBalance(t *testing.T) {
 			t.Fatalf("Record() がエラーを返しました: %v", err)
 		}
 
-		balance, err := store.GetBalance(ctx, appUser.ID)
+		balance, err := store.GetBalance(ctx, appUser.ID, contributionpointdomain.PointTypeCP)
 		if err != nil {
 			t.Fatalf("GetBalance() がエラーを返しました: %v", err)
 		}
@@ -255,15 +242,15 @@ func TestContributionPointStoreGetBalance(t *testing.T) {
 	})
 }
 
-func createPostgresTestUserWithContributionPointAccount(t *testing.T, ctx context.Context, tx *gorm.DB) user.User {
+func createPostgresTestUserWithPointAccount(t *testing.T, ctx context.Context, tx *gorm.DB) user.User {
 	t.Helper()
 
 	appUser := createPostgresTestUser(t, ctx, tx)
 	if err := tx.Exec(`
-		INSERT INTO contribution_point_accounts (user_id, balance, created_at, updated_at)
-		VALUES (?, 0, ?, ?)
-	`, appUser.ID, appUser.CreatedAt, appUser.UpdatedAt).Error; err != nil {
-		t.Fatalf("contribution_point_accounts INSERT でエラーが発生しました: %v", err)
+		INSERT INTO point_accounts (user_id, point_type, balance, created_at, updated_at)
+		VALUES (?, ?, 0, ?, ?)
+	`, appUser.ID, contributionpointdomain.PointTypeCP, appUser.CreatedAt, appUser.UpdatedAt).Error; err != nil {
+		t.Fatalf("point_accounts INSERT でエラーが発生しました: %v", err)
 	}
 
 	return appUser

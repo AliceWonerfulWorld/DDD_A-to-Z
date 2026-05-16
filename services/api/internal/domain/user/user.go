@@ -1,4 +1,4 @@
-// Package user owns the app user aggregate and linked GitHub account identity.
+// Package user はアプリユーザー集約と紐づく GitHub アカウント情報を管理する。
 package user
 
 import (

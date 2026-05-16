@@ -1,0 +1,2 @@
+-- Create "user_profiles" table
+CREATE TABLE "user_profiles" ("user_id" text NOT NULL, "display_name" text NOT NULL, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, PRIMARY KEY ("user_id"), CONSTRAINT "user_profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT "user_profiles_display_name_check" CHECK ((length(display_name) > 0) AND (length(display_name) <= 50)));

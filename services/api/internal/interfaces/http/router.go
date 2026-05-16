@@ -1,4 +1,4 @@
-// Package http owns HTTP routing and request/response adapters.
+// Package http は HTTP ルーティングとリクエスト・レスポンスのアダプターを管理する。
 package http
 
 import (

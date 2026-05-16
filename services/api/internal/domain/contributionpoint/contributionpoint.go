@@ -1,4 +1,4 @@
-// Package contributionpoint owns ContributionPoint account and ledger rules.
+// Package contributionpoint は ContributionPoint アカウントと台帳のルールを管理する。
 package contributionpoint
 
 import (
@@ -17,9 +17,20 @@ const (
 	EntryTypeAdjust EntryType = "adjust"
 )
 
+// PointType はポイントの種別を表す。有効値は point_types マスターテーブルで管理し、
+// 新しいSP種別の追加は INSERT のみで完結する。
+type PointType string
+
+const (
+	PointTypeCP       PointType = "CP"
+	PointTypeGolangSP PointType = "Golang_SP"
+	PointTypeTSSP     PointType = "TypeScript_SP"
+)
+
 type LedgerEntry struct {
 	ID           string
 	UserID       user.ID
+	PointType    PointType
 	Amount       int64
 	Type         EntryType
 	Reason       string
@@ -32,6 +43,7 @@ type LedgerEntry struct {
 func NewLedgerEntry(
 	id string,
 	userID user.ID,
+	pointType PointType,
 	amount int64,
 	entryType EntryType,
 	reason string,
@@ -47,6 +59,9 @@ func NewLedgerEntry(
 		requiredString{name: "contribution point source id", value: sourceID},
 	); err != nil {
 		return LedgerEntry{}, err
+	}
+	if string(pointType) == "" {
+		return LedgerEntry{}, fmt.Errorf("point type is required")
 	}
 	if amount == 0 {
 		return LedgerEntry{}, errors.New("contribution point amount must not be zero")
@@ -69,6 +84,7 @@ func NewLedgerEntry(
 	return LedgerEntry{
 		ID:         id,
 		UserID:     userID,
+		PointType:  pointType,
 		Amount:     amount,
 		Type:       entryType,
 		Reason:     reason,

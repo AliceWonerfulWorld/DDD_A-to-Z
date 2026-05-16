@@ -2,10 +2,12 @@ import { motion } from "framer-motion";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 
 interface BackButtonProps {
+  align?: "left" | "right";
   onNavigate: (path: string) => void;
+  targetPath?: string;
 }
 
-export function BackButton({ onNavigate }: BackButtonProps) {
+export function BackButton({ align = "left", onNavigate, targetPath = "/guild" }: BackButtonProps) {
   const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
 
   return (
@@ -20,11 +22,12 @@ export function BackButton({ onNavigate }: BackButtonProps) {
         type="button"
         whileHover={{ y: -2, scale: 1.02 }}
         whileTap={{ y: 2, scale: 0.98 }}
-        onClick={() => void navigateBackWithSe("/guild")}
+        onClick={() => void navigateBackWithSe(targetPath)}
         style={{
           position: "fixed",
           top: "calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.2vw, 28px))",
-          left: "clamp(14px, 2.2vw, 28px)",
+          left: align === "left" ? "clamp(14px, 2.2vw, 28px)" : "auto",
+          right: align === "right" ? "clamp(14px, 2.2vw, 28px)" : "auto",
           zIndex: 6,
           minHeight: "42px",
           border: "2px solid rgba(255, 217, 102, 0.78)",

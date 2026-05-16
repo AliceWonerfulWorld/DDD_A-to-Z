@@ -9,8 +9,10 @@ import { MyPage } from "./components/my-page/MyPage.tsx";
 import { InitialProfile } from "./components/profile/InitialProfile.tsx";
 import { GuildBgm } from "./components/shared/GuildBgm.tsx";
 import { HomeBgm } from "./components/shared/HomeBgm.tsx";
+import { WarMap } from "./components/war-map/WarMap.tsx";
 import { PATHS } from "./constants/paths.ts";
 import { fetchMe } from "./features/auth/api.ts";
+import { completeInitialProfileAPI } from "./features/profile/api.ts";
 import { markInitialProfileCompleted } from "./features/profile/initialProfile.ts";
 
 export function AppRoutes() {
@@ -27,6 +29,7 @@ export function AppRoutes() {
     try {
       const user = await fetchMe();
       if (user) {
+        await completeInitialProfileAPI(username);
         markInitialProfileCompleted(user.id);
       }
     } catch (error) {
@@ -58,7 +61,7 @@ export function AppRoutes() {
         <Route path={PATHS.GUILD_DETAILS} element={<MyGuildDetails onNavigate={navigate} />} />
         <Route path={PATHS.GUILD_MY_GUILD} element={<MyGuildDetails onNavigate={navigate} />} />
         <Route path={PATHS.GUILD_TOWN} element={<GuildTown onNavigate={navigate} />} />
-        <Route path={PATHS.WAR} element={<Navigate to={PATHS.MY_PAGE} replace />} />
+        <Route path={PATHS.WAR} element={<WarMap onNavigate={navigate} />} />
         <Route path="*" element={<Navigate to={PATHS.ROOT} replace />} />
       </Routes>
     </>
