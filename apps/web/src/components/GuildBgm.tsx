@@ -99,13 +99,6 @@ export function GuildBgm({ src = AUDIO_ASSETS.bgm.guild }: GuildBgmProps) {
   }, [isBgmEnabled]);
 
   return (
-    <audio
-      ref={audioRef}
-      src={src}
-      loop
-      preload="auto"
-      muted={!isBgmEnabled}
-      aria-hidden="true"
-    />
+    <audio ref={audioRef} src={src} loop preload="auto" muted={!isBgmEnabled} aria-hidden="true" />
   );
 }

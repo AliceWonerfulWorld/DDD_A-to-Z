@@ -111,6 +111,7 @@ pnpm lint
 pnpm test
 pnpm build
 pnpm format
+pnpm format:check
 ```
 
 ルートのコマンドは各言語・各 workspace の検証を呼び出すための入口です。TypeScript の検証は `apps/web` の Oxlint / Oxfmt、Go の lint は `golangci-lint`、Go の整形は `gofmt` が担当します。

@@ -151,10 +151,10 @@ export function Home({ onNavigate }: HomeProps) {
           gap: "20px",
         }}
       >
-        <HomeHud 
-          guild={guild} 
-          player={{ ...player, name: profile?.display_name || player.name }} 
-          onReturnTitle={openReturnTitleDialog} 
+        <HomeHud
+          guild={guild}
+          player={{ ...player, name: profile?.display_name || player.name }}
+          onReturnTitle={openReturnTitleDialog}
         />
 
         <section

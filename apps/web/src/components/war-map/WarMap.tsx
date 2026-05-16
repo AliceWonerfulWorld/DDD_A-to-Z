@@ -41,7 +41,7 @@ export function WarMap({ onNavigate }: WarMapProps) {
     (guild: WarGuild) => {
       setSelectedGuild((current) => {
         if (current?.id === guild.id) {
-          return null; 
+          return null;
         }
 
         playSe(guildScoutSeRef.current);
