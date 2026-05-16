@@ -9,6 +9,7 @@ import { HomeBgm } from "./components/HomeBgm.tsx";
 import { InitialProfile } from "./components/InitialProfile.tsx";
 import { MyPage } from "./components/MyPage.tsx";
 import { MyGuildDetails } from "./components/MyGuildDetails.tsx";
+import { WarMap } from "./components/war-map/WarMap.tsx";
 import { PATHS } from "./constants/paths.ts";
 import { fetchMe } from "./features/auth/api.ts";
 import { completeInitialProfileAPI } from "./features/profile/api.ts";
@@ -60,7 +61,7 @@ export function AppRoutes() {
         <Route path={PATHS.GUILD_DETAILS} element={<MyGuildDetails onNavigate={navigate} />} />
         <Route path={PATHS.GUILD_MY_GUILD} element={<MyGuildDetails onNavigate={navigate} />} />
         <Route path={PATHS.GUILD_TOWN} element={<GuildTown onNavigate={navigate} />} />
-        <Route path={PATHS.WAR} element={<Navigate to={PATHS.MY_PAGE} replace />} />
+        <Route path={PATHS.WAR} element={<WarMap onNavigate={navigate} />} />
         <Route path="*" element={<Navigate to={PATHS.ROOT} replace />} />
       </Routes>
     </>

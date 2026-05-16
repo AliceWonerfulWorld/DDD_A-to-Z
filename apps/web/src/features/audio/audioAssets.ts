@@ -4,6 +4,7 @@ export const AUDIO_ASSETS = {
     home: "/bgm/home_bgm.ogg",
     guild: "/bgm/guild.ogg",
     guildTown: "/bgm/guild-town.ogg",
+    warMap: "/bgm/war_map.ogg",
   },
   se: {
     confirmModal: "/SE/confirm-modal.wav",
@@ -15,5 +16,6 @@ export const AUDIO_ASSETS = {
     homeNavSelect: "/SE/home-nav-select.wav",
     returnTitle: "/SE/return-title.wav",
     gopherTalk: "/SE/gopher-talk.wav",
+    warGuildScout: "/SE/war-guild-scout.wav",
   },
 } as const;
