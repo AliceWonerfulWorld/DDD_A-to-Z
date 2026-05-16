@@ -3,139 +3,56 @@ import { motion } from "framer-motion";
 import { ParticleBackground } from "./ParticleBackground";
 import { AnalyzingPanel } from "./AnalyzingPanel";
 import { CompletePanel, type AnalysisResult } from "./CompletePanel";
-
-const MOCK_RESULT: AnalysisResult = {
-  totalCommits: 23,
-  totalPRs: 4,
-  totalCP: 43,
-  languageBreakdown: [
-    { name: "TypeScript", cp: 18, color: "#3178c6", icon: "📘" },
-    { name: "Rust", cp: 12, color: "#ff6b35", icon: "🦀" },
-    { name: "Python", cp: 8, color: "#3776ab", icon: "🐍" },
-    { name: "Go", cp: 5, color: "#00acd7", icon: "🐹" },
-  ],
-  contributions: [
-    {
-      repo: "user/awesome-project",
-      type: "commit",
-      message: "feat: implement OAuth2 login flow",
-      language: "TypeScript",
-      cp: 1,
-      timestamp: "2h ago",
-    },
-    {
-      repo: "user/awesome-project",
-      type: "commit",
-      message: "refactor: extract auth middleware",
-      language: "TypeScript",
-      cp: 1,
-      timestamp: "3h ago",
-    },
-    {
-      repo: "user/awesome-project",
-      type: "commit",
-      message: "style: format with prettier",
-      language: "TypeScript",
-      cp: 1,
-      timestamp: "4h ago",
-    },
-    {
-      repo: "user/rust-tool",
-      type: "commit",
-      message: "fix: handle edge case in parser",
-      language: "Rust",
-      cp: 1,
-      timestamp: "5h ago",
-    },
-    {
-      repo: "user/rust-tool",
-      type: "commit",
-      message: "docs: add API documentation",
-      language: "Rust",
-      cp: 1,
-      timestamp: "6h ago",
-    },
-    {
-      repo: "user/rust-tool",
-      type: "pull_request",
-      message: "Add CLI argument parsing",
-      language: "Rust",
-      cp: 5,
-      timestamp: "1d ago",
-    },
-    {
-      repo: "user/data-science",
-      type: "commit",
-      message: "update: normalize training dataset",
-      language: "Python",
-      cp: 1,
-      timestamp: "1d ago",
-    },
-    {
-      repo: "user/data-science",
-      type: "commit",
-      message: "feat: add cross-validation split",
-      language: "Python",
-      cp: 1,
-      timestamp: "1d ago",
-    },
-    {
-      repo: "user/go-api",
-      type: "commit",
-      message: "fix: correct status code on error",
-      language: "Go",
-      cp: 1,
-      timestamp: "2d ago",
-    },
-    {
-      repo: "user/go-api",
-      type: "commit",
-      message: "feat: add request logging middleware",
-      language: "Go",
-      cp: 1,
-      timestamp: "2d ago",
-    },
-  ],
-};
+import { analyzeContribution } from "../features/analysis/api";
 
 interface ContributionAnalysisProps {
   onComplete?: () => void;
 }
 
 export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) {
-  const [phase, setPhase] = useState<"analyzing" | "complete">("analyzing");
+  const [phase, setPhase] = useState<"analyzing" | "complete" | "error">("analyzing");
   const [progress, setProgress] = useState(0);
   const [currentMessageIdx, setCurrentMessageIdx] = useState(0);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
 
   useEffect(() => {
     if (phase !== "analyzing") return;
 
     let alive = true;
-    let messageIdx = 0;
     let completeTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const msgTimer = setInterval(() => {
-      messageIdx++;
-      if (messageIdx < 7) {
-        if (alive) setCurrentMessageIdx(messageIdx);
-      }
-    }, 1200);
-
-    const progTimer = setInterval(() => {
+    const advanceProgress = () => {
       setProgress((prev) => {
         if (!alive) return prev;
-        const next = Math.min(prev + Math.random() * 6 + 2, 100);
-        if (next >= 100) {
-          clearInterval(msgTimer);
-          clearInterval(progTimer);
-          completeTimer = setTimeout(() => {
-            if (alive) setPhase("complete");
-          }, 600);
-          return 100;
-        }
-        return next;
+        const next = prev + Math.random() * 4 + 1;
+        return Math.min(next, 85);
       });
-    }, 700);
+    };
+
+    const msgTimer = setInterval(() => {
+      setCurrentMessageIdx((prev) => Math.min(prev + 1, 6));
+    }, 1200);
+
+    const progTimer = setInterval(advanceProgress, 700);
+
+    analyzeContribution()
+      .then((data) => {
+        if (!alive) return;
+        setResult(data);
+        clearInterval(msgTimer);
+        clearInterval(progTimer);
+        setProgress(100);
+        setCurrentMessageIdx(6);
+        completeTimer = setTimeout(() => {
+          if (alive) setPhase("complete");
+        }, 600);
+      })
+      .catch(() => {
+        if (!alive) return;
+        clearInterval(msgTimer);
+        clearInterval(progTimer);
+        if (alive) setPhase("error");
+      });
 
     return () => {
       alive = false;
@@ -148,6 +65,12 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
   const handleContinue = useCallback(() => {
     onComplete?.();
   }, [onComplete]);
+
+  const handleRetry = useCallback(() => {
+    setProgress(0);
+    setCurrentMessageIdx(0);
+    setPhase("analyzing");
+  }, []);
 
   return (
     <div
@@ -192,9 +115,48 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
 
       {phase === "analyzing" ? (
         <AnalyzingPanel progress={progress} currentMessageIdx={currentMessageIdx} />
-      ) : (
-        <CompletePanel result={MOCK_RESULT} onContinue={handleContinue} />
-      )}
+      ) : phase === "error" ? (
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            border: "4px solid var(--color-gold)",
+            background: "var(--color-navy-light)",
+            boxShadow: "0 0 30px rgba(0, 245, 255, 0.12), 8px 8px 0 rgba(0,0,0,0.8)",
+            maxWidth: "520px",
+            width: "100%",
+            padding: "2rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.5rem",
+            textAlign: "center",
+          }}
+        >
+          <span style={{ fontFamily: "var(--font-press)", fontSize: "1rem", color: "var(--color-gold)" }}>
+            ✗ ANALYSIS FAILED
+          </span>
+          <span style={{ fontSize: "0.8rem", color: "rgba(232,232,208,0.6)" }}>
+            Failed to fetch contribution data from GitHub. Make sure you have synced your repositories.
+          </span>
+          <button
+            onClick={handleRetry}
+            style={{
+              padding: "0.8rem 2rem",
+              fontFamily: "var(--font-press)",
+              fontSize: "0.85rem",
+              background: "var(--color-gold)",
+              color: "#000",
+              border: "none",
+              boxShadow: "0px 4px 0 var(--color-gold-dark)",
+              cursor: "pointer",
+            }}
+          >
+            RETRY
+          </button>
+        </div>
+      ) : result ? (
+        <CompletePanel result={result} onContinue={handleContinue} />
+      ) : null}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 interface ContributionItem {
   repo: string;
-  type: "commit" | "pull_request";
+  type?: "commit" | "pull_request";
   message: string;
   language: string;
   cp: number;
@@ -12,8 +12,8 @@ interface ContributionItem {
 interface LanguageBreakdown {
   name: string;
   cp: number;
-  color: string;
-  icon: string;
+  color?: string;
+  icon?: string;
 }
 
 export interface AnalysisResult {
@@ -27,6 +27,34 @@ export interface AnalysisResult {
 interface CompletePanelProps {
   result: AnalysisResult;
   onContinue: () => void;
+}
+
+const LANGUAGE_META: Record<string, { color: string; icon: string }> = {
+  TypeScript: { color: "#3178c6", icon: "📘" },
+  JavaScript: { color: "#f7df1e", icon: "📒" },
+  Rust: { color: "#dea584", icon: "🦀" },
+  Go: { color: "#00add8", icon: "🐹" },
+  Python: { color: "#3572a5", icon: "🐍" },
+  Ruby: { color: "#701516", icon: "💎" },
+  Java: { color: "#b07219", icon: "☕" },
+  Kotlin: { color: "#a97bff", icon: "🅺" },
+  Swift: { color: "#f05138", icon: "🍎" },
+  "C++": { color: "#f34b7d", icon: "⚙️" },
+  C: { color: "#555555", icon: "⚙️" },
+  "C#": { color: "#178600", icon: "🎯" },
+  PHP: { color: "#4f5d95", icon: "🐘" },
+  Shell: { color: "#89e051", icon: "🐚" },
+  Dockerfile: { color: "#384d54", icon: "🐳" },
+  HTML: { color: "#e34c26", icon: "🌐" },
+  CSS: { color: "#563d7c", icon: "🎨" },
+  Scala: { color: "#c22d40", icon: "🔥" },
+  Dart: { color: "#00b4ab", icon: "🎯" },
+  Lua: { color: "#000080", icon: "🌙" },
+  Haskell: { color: "#5e5086", icon: "λ" },
+};
+
+function langMeta(name: string): { color: string; icon: string } {
+  return LANGUAGE_META[name] ?? { color: "#8b8b8b", icon: "◇" };
 }
 
 const steppedEase = (steps: number) => (t: number) => Math.floor(t * steps) / steps;
@@ -121,72 +149,77 @@ export function CompletePanel({ result, onContinue }: CompletePanelProps) {
       >
         <SectionLabel text="LANGUAGE BREAKDOWN" />
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "0.8rem" }}>
-          {result.languageBreakdown.map((lang, i) => (
-            <motion.div
-              key={lang.name}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.8 + i * 0.12, duration: 0.4, ease: steppedEase(6) }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "4px",
-                }}
+          {result.languageBreakdown.map((lang, i) => {
+            const meta = langMeta(lang.name);
+            const color = lang.color ?? meta.color;
+            const icon = lang.icon ?? meta.icon;
+            return (
+              <motion.div
+                key={lang.name}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8 + i * 0.12, duration: 0.4, ease: steppedEase(6) }}
               >
-                <span style={{ fontSize: "1rem" }}>{lang.icon}</span>
-                <span
-                  style={{
-                    fontFamily: "var(--font-dot)",
-                    fontSize: "0.8rem",
-                    color: lang.color,
-                    minWidth: "90px",
-                  }}
-                >
-                  {lang.name}
-                </span>
                 <div
                   style={{
-                    flex: 1,
-                    height: "14px",
-                    border: "2px solid rgba(255,255,255,0.15)",
-                    background: "rgba(0,0,0,0.4)",
-                    position: "relative",
-                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "4px",
                   }}
                 >
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{
-                      width: result.totalCP === 0 ? "0%" : `${(lang.cp / result.totalCP) * 100}%`,
-                    }}
-                    transition={{ delay: 1 + i * 0.12, duration: 0.6, ease: steppedEase(8) }}
+                  <span style={{ fontSize: "1rem" }}>{icon}</span>
+                  <span
                     style={{
-                      height: "100%",
-                      background: `linear-gradient(90deg, ${lang.color}80, ${lang.color})`,
-                      boxShadow: `0 0 4px ${lang.color}`,
-                      position: "absolute",
-                      left: 0,
-                      top: 0,
+                      fontFamily: "var(--font-dot)",
+                      fontSize: "0.8rem",
+                      color: color,
+                      minWidth: "90px",
                     }}
-                  />
+                  >
+                    {lang.name}
+                  </span>
+                  <div
+                    style={{
+                      flex: 1,
+                      height: "14px",
+                      border: "2px solid rgba(255,255,255,0.15)",
+                      background: "rgba(0,0,0,0.4)",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: result.totalCP === 0 ? "0%" : `${(lang.cp / result.totalCP) * 100}%`,
+                      }}
+                      transition={{ delay: 1 + i * 0.12, duration: 0.6, ease: steppedEase(8) }}
+                      style={{
+                        height: "100%",
+                        background: `linear-gradient(90deg, ${color}80, ${color})`,
+                        boxShadow: `0 0 4px ${color}`,
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                      }}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-press)",
+                      fontSize: "0.65rem",
+                      color: "var(--color-pixel-white)",
+                      minWidth: "36px",
+                      textAlign: "right",
+                    }}
+                  >
+                    +{lang.cp}
+                  </span>
                 </div>
-                <span
-                  style={{
-                    fontFamily: "var(--font-press)",
-                    fontSize: "0.65rem",
-                    color: "var(--color-pixel-white)",
-                    minWidth: "36px",
-                    textAlign: "right",
-                  }}
-                >
-                  +{lang.cp}
-                </span>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       </motion.div>
 
@@ -207,68 +240,72 @@ export function CompletePanel({ result, onContinue }: CompletePanelProps) {
             overflowY: "auto",
           }}
         >
-          {result.contributions.map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1.5 + i * 0.05, duration: 0.3 }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "6px 4px",
-                borderBottom: "1px solid rgba(255,255,255,0.05)",
-                fontSize: "0.75rem",
-              }}
-            >
-              <span
+          {result.contributions.map((item, i) => {
+            const type = item.type ?? "commit";
+            const ts = item.timestamp.length > 10 ? item.timestamp.slice(0, 10) : item.timestamp;
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 1.5 + i * 0.05, duration: 0.3 }}
                 style={{
-                  fontFamily: "var(--font-press)",
-                  fontSize: "0.6rem",
-                  color:
-                    item.type === "pull_request" ? "var(--color-neon-green)" : "var(--color-gold)",
-                  minWidth: "24px",
-                  textAlign: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 4px",
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  fontSize: "0.75rem",
                 }}
               >
-                +{item.cp}
-              </span>
-              <span
-                style={{
-                  color: "rgba(232,232,208,0.4)",
-                  fontSize: "0.65rem",
-                  minWidth: "120px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {item.repo}
-              </span>
-              <span
-                style={{
-                  color: "var(--color-pixel-white)",
-                  flex: 1,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {item.message}
-              </span>
-              <span
-                style={{
-                  color: "rgba(232,232,208,0.3)",
-                  fontSize: "0.6rem",
-                  minWidth: "50px",
-                  textAlign: "right",
-                }}
-              >
-                {item.timestamp}
-              </span>
-            </motion.div>
-          ))}
+                <span
+                  style={{
+                    fontFamily: "var(--font-press)",
+                    fontSize: "0.6rem",
+                    color:
+                      type === "pull_request" ? "var(--color-neon-green)" : "var(--color-gold)",
+                    minWidth: "24px",
+                    textAlign: "center",
+                  }}
+                >
+                  +{item.cp}
+                </span>
+                <span
+                  style={{
+                    color: "rgba(232,232,208,0.4)",
+                    fontSize: "0.65rem",
+                    minWidth: "120px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {item.repo}
+                </span>
+                <span
+                  style={{
+                    color: "var(--color-pixel-white)",
+                    flex: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {item.message}
+                </span>
+                <span
+                  style={{
+                    color: "rgba(232,232,208,0.3)",
+                    fontSize: "0.6rem",
+                    minWidth: "50px",
+                    textAlign: "right",
+                  }}
+                >
+                  {ts}
+                </span>
+              </motion.div>
+            );
+          })}
         </div>
       </motion.div>
 
