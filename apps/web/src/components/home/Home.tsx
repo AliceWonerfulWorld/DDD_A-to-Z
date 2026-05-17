@@ -77,7 +77,10 @@ export function Home({ onNavigate }: HomeProps) {
           accent: displayGuild.accent,
         });
       })
-      .catch(console.error);
+      .catch((error) => {
+        console.error(error);
+        setGuild(null);
+      });
   }, []);
 
   const cancelReturnTitle = () => {
