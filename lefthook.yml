@@ -1,9 +1,17 @@
 pre-commit:
-  parallel: true
+  parallel: false
   commands:
+    web-format:
+      root: apps/web
+      run: pnpm format
+      stage_fixed: true
     web-lint:
       root: apps/web
       run: pnpm lint
+    api-format:
+      root: services/api
+      run: pnpm format
+      stage_fixed: true
     api-lint:
       root: services/api
       run: pnpm lint
@@ -12,4 +20,4 @@ pre-push:
   commands:
     verify:
       glob: "*"
-      run: pnpm lint && pnpm test && pnpm build
+      run: pnpm format:check && pnpm lint && pnpm test && pnpm build

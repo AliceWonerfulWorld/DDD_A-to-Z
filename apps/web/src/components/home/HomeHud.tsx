@@ -1,6 +1,6 @@
 import { motion, type Variants } from "framer-motion";
 import type { ReactNode } from "react";
-import { steppedEase } from "../lib/animationUtils";
+import { steppedEase } from "../../lib/animationUtils";
 
 interface PlayerSummary {
   name: string;

@@ -4,8 +4,7 @@
   overflow: hidden;
   padding: clamp(18px, 3vw, 34px);
   background:
-    linear-gradient(180deg, rgba(2, 6, 18, 0.34), rgba(2, 6, 18, 0.86)),
-    url("/guild_details.png");
+    linear-gradient(180deg, rgba(2, 6, 18, 0.34), rgba(2, 6, 18, 0.86)), url("/guild_details.png");
   background-size: cover;
   background-position: center;
   color: #f4ecd0;

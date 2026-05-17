@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { SPRITE_ASSETS } from "../constants/assets";
-import { steppedEase } from "../lib/animationUtils";
+import { SPRITE_ASSETS } from "../../constants/assets";
+import { steppedEase } from "../../lib/animationUtils";
 
 interface GopherSpriteProps {
   className?: string;

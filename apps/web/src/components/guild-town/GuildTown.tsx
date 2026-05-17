@@ -1,5 +1,5 @@
 import { useMotionValue, type PanInfo } from "framer-motion";
-import { AUDIO_ASSETS } from "../features/audio/audioAssets";
+import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import {
   useEffect,
   useRef,
@@ -7,16 +7,16 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent,
 } from "react";
-import { BackButton } from "./guild-town/BackButton";
-import { BuildInventory } from "./guild-town/BuildInventory";
-import { BuildingInfoPanel } from "./guild-town/BuildingInfoPanel";
-import { TownMap } from "./guild-town/TownMap";
-import { TownStatusHeader } from "./guild-town/TownStatusHeader";
-import { MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS, INITIAL_INVENTORY } from "./guild-town/townData";
-import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./guild-town/townMath";
-import type { InventoryItem, PlacedItem, ViewportSize } from "./guild-town/types";
-import { ZoomControls } from "./guild-town/ZoomControls";
-import { GuildBgm } from "./GuildBgm";
+import { GuildBgm } from "../shared/GuildBgm";
+import { BackButton } from "./BackButton";
+import { BuildInventory } from "./BuildInventory";
+import { BuildingInfoPanel } from "./BuildingInfoPanel";
+import { TownMap } from "./TownMap";
+import { TownStatusHeader } from "./TownStatusHeader";
+import { MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS, INITIAL_INVENTORY } from "./townData";
+import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./townMath";
+import type { InventoryItem, PlacedItem, ViewportSize } from "./types";
+import { ZoomControls } from "./ZoomControls";
 
 interface GuildTownProps {
   onNavigate: (path: string) => void;

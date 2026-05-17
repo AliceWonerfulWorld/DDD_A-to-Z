@@ -1,7 +1,7 @@
 import { useState, useMemo, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../hooks/useBackNavigationSe";
-import { useGuardedNavigation } from "../hooks/useGuardedNavigation";
+import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
+import { useGuardedNavigation } from "../../hooks/useGuardedNavigation";
 
 interface MyPageProps {
   onNavigate: (path: string) => void;

@@ -47,6 +47,9 @@ jobs:
       - name: Install dependencies
         run: nix develop -c pnpm install --frozen-lockfile
 
+      - name: Format
+        run: nix develop -c pnpm --filter @lang-war/api format:check
+
       - name: Lint
         run: nix develop -c pnpm --filter @lang-war/api lint
 

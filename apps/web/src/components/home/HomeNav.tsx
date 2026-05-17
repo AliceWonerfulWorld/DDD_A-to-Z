@@ -1,5 +1,5 @@
 import { motion, type Variants } from "framer-motion";
-import { steppedEase } from "../lib/animationUtils";
+import { steppedEase } from "../../lib/animationUtils";
 
 interface HomeNavItem {
   label: string;

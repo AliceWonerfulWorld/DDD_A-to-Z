@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ParticleBackground } from "./ParticleBackground";
+import { ParticleBackground } from "../shared/ParticleBackground";
 import { AnalyzingPanel } from "./AnalyzingPanel";
 import { CompletePanel, type AnalysisResult } from "./CompletePanel";
-import { analyzeContribution } from "../features/analysis/api";
+import { analyzeContribution } from "../../features/analysis/api";
 
 interface ContributionAnalysisProps {
   onComplete?: () => void;
@@ -132,11 +132,18 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
             textAlign: "center",
           }}
         >
-          <span style={{ fontFamily: "var(--font-press)", fontSize: "1rem", color: "var(--color-gold)" }}>
+          <span
+            style={{
+              fontFamily: "var(--font-press)",
+              fontSize: "1rem",
+              color: "var(--color-gold)",
+            }}
+          >
             ✗ ANALYSIS FAILED
           </span>
           <span style={{ fontSize: "0.8rem", color: "rgba(232,232,208,0.6)" }}>
-            Failed to fetch contribution data from GitHub. Make sure you have synced your repositories.
+            Failed to fetch contribution data from GitHub. Make sure you have synced your
+            repositories.
           </span>
           <button
             onClick={handleRetry}

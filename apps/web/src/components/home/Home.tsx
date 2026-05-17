@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { HomeHud } from "./HomeHud";
 import { HomeNav } from "./HomeNav";
 import { ReturnTitleDialog } from "./ReturnTitleDialog";
-import { AudioTogglePanel } from "./AudioTogglePanel";
+import { AudioTogglePanel } from "../shared/AudioTogglePanel";
 import { WalkingGopher } from "./WalkingGopher";
-import { useHomeAudio } from "../hooks/useHomeAudio";
-import { AUDIO_ASSETS } from "../features/audio/audioAssets";
-import { fetchProfile, type Profile } from "../features/profile/api";
+import { useHomeAudio } from "../../hooks/useHomeAudio";
+import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { fetchProfile, type Profile } from "../../features/profile/api";
 
 interface HomeProps {
   onNavigate: (path: string) => void | Promise<void>;
@@ -151,10 +151,10 @@ export function Home({ onNavigate }: HomeProps) {
           gap: "20px",
         }}
       >
-        <HomeHud 
-          guild={guild} 
-          player={{ ...player, name: profile?.display_name || player.name }} 
-          onReturnTitle={openReturnTitleDialog} 
+        <HomeHud
+          guild={guild}
+          player={{ ...player, name: profile?.display_name || player.name }}
+          onReturnTitle={openReturnTitleDialog}
         />
 
         <section

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../hooks/useBackNavigationSe";
-import { steppedEase } from "../lib/animationUtils";
+import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
+import { steppedEase } from "../../lib/animationUtils";
 import styles from "./MyGuildDetails.module.css";
 
 interface MyGuildDetailsProps {
