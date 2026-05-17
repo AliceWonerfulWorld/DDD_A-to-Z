@@ -4,8 +4,10 @@ import { HomeNav } from "./HomeNav";
 import { ReturnTitleDialog } from "./ReturnTitleDialog";
 import { AudioTogglePanel } from "../shared/AudioTogglePanel";
 import { WalkingGopher } from "./WalkingGopher";
+import { PATHS } from "../../constants/paths";
 import { useHomeAudio } from "../../hooks/useHomeAudio";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { hasSelectedGuildMembership } from "../../features/guild/membership";
 import { fetchProfile, type Profile } from "../../features/profile/api";
 
 interface HomeProps {
@@ -28,13 +30,21 @@ const guild = {
 };
 
 const navItems = [
-  { label: "WAR MAP", caption: "BATTLE FRONT", path: "/war", accent: "#ff5f56" },
-  { label: "GUILD BASE", caption: "COMMUNITY HQ", path: "/guild", accent: "#00f5ff" },
-  { label: "MY STATUS", caption: "PLAYER DATA", path: "/mypage", accent: "#ffd700" },
+  { label: "WAR MAP", caption: "BATTLE FRONT", path: PATHS.WAR, accent: "#ff5f56" },
+  { label: "GUILD BASE", caption: "COMMUNITY HQ", path: PATHS.GUILD, accent: "#00f5ff" },
+  { label: "MY STATUS", caption: "PLAYER DATA", path: PATHS.MY_PAGE, accent: "#ffd700" },
 ];
 
 export function Home({ onNavigate }: HomeProps) {
   const [isReturnTitleDialogOpen, setIsReturnTitleDialogOpen] = useState(false);
+  const navigateFromHome = (path: string) => {
+    if (path === PATHS.GUILD && !hasSelectedGuildMembership()) {
+      onNavigate(PATHS.GUILD_SELECT);
+      return;
+    }
+
+    onNavigate(path);
+  };
   const {
     audioRefs,
     audioError,
@@ -44,7 +54,7 @@ export function Home({ onNavigate }: HomeProps) {
     playModalCancel,
     playModalOpen,
     playReturnTitle,
-  } = useHomeAudio(onNavigate);
+  } = useHomeAudio(navigateFromHome);
 
   const [profile, setProfile] = useState<Profile | null>(null);
 
