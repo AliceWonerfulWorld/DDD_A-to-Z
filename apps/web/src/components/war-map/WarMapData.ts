@@ -11,8 +11,6 @@ export interface WarGuild {
   description: string;
 }
 
-export const CURRENT_GUILD_ID = "typescript";
-
 export const WAR_GUILDS: WarGuild[] = [
   {
     id: "rust",
@@ -101,3 +99,11 @@ export const WAR_GUILDS: WarGuild[] = [
 ];
 
 export const RANKED_WAR_GUILDS = [...WAR_GUILDS].sort((a, b) => b.totalCp - a.totalCp);
+
+export function findWarGuildByID(guildID: string | null | undefined): WarGuild | null {
+  if (!guildID) {
+    return null;
+  }
+
+  return WAR_GUILDS.find((guild) => guild.id === guildID) ?? null;
+}

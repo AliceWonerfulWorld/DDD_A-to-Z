@@ -4,11 +4,12 @@ import type { WarGuild } from "./WarMapData";
 
 interface WarMapHexProps {
   guild: WarGuild;
+  isCurrentGuild: boolean;
   isSelected: boolean;
   onSelect: (guild: WarGuild) => void;
 }
 
-export function WarMapHex({ guild, isSelected, onSelect }: WarMapHexProps) {
+export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMapHexProps) {
   return (
     <motion.button
       type="button"
@@ -42,6 +43,27 @@ export function WarMapHex({ guild, isSelected, onSelect }: WarMapHexProps) {
         touchAction: "none",
       }}
     >
+      {isCurrentGuild && (
+        <span
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: "calc(100% + 6px)",
+            border: `2px solid ${guild.color}`,
+            background: "rgba(0, 0, 0, 0.84)",
+            boxShadow: `0 0 12px ${guild.color}55`,
+            color: guild.accent,
+            fontSize: "clamp(0.3rem, 0.6vw, 0.42rem)",
+            lineHeight: 1,
+            padding: "4px 5px",
+            textShadow: "2px 2px 0 rgba(0,0,0,0.76)",
+            transform: "translateX(-50%)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          MY GUILD
+        </span>
+      )}
       <svg viewBox="0 0 100 112" aria-hidden="true" style={{ display: "block", width: "100%" }}>
         <defs>
           <linearGradient id={`${guild.id}-hex-fill`} x1="0" x2="1" y1="0" y2="1">
@@ -53,7 +75,7 @@ export function WarMapHex({ guild, isSelected, onSelect }: WarMapHexProps) {
           points="50 4 92 28 92 78 50 108 8 78 8 28"
           fill={`url(#${guild.id}-hex-fill)`}
           stroke={guild.color}
-          strokeWidth={isSelected ? 5 : 3}
+          strokeWidth={isSelected || isCurrentGuild ? 5 : 3}
           style={{
             filter: `drop-shadow(0 0 8px ${guild.color}) drop-shadow(0 0 18px ${guild.color}88)`,
           }}

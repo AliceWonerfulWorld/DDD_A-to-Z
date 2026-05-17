@@ -1,12 +1,19 @@
-import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { useAudioSettings } from "../../features/audio/useAudioSettings";
+import { fetchMyGuild } from "../../features/guild/api";
 import { PATHS } from "../../constants/paths";
 import { BackButton } from "../guild-town/BackButton";
 import { GuildBgm } from "../shared/GuildBgm";
 import { RankingPanel } from "./RankingPanel";
 import { ScoutPanel } from "./ScoutPanel";
-import { WAR_GUILDS, type WarGuild } from "./WarMapData";
+import { findWarGuildByID, WAR_GUILDS, type WarGuild } from "./WarMapData";
 import { WarMapHex } from "./WarMapHex";
 
 interface WarMapProps {
@@ -15,11 +22,47 @@ interface WarMapProps {
 
 export function WarMap({ onNavigate }: WarMapProps) {
   const { isSeEnabled } = useAudioSettings();
+  const [currentGuildID, setCurrentGuildID] = useState<string | null>(null);
+  const [isCurrentGuildLoaded, setIsCurrentGuildLoaded] = useState(false);
   const [isRankingOpen, setIsRankingOpen] = useState(false);
   const [selectedGuild, setSelectedGuild] = useState<WarGuild | null>(null);
   const guildScoutSeRef = useRef<HTMLAudioElement | null>(null);
   const rankingToggleSeRef = useRef<HTMLAudioElement | null>(null);
   const scoutCloseSeRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchMyGuild()
+      .then((data) => {
+        if (!isMounted) {
+          return;
+        }
+
+        const nextGuildID = data?.guild?.slug ?? null;
+        setCurrentGuildID(nextGuildID);
+        setSelectedGuild((current) => current ?? findWarGuildByID(nextGuildID));
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error("failed to fetch my guild for war map", error);
+        setCurrentGuildID(null);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsCurrentGuildLoaded(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const currentGuild = findWarGuildByID(currentGuildID);
 
   const playSe = useCallback(
     (audio: HTMLAudioElement | null) => {
@@ -162,15 +205,75 @@ export function WarMap({ onNavigate }: WarMapProps) {
           <WarMapHex
             key={guild.id}
             guild={guild}
+            isCurrentGuild={guild.id === currentGuildID}
             isSelected={selectedGuild?.id === guild.id}
             onSelect={selectGuild}
           />
         ))}
       </div>
 
-      <RankingPanel isOpen={isRankingOpen} onToggle={toggleRankingWithSe} />
-      <ScoutPanel guild={selectedGuild} onClose={closeScoutWithSe} />
+      <RankingPanel
+        currentGuildID={currentGuildID}
+        isOpen={isRankingOpen}
+        onToggle={toggleRankingWithSe}
+      />
+      <ScoutPanel
+        guild={selectedGuild}
+        isCurrentGuild={selectedGuild?.id === currentGuildID}
+        onClose={closeScoutWithSe}
+      />
       <BackButton onNavigate={onNavigate} targetPath={PATHS.HOME} />
+
+      <div
+        data-war-interactive="true"
+        style={{
+          position: "fixed",
+          left: "50%",
+          top: "calc(env(safe-area-inset-top, 0px) + 14px)",
+          zIndex: 12,
+          border: `3px solid ${currentGuild?.color ?? "rgba(255,217,102,0.72)"}`,
+          borderBottomColor: "rgba(28, 20, 8, 0.98)",
+          borderRightColor: "rgba(28, 20, 8, 0.98)",
+          background: "rgba(3, 10, 24, 0.88)",
+          boxShadow:
+            "0 0 0 2px rgba(0,0,0,0.76), 6px 6px 0 rgba(0,0,0,0.36), inset 0 0 18px rgba(255,255,255,0.06)",
+          color: "#fff8d7",
+          minWidth: "min(360px, calc(100vw - 96px))",
+          maxWidth: "calc(100vw - 96px)",
+          padding: "10px 14px",
+          textAlign: "center",
+          textShadow: "2px 2px 0 rgba(0,0,0,0.8)",
+          transform: "translateX(-50%)",
+        }}
+      >
+        <p
+          style={{
+            margin: "0 0 6px",
+            color: currentGuild?.accent ?? "#ffd966",
+            fontSize: "0.44rem",
+            lineHeight: 1.4,
+          }}
+        >
+          CURRENT BANNER
+        </p>
+        <p
+          style={{
+            margin: 0,
+            color: "#fff8d7",
+            fontSize: "clamp(0.48rem, 1vw, 0.66rem)",
+            lineHeight: 1.5,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {!isCurrentGuildLoaded && "Synchronizing guild data..."}
+          {isCurrentGuildLoaded &&
+            currentGuild &&
+            `${currentGuild.name} Guild deployed on this front.`}
+          {isCurrentGuildLoaded &&
+            !currentGuild &&
+            "No guild selected yet. Join a guild to claim a front."}
+        </p>
+      </div>
 
       <div
         aria-hidden="true"

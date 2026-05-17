@@ -1,15 +1,16 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { steppedEase } from "../../lib/animationUtils";
-import { CURRENT_GUILD_ID, RANKED_WAR_GUILDS } from "./WarMapData";
+import { RANKED_WAR_GUILDS } from "./WarMapData";
 
 interface RankingPanelProps {
+  currentGuildID: string | null;
   isOpen: boolean;
   onToggle: () => void;
 }
 
 const rankColors = ["#ffd966", "#c8f2ff", "#ffad66"];
 
-export function RankingPanel({ isOpen, onToggle }: RankingPanelProps) {
+export function RankingPanel({ currentGuildID, isOpen, onToggle }: RankingPanelProps) {
   return (
     <div
       style={{
@@ -90,7 +91,7 @@ export function RankingPanel({ isOpen, onToggle }: RankingPanelProps) {
             <ol style={{ display: "grid", gap: "8px", listStyle: "none", margin: 0, padding: 0 }}>
               {RANKED_WAR_GUILDS.map((guild, index) => {
                 const rankColor = rankColors[index] ?? "rgba(255, 248, 215, 0.64)";
-                const isCurrentGuild = guild.id === CURRENT_GUILD_ID;
+                const isCurrentGuild = guild.id === currentGuildID;
 
                 return (
                   <li
@@ -156,6 +157,22 @@ export function RankingPanel({ isOpen, onToggle }: RankingPanelProps) {
                       >
                         {guild.totalCp.toLocaleString()} CP
                       </span>
+                      {isCurrentGuild && (
+                        <span
+                          style={{
+                            display: "inline-block",
+                            marginTop: "6px",
+                            border: `2px solid ${guild.color}`,
+                            background: `${guild.color}24`,
+                            color: guild.accent,
+                            fontSize: "0.42rem",
+                            lineHeight: 1,
+                            padding: "4px 6px",
+                          }}
+                        >
+                          YOUR GUILD
+                        </span>
+                      )}
                     </span>
                   </li>
                 );

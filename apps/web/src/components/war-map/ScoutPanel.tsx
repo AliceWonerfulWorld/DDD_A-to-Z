@@ -4,10 +4,11 @@ import type { WarGuild } from "./WarMapData";
 
 interface ScoutPanelProps {
   guild: WarGuild | null;
+  isCurrentGuild?: boolean;
   onClose: () => void;
 }
 
-export function ScoutPanel({ guild, onClose }: ScoutPanelProps) {
+export function ScoutPanel({ guild, isCurrentGuild = false, onClose }: ScoutPanelProps) {
   return (
     <AnimatePresence>
       {guild && (
@@ -131,6 +132,22 @@ export function ScoutPanel({ guild, onClose }: ScoutPanelProps) {
               >
                 {guild.color}
               </span>
+              {isCurrentGuild && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    marginLeft: "8px",
+                    border: `2px solid ${guild.color}`,
+                    background: `${guild.color}24`,
+                    color: guild.accent,
+                    fontSize: "0.48rem",
+                    lineHeight: 1,
+                    padding: "6px 7px",
+                  }}
+                >
+                  YOUR GUILD
+                </span>
+              )}
             </div>
           </div>
 
