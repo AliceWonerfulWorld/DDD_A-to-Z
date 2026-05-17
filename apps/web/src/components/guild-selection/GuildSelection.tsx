@@ -22,10 +22,12 @@ export function GuildSelection({ onNavigate }: GuildSelectionProps) {
     : "Welcome to the World. Choose your faction.";
 
   useEffect(() => {
+    let isMounted = true;
+
     fetchGuilds()
       .then((apiGuilds) => {
         const displayGuilds = toDisplayGuilds(apiGuilds);
-        if (displayGuilds.length === 0) {
+        if (!isMounted || displayGuilds.length === 0) {
           return;
         }
 
@@ -33,9 +35,17 @@ export function GuildSelection({ onNavigate }: GuildSelectionProps) {
         setSelectedGuild(displayGuilds[0]);
       })
       .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
         console.error("failed to fetch guilds", error);
         setStatusMessage("ギルド一覧を取得できませんでした。表示中の候補から再試行してください。");
       });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const joinGuild = async () => {

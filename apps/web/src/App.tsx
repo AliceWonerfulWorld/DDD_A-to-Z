@@ -46,6 +46,7 @@ function App() {
   const [isDay, setIsDay] = useState(() => isDaytime(new Date().getHours()));
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isInitialProfileCompleted, setIsInitialProfileCompleted] = useState(false);
+  const [isProfileCheckComplete, setIsProfileCheckComplete] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
@@ -63,14 +64,17 @@ function App() {
         setCurrentUser(user);
         if (!user) {
           setIsInitialProfileCompleted(false);
+          setIsProfileCheckComplete(true);
           return;
         }
 
         const profile = await fetchProfile();
         setIsInitialProfileCompleted(profile !== null);
+        setIsProfileCheckComplete(true);
       })
       .catch(() => {
         setIsInitialProfileCompleted(false);
+        setIsProfileCheckComplete(true);
       });
   }, []);
 
@@ -83,11 +87,12 @@ function App() {
     } finally {
       setCurrentUser(null);
       setIsInitialProfileCompleted(false);
+      setIsProfileCheckComplete(false);
       setIsLogoutDialogOpen(false);
     }
   };
   const handleStart = async () => {
-    if (isStarting) {
+    if (isStarting || !isProfileCheckComplete) {
       return;
     }
 
@@ -259,7 +264,7 @@ function App() {
             onLogin={handleLogin}
             onLogoutClick={() => setIsLogoutDialogOpen(true)}
             onStart={handleStart}
-            isStarting={isStarting}
+            isStarting={isStarting || (currentUser !== null && !isProfileCheckComplete)}
           />
         </motion.div>
 
