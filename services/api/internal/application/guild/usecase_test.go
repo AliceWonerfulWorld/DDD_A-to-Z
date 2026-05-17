@@ -35,6 +35,9 @@ func (r testRepository) FindActiveMembershipByUserID(ctx context.Context, userID
 	if r.activeMembership == nil {
 		return guilddomain.MembershipWithGuild{}, false, nil
 	}
+	if r.activeMembership.Membership.UserID != userID {
+		return guilddomain.MembershipWithGuild{}, false, nil
+	}
 
 	return *r.activeMembership, true, nil
 }

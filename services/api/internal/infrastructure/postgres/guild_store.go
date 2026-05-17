@@ -3,9 +3,9 @@ package postgres
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
@@ -181,7 +181,10 @@ func (s *GuildStore) CreateMembership(ctx context.Context, membership guilddomai
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`, membership.ID, membership.UserID, membership.GuildID, membership.JoinedAt, membership.LeftAt, membership.CreatedAt, membership.UpdatedAt).Error
 	if err != nil {
-		if strings.Contains(err.Error(), "guild_memberships_active_user_id_idx") {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) &&
+			pgErr.Code == "23505" &&
+			pgErr.ConstraintName == "guild_memberships_active_user_id_idx" {
 			return guildapp.ErrAlreadyJoined
 		}
 		return err

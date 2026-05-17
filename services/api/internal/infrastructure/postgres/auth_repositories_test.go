@@ -72,8 +72,12 @@ func TestAuthStoreFindOrCreateByGitHub(t *testing.T) {
 		}
 
 		var balance int64
-		if err := tx.WithContext(ctx).Raw("SELECT balance FROM point_accounts WHERE user_id = ? AND point_type = 'CP'", wantUserID).Scan(&balance).Error; err != nil {
+		result := tx.WithContext(ctx).Raw("SELECT balance FROM point_accounts WHERE user_id = ? AND point_type = 'CP'", wantUserID).Scan(&balance)
+		if err := result.Error; err != nil {
 			t.Fatalf("point_accounts の初期残高取得でエラーが発生しました: %v", err)
+		}
+		if result.RowsAffected == 0 {
+			t.Fatalf("point_accounts に user_id=%q の初期CP口座が作成されていません: balance = %d", wantUserID, balance)
 		}
 		if balance != 0 {
 			t.Fatalf("point_accounts.balance = %d, 期待値 0", balance)
