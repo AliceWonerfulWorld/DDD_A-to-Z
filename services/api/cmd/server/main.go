@@ -94,6 +94,14 @@ func (m *cpManager) GetBalance(ctx context.Context, userID user.ID) (int64, erro
 	return m.inner.GetBalance(ctx, userID, contributionpointdomain.PointTypeCP)
 }
 
+func (m *cpManager) GetLastAnalyzedAt(ctx context.Context, userID user.ID) (*time.Time, error) {
+	return m.inner.GetLastAnalyzedAt(ctx, userID, contributionpointdomain.PointTypeCP)
+}
+
+func (m *cpManager) UpdateLastAnalyzedAt(ctx context.Context, userID user.ID, at time.Time) error {
+	return m.inner.UpdateLastAnalyzedAt(ctx, userID, contributionpointdomain.PointTypeCP, at)
+}
+
 func buildControllers(logger *slog.Logger, db *gorm.DB) (*httpapi.AuthController, *httpapi.RepositoryController, *httpapi.GuildController, *httpapi.MypageController, *httpapi.ProfileController, *httpapi.AnalysisController, error) {
 	oauthConfig, err := config.GitHubOAuthFromEnv()
 	if err != nil {
