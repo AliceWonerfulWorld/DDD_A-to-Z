@@ -10,7 +10,7 @@ interface PlayerSummary {
   todayCp: number;
 }
 
-interface GuildSummary {
+export interface GuildSummary {
   name: string;
   icon: string;
   rank: string;
@@ -141,7 +141,15 @@ function GuildEmblem({ accent, icon }: { accent: string; icon: string }) {
   );
 }
 
-function GuildMembership({ guild }: { guild: GuildSummary }) {
+function GuildMembership({ guild }: { guild: GuildSummary | null | undefined }) {
+  const accent = guild?.accent ?? "#f4ecd0";
+  const icon = guild?.icon ?? "--";
+  const name = guild === undefined ? "確認中" : (guild?.name ?? "未所属");
+  const rank =
+    guild === undefined
+      ? "Guild status loading..."
+      : (guild?.rank ?? "Guild Base から所属先を選択");
+
   return (
     <HudPanel>
       <div
@@ -151,7 +159,7 @@ function GuildMembership({ guild }: { guild: GuildSummary }) {
           gap: "12px",
         }}
       >
-        <GuildEmblem accent={guild.accent} icon={guild.icon} />
+        <GuildEmblem accent={accent} icon={icon} />
         <div style={{ minWidth: 0 }}>
           <div
             style={{
@@ -165,13 +173,13 @@ function GuildMembership({ guild }: { guild: GuildSummary }) {
           </div>
           <div
             style={{
-              color: guild.accent,
+              color: accent,
               fontSize: "clamp(0.74rem, 1.7vw, 0.92rem)",
               lineHeight: 1.45,
               overflowWrap: "anywhere",
             }}
           >
-            {guild.name}
+            {name}
           </div>
           <div
             style={{
@@ -182,7 +190,7 @@ function GuildMembership({ guild }: { guild: GuildSummary }) {
               marginTop: "2px",
             }}
           >
-            {guild.rank}
+            {rank}
           </div>
         </div>
       </div>
@@ -195,7 +203,7 @@ export function HomeHud({
   onReturnTitle,
   player,
 }: {
-  guild: GuildSummary;
+  guild: GuildSummary | null | undefined;
   onReturnTitle: () => void;
   player: PlayerSummary;
 }) {

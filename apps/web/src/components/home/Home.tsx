@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { HomeHud } from "./HomeHud";
+import type { GuildSummary } from "./HomeHud";
 import { HomeNav } from "./HomeNav";
 import { ReturnTitleDialog } from "./ReturnTitleDialog";
 import { AudioTogglePanel } from "../shared/AudioTogglePanel";
@@ -7,7 +8,8 @@ import { WalkingGopher } from "./WalkingGopher";
 import { PATHS } from "../../constants/paths";
 import { useHomeAudio } from "../../hooks/useHomeAudio";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
-import { hasSelectedGuildMembership } from "../../features/guild/membership";
+import { fetchMyGuild } from "../../features/guild/api";
+import { toDisplayGuild } from "../../features/guild/presentation";
 import { fetchProfile, type Profile } from "../../features/profile/api";
 
 interface HomeProps {
@@ -22,13 +24,6 @@ const player = {
   todayCp: 320,
 };
 
-const guild = {
-  name: "TypeScript Guild",
-  icon: "TS",
-  rank: "Member",
-  accent: "#3178c6",
-};
-
 const navItems = [
   { label: "WAR MAP", caption: "BATTLE FRONT", path: PATHS.WAR, accent: "#ff5f56" },
   { label: "GUILD BASE", caption: "COMMUNITY HQ", path: PATHS.GUILD, accent: "#00f5ff" },
@@ -37,8 +32,12 @@ const navItems = [
 
 export function Home({ onNavigate }: HomeProps) {
   const [isReturnTitleDialogOpen, setIsReturnTitleDialogOpen] = useState(false);
+  const [guild, setGuild] = useState<GuildSummary | null | undefined>(undefined);
   const navigateFromHome = (path: string) => {
-    if (path === PATHS.GUILD && !hasSelectedGuildMembership()) {
+    if (path === PATHS.GUILD && guild === undefined) {
+      return;
+    }
+    if (path === PATHS.GUILD && guild === null) {
       onNavigate(PATHS.GUILD_SELECT);
       return;
     }
@@ -60,6 +59,25 @@ export function Home({ onNavigate }: HomeProps) {
 
   useEffect(() => {
     fetchProfile().then(setProfile).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    fetchMyGuild()
+      .then((data) => {
+        if (!data?.guild) {
+          setGuild(null);
+          return;
+        }
+
+        const displayGuild = toDisplayGuild(data.guild);
+        setGuild({
+          name: `${displayGuild.name} Guild`,
+          icon: displayGuild.icon,
+          rank: "Member",
+          accent: displayGuild.accent,
+        });
+      })
+      .catch(console.error);
   }, []);
 
   const cancelReturnTitle = () => {

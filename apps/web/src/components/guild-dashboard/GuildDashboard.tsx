@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { useAudioSettings } from "../../features/audio/useAudioSettings";
+import { fetchMyGuild } from "../../features/guild/api";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
+import { PATHS } from "../../constants/paths";
 import { DashboardMonitor } from "./DashboardMonitor";
 import { createLog, GUILD_TABS, INITIAL_LOGS } from "./data";
 import { GuildBadge } from "./GuildBadge";
@@ -53,6 +55,16 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
 
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    fetchMyGuild()
+      .then((data) => {
+        if (!data?.guild) {
+          onNavigate(PATHS.GUILD_SELECT);
+        }
+      })
+      .catch(console.error);
+  }, [onNavigate]);
 
   return (
     <main

@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { PATHS } from "../../constants/paths";
 import { GUILD_MASTERS, type GuildMaster } from "../../features/guild/guildMaster";
-import { hasEverJoinedGuild, selectGuildMembership } from "../../features/guild/membership";
+import { fetchGuilds, joinGuild as joinGuildAPI } from "../../features/guild/api";
+import { hasEverJoinedGuild } from "../../features/guild/membership";
+import { toDisplayGuilds } from "../../features/guild/presentation";
+import { ApiError } from "../../lib/api/client";
 import { steppedEase } from "../../lib/animationUtils";
 
 interface GuildSelectionProps {
@@ -10,14 +13,52 @@ interface GuildSelectionProps {
 }
 
 export function GuildSelection({ onNavigate }: GuildSelectionProps) {
+  const [guilds, setGuilds] = useState<GuildMaster[]>(GUILD_MASTERS);
   const [selectedGuild, setSelectedGuild] = useState<GuildMaster>(GUILD_MASTERS[0]);
+  const [isJoining, setIsJoining] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const systemMessage = hasEverJoinedGuild()
     ? "次なる戦いの舞台へ。今シーズンの所属を選択してください"
     : "Welcome to the World. Choose your faction.";
 
-  const joinGuild = () => {
-    selectGuildMembership(selectedGuild.slug);
-    onNavigate(PATHS.GUILD);
+  useEffect(() => {
+    fetchGuilds()
+      .then((apiGuilds) => {
+        const displayGuilds = toDisplayGuilds(apiGuilds);
+        if (displayGuilds.length === 0) {
+          return;
+        }
+
+        setGuilds(displayGuilds);
+        setSelectedGuild(displayGuilds[0]);
+      })
+      .catch((error) => {
+        console.error("failed to fetch guilds", error);
+        setStatusMessage("ギルド一覧を取得できませんでした。表示中の候補から再試行してください。");
+      });
+  }, []);
+
+  const joinGuild = async () => {
+    if (isJoining) {
+      return;
+    }
+
+    setIsJoining(true);
+    setStatusMessage(null);
+    try {
+      await joinGuildAPI(selectedGuild.id);
+      onNavigate(PATHS.GUILD);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        onNavigate(PATHS.GUILD);
+        return;
+      }
+
+      console.error("failed to join guild", error);
+      setStatusMessage("ギルド参加に失敗しました。少し時間を置いて再度お試しください。");
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   return (
@@ -118,8 +159,13 @@ export function GuildSelection({ onNavigate }: GuildSelectionProps) {
             alignItems: "stretch",
           }}
         >
-          <GuildList selectedGuild={selectedGuild} onSelect={setSelectedGuild} />
-          <GuildDetail guild={selectedGuild} onJoin={joinGuild} />
+          <GuildList guilds={guilds} selectedGuild={selectedGuild} onSelect={setSelectedGuild} />
+          <GuildDetail
+            guild={selectedGuild}
+            isJoining={isJoining}
+            onJoin={() => void joinGuild()}
+            statusMessage={statusMessage}
+          />
         </div>
       </section>
     </main>
@@ -127,9 +173,11 @@ export function GuildSelection({ onNavigate }: GuildSelectionProps) {
 }
 
 function GuildList({
+  guilds,
   selectedGuild,
   onSelect,
 }: {
+  guilds: GuildMaster[];
   selectedGuild: GuildMaster;
   onSelect: (guild: GuildMaster) => void;
 }) {
@@ -171,7 +219,7 @@ function GuildList({
           paddingRight: "4px",
         }}
       >
-        {GUILD_MASTERS.map((guild, index) => {
+        {guilds.map((guild, index) => {
           const isSelected = guild.slug === selectedGuild.slug;
 
           return (
@@ -251,7 +299,17 @@ function GuildList({
   );
 }
 
-function GuildDetail({ guild, onJoin }: { guild: GuildMaster; onJoin: () => void }) {
+function GuildDetail({
+  guild,
+  isJoining,
+  onJoin,
+  statusMessage,
+}: {
+  guild: GuildMaster;
+  isJoining: boolean;
+  onJoin: () => void;
+  statusMessage: string | null;
+}) {
   return (
     <motion.article
       key={guild.slug}
@@ -352,6 +410,7 @@ function GuildDetail({ guild, onJoin }: { guild: GuildMaster; onJoin: () => void
 
       <motion.button
         type="button"
+        disabled={isJoining}
         onClick={onJoin}
         whileHover={{
           y: -3,
@@ -367,15 +426,30 @@ function GuildDetail({ guild, onJoin }: { guild: GuildMaster; onJoin: () => void
           background: `linear-gradient(90deg, ${guild.color}38, rgba(0,0,0,0.78))`,
           boxShadow: `0 0 0 2px rgba(0,0,0,0.78), 7px 7px 0 rgba(0,0,0,0.42), inset 0 0 18px ${guild.color}22`,
           color: "#fff8d7",
-          cursor: "pointer",
+          cursor: isJoining ? "wait" : "pointer",
+          opacity: isJoining ? 0.72 : 1,
           fontFamily: "inherit",
           fontSize: "clamp(0.78rem, 1.5vw, 1rem)",
           lineHeight: 1.5,
           textShadow: `2px 2px 0 rgba(0,0,0,0.72), 0 0 14px ${guild.color}`,
         }}
       >
-        JOIN GUILD
+        {isJoining ? "JOINING..." : "JOIN GUILD"}
       </motion.button>
+      {statusMessage && (
+        <p
+          role="alert"
+          style={{
+            margin: "14px 0 0",
+            color: "#ffd966",
+            fontFamily: '"DotGothic16", monospace',
+            fontSize: "0.9rem",
+            lineHeight: 1.6,
+          }}
+        >
+          {statusMessage}
+        </p>
+      )}
     </motion.article>
   );
 }

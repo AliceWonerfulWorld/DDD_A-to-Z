@@ -13,7 +13,6 @@ import { HomeBgm } from "./components/shared/HomeBgm.tsx";
 import { WarMap } from "./components/war-map/WarMap.tsx";
 import { PATHS } from "./constants/paths.ts";
 import { fetchMe } from "./features/auth/api.ts";
-import { hasSelectedGuildMembership } from "./features/guild/membership.ts";
 import { completeInitialProfileAPI } from "./features/profile/api.ts";
 import { markInitialProfileCompleted } from "./features/profile/initialProfile.ts";
 
@@ -60,16 +59,7 @@ export function AppRoutes() {
         />
         <Route path={PATHS.HOME} element={<Home onNavigate={navigate} />} />
         <Route path={PATHS.MY_PAGE} element={<MyPage onNavigate={navigate} />} />
-        <Route
-          path={PATHS.GUILD}
-          element={
-            hasSelectedGuildMembership() ? (
-              <GuildDashboard onNavigate={navigate} />
-            ) : (
-              <Navigate to={PATHS.GUILD_SELECT} replace />
-            )
-          }
-        />
+        <Route path={PATHS.GUILD} element={<GuildDashboard onNavigate={navigate} />} />
         <Route
           path={PATHS.GUILD_SELECT}
           element={<GuildSelection onNavigate={(path) => void navigate(path)} />}
