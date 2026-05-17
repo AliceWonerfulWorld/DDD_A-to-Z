@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PATHS } from "../../constants/paths";
+import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { useAudioSettings } from "../../features/audio/useAudioSettings";
 import { fetchMyGuild, leaveGuild } from "../../features/guild/api";
 import { toDisplayGuild, type DisplayGuild } from "../../features/guild/presentation";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
@@ -56,11 +58,39 @@ const MEMBERS: GuildMember[] = [
 const panelTransition = { duration: 0.34, ease: steppedEase(6) };
 
 export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
+  const { isSeEnabled } = useAudioSettings();
   const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
+  const confirmModalSeRef = useRef<HTMLAudioElement | null>(null);
+  const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
+  const modalConfirmSeRef = useRef<HTMLAudioElement | null>(null);
   const [guild, setGuild] = useState<DisplayGuild | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const playSe = useCallback(
+    (audio: HTMLAudioElement | null) => {
+      if (!audio || !isSeEnabled) {
+        return;
+      }
+
+      if (audio.preload === "none" && audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+        audio.load();
+      }
+
+      audio.currentTime = 0;
+      void audio.play().catch(() => {});
+    },
+    [isSeEnabled],
+  );
+  const openLeaveConfirm = () => {
+    playSe(confirmModalSeRef.current);
+    setIsLeaveConfirmOpen(true);
+  };
+  const cancelLeaveConfirm = () => {
+    playSe(modalCancelSeRef.current);
+    setIsLeaveConfirmOpen(false);
+  };
   const stats = useMemo(() => {
     const displayGuild = guild;
 
@@ -119,6 +149,7 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
 
     setIsLeaving(true);
     setStatusMessage(null);
+    playSe(modalConfirmSeRef.current);
     try {
       await leaveGuild();
       onNavigate(PATHS.GUILD_SELECT);
@@ -132,6 +163,7 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
       setStatusMessage("ギルド脱退に失敗しました。少し時間を置いて再度お試しください。");
     } finally {
       setIsLeaving(false);
+      setIsLeaveConfirmOpen(false);
     }
   };
 
@@ -141,6 +173,27 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
         ref={backNavigationSeRef}
         src={BACK_NAVIGATION_SE_SRC}
         preload="none"
+        aria-hidden="true"
+      />
+      <audio
+        ref={confirmModalSeRef}
+        src={AUDIO_ASSETS.se.confirmModal}
+        preload="none"
+        muted={!isSeEnabled}
+        aria-hidden="true"
+      />
+      <audio
+        ref={modalCancelSeRef}
+        src={AUDIO_ASSETS.se.modalCancel}
+        preload="none"
+        muted={!isSeEnabled}
+        aria-hidden="true"
+      />
+      <audio
+        ref={modalConfirmSeRef}
+        src={AUDIO_ASSETS.se.modalConfirm}
+        preload="none"
+        muted={!isSeEnabled}
         aria-hidden="true"
       />
 
@@ -209,9 +262,9 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
                 disabled={isLeaving || isLoading || !guild}
                 whileHover={{ y: -2, scale: 1.02 }}
                 whileTap={{ y: 2, scale: 0.98 }}
-                onClick={() => void leaveCurrentGuild()}
+                onClick={openLeaveConfirm}
               >
-                {isLeaving ? "LEAVING..." : "LEAVE GUILD"}
+                LEAVE GUILD
               </motion.button>
             </div>
             {statusMessage && (
@@ -264,7 +317,110 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
         </div>
       </div>
 
+      {isLeaveConfirmOpen && (
+        <LeaveGuildConfirmDialog
+          guildName={guild ? `${guild.name} Guild` : "current guild"}
+          isLeaving={isLeaving}
+          onCancel={cancelLeaveConfirm}
+          onConfirm={() => void leaveCurrentGuild()}
+        />
+      )}
+
       <div className={styles.scanline} aria-hidden="true" />
     </main>
+  );
+}
+
+function LeaveGuildConfirmDialog({
+  guildName,
+  isLeaving,
+  onCancel,
+  onConfirm,
+}: {
+  guildName: string;
+  isLeaving: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    cancelButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isLeaving) {
+        event.preventDefault();
+        onCancel();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [isLeaving, onCancel]);
+
+  return (
+    <motion.div
+      role="presentation"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={styles.confirmBackdrop}
+      onClick={() => {
+        if (!isLeaving) {
+          onCancel();
+        }
+      }}
+    >
+      <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leave-guild-dialog-title"
+        aria-describedby="leave-guild-dialog-description"
+        tabIndex={-1}
+        initial={{ opacity: 0, y: 18, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        className={styles.confirmDialog}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className={styles.confirmTitle} id="leave-guild-dialog-title">
+          LEAVE GUILD?
+        </div>
+        <p className={styles.confirmBody} id="leave-guild-dialog-description">
+          {guildName} から脱退しますか？
+        </p>
+        <div className={styles.confirmActions}>
+          <motion.button
+            ref={cancelButtonRef}
+            className={styles.confirmCancelButton}
+            type="button"
+            disabled={isLeaving}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ y: 2, scale: 0.98 }}
+            onClick={onCancel}
+          >
+            CANCEL
+          </motion.button>
+          <motion.button
+            className={styles.confirmLeaveButton}
+            type="button"
+            disabled={isLeaving}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ y: 2, scale: 0.98 }}
+            onClick={onConfirm}
+          >
+            {isLeaving ? "LEAVING..." : "LEAVE"}
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
