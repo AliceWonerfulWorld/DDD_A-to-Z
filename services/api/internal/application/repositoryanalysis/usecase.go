@@ -108,6 +108,7 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 	langCP := map[string]int64{}
 	var contributions []repositoryanalysis.Contribution
 	username := appUser.GitHubAccount.Username
+	var apiErr bool
 
 	for _, repo := range repos {
 		if repo.Fork || repo.Archived {
@@ -120,11 +121,13 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 		commits, err := u.commits.ListCommits(ctx, accessToken, repo.Owner, repo.Name, username, since)
 		if err != nil {
 			commits = nil
+			apiErr = true
 		}
 
 		prs, err := u.prs.ListPullRequests(ctx, accessToken, repo.Owner, repo.Name, username, since)
 		if err != nil {
 			prs = nil
+			apiErr = true
 		}
 
 		if len(commits) == 0 && len(prs) == 0 {
@@ -132,7 +135,10 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 		}
 
 		langs, err := u.languages.ListLanguages(ctx, accessToken, repo.Owner, repo.Name)
-		if err != nil || len(langs) == 0 {
+		if err != nil {
+			langs = map[string]int64{repo.Language: 1}
+			apiErr = true
+		} else if len(langs) == 0 {
 			langs = map[string]int64{repo.Language: 1}
 		}
 
@@ -229,8 +235,10 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 		}
 	}
 
-	if err := u.cpBalance.UpdateLastAnalyzedAt(ctx, appUser.ID, now); err != nil {
-		return AnalysisResult{}, err
+	if !apiErr {
+		if err := u.cpBalance.UpdateLastAnalyzedAt(ctx, appUser.ID, now); err != nil {
+			return AnalysisResult{}, err
+		}
 	}
 
 	balance, err := u.cpBalance.GetBalance(ctx, appUser.ID)
