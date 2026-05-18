@@ -229,13 +229,12 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 		return breakdown[i].CP > breakdown[j].CP
 	})
 
-	if totalCP > 0 {
-		if err := u.cp.Earn(ctx, appUser.ID, totalCP, "contribution analysis reward", "analysis", "initial"); err != nil {
-			return AnalysisResult{}, err
-		}
-	}
-
 	if !apiErr {
+		if totalCP > 0 {
+			if err := u.cp.Earn(ctx, appUser.ID, totalCP, "contribution analysis reward", "analysis", "initial"); err != nil {
+				return AnalysisResult{}, err
+			}
+		}
 		if err := u.cpBalance.UpdateLastAnalyzedAt(ctx, appUser.ID, now); err != nil {
 			return AnalysisResult{}, err
 		}
