@@ -46,7 +46,12 @@ func (g *analysisGuard) Analyze(ctx context.Context, sessionToken string) (analy
 	g.mu.Unlock()
 
 	l.Lock()
-	defer l.Unlock()
+	defer func() {
+		l.Unlock()
+		g.mu.Lock()
+		delete(g.locks, appUser.ID)
+		g.mu.Unlock()
+	}()
 
 	return g.inner.AnalyzeForUser(ctx, appUser, sessionToken, time.Now())
 }
