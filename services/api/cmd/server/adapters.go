@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"time"
 
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
@@ -30,6 +31,14 @@ func (m *cpManager) Earn(ctx context.Context, userID user.ID, amount int64, reas
 
 func (m *cpManager) GetBalance(ctx context.Context, userID user.ID) (int64, error) {
 	return m.inner.GetBalance(ctx, userID, contributionpointdomain.PointTypeCP)
+}
+
+func (m *cpManager) GetLastAnalyzedAt(ctx context.Context, userID user.ID) (*time.Time, error) {
+	return m.inner.GetLastAnalyzedAt(ctx, userID, contributionpointdomain.PointTypeCP)
+}
+
+func (m *cpManager) UpdateLastAnalyzedAt(ctx context.Context, userID user.ID, at time.Time) error {
+	return m.inner.UpdateLastAnalyzedAt(ctx, userID, contributionpointdomain.PointTypeCP, at)
 }
 
 type mypageCPReader struct {

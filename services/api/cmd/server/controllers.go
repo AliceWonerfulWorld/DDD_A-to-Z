@@ -116,7 +116,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 		guild:      httpapi.NewGuildController(guildUseCase, logger),
 		mypage:     httpapi.NewMypageController(mypageUseCase, logger),
 		profile:    httpapi.NewProfileController(profileUseCase, logger),
-		analysis:   httpapi.NewAnalysisController(analysisUseCase, logger),
+		analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), logger),
 	}, nil
 }
 

@@ -91,6 +91,22 @@ func (u *UseCase) GetBalance(ctx context.Context, userID user.ID, pointType cont
 	return u.ledger.GetBalance(ctx, userID, pointType)
 }
 
+func (u *UseCase) GetLastAnalyzedAt(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType) (*time.Time, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	return u.ledger.GetLastAnalyzedAt(ctx, userID, pointType)
+}
+
+func (u *UseCase) UpdateLastAnalyzedAt(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType, at time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	return u.ledger.UpdateLastAnalyzedAt(ctx, userID, pointType, at)
+}
+
 type ApplyCommand struct {
 	UserID     user.ID
 	PointType  contributionpointdomain.PointType

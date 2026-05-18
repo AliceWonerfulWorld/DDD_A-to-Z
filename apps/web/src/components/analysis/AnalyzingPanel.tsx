@@ -14,10 +14,15 @@ const STATUS_MESSAGES = [
 
 interface AnalyzingPanelProps {
   progress: number;
-  currentMessageIdx: number;
 }
 
-export function AnalyzingPanel({ progress, currentMessageIdx }: AnalyzingPanelProps) {
+const STATUS_SEGMENT = 100 / STATUS_MESSAGES.length;
+
+export function AnalyzingPanel({ progress }: AnalyzingPanelProps) {
+  const currentMessageIdx = Math.min(
+    Math.floor(progress / STATUS_SEGMENT),
+    STATUS_MESSAGES.length - 1,
+  );
   return (
     <motion.div
       initial={{ scaleY: 0, opacity: 0 }}

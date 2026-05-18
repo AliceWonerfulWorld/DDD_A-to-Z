@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/repositoryanalysis"
+	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
 const analysisPeriod = -30 * 24 * time.Hour
@@ -76,6 +77,10 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 		return AnalysisResult{}, ErrUnauthenticated
 	}
 
+	return u.AnalyzeForUser(ctx, appUser, sessionToken, now)
+}
+
+func (u *UseCase) AnalyzeForUser(ctx context.Context, appUser user.User, sessionToken string, now time.Time) (AnalysisResult, error) {
 	accessToken, ok, err := u.tokens.GitHubAccessToken(ctx, appUser.ID)
 	if err != nil {
 		return AnalysisResult{}, err
@@ -95,26 +100,39 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 	}
 
 	since := now.Add(analysisPeriod)
+	lastAnalyzedAt, err := u.cpBalance.GetLastAnalyzedAt(ctx, appUser.ID)
+	if err != nil {
+		return AnalysisResult{}, err
+	}
+	if lastAnalyzedAt != nil && lastAnalyzedAt.After(since) {
+		since = *lastAnalyzedAt
+	}
 
 	var totalCommits int64
 	var totalPRs int64
 	langCP := map[string]int64{}
 	var contributions []repositoryanalysis.Contribution
 	username := appUser.GitHubAccount.Username
+	var apiErr bool
 
 	for _, repo := range repos {
 		if repo.Fork || repo.Archived {
+			continue
+		}
+		if repo.GitHubUpdatedAt.Before(since) {
 			continue
 		}
 
 		commits, err := u.commits.ListCommits(ctx, accessToken, repo.Owner, repo.Name, username, since)
 		if err != nil {
 			commits = nil
+			apiErr = true
 		}
 
 		prs, err := u.prs.ListPullRequests(ctx, accessToken, repo.Owner, repo.Name, username, since)
 		if err != nil {
 			prs = nil
+			apiErr = true
 		}
 
 		if len(commits) == 0 && len(prs) == 0 {
@@ -122,7 +140,10 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 		}
 
 		langs, err := u.languages.ListLanguages(ctx, accessToken, repo.Owner, repo.Name)
-		if err != nil || len(langs) == 0 {
+		if err != nil {
+			langs = map[string]int64{repo.Language: 1}
+			apiErr = true
+		} else if len(langs) == 0 {
 			langs = map[string]int64{repo.Language: 1}
 		}
 
@@ -213,8 +234,13 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 		return breakdown[i].CP > breakdown[j].CP
 	})
 
-	if totalCP > 0 {
-		if err := u.cp.Earn(ctx, appUser.ID, totalCP, "contribution analysis reward", "analysis", "initial"); err != nil {
+	if !apiErr {
+		if totalCP > 0 {
+			if err := u.cp.Earn(ctx, appUser.ID, totalCP, "contribution analysis reward", "analysis", "initial"); err != nil {
+				return AnalysisResult{}, err
+			}
+		}
+		if err := u.cpBalance.UpdateLastAnalyzedAt(ctx, appUser.ID, now); err != nil {
 			return AnalysisResult{}, err
 		}
 	}

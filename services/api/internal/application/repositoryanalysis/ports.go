@@ -42,4 +42,6 @@ type CPEarner interface {
 
 type CPBalanceProvider interface {
 	GetBalance(ctx context.Context, userID user.ID) (int64, error)
+	GetLastAnalyzedAt(ctx context.Context, userID user.ID) (*time.Time, error)
+	UpdateLastAnalyzedAt(ctx context.Context, userID user.ID, at time.Time) error
 }

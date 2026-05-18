@@ -9,11 +9,12 @@ INSERT INTO point_types (code, label) VALUES
   ('TypeScript_SP',     'TypeScript Skill Point');
 
 CREATE TABLE point_accounts (
-  user_id    TEXT NOT NULL REFERENCES users(id),
-  point_type TEXT NOT NULL REFERENCES point_types(code),
-  balance    BIGINT NOT NULL DEFAULT 0 CHECK (balance >= 0),
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
+  user_id         TEXT NOT NULL REFERENCES users(id),
+  point_type      TEXT NOT NULL REFERENCES point_types(code),
+  balance         BIGINT NOT NULL DEFAULT 0 CHECK (balance >= 0),
+  last_analyzed_at TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ NOT NULL,
+  updated_at      TIMESTAMPTZ NOT NULL,
   PRIMARY KEY (user_id, point_type)
 );
 

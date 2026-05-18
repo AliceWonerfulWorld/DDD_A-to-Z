@@ -36,6 +36,20 @@ func (r *fakeLedgerRepository) GetBalance(ctx context.Context, userID user.ID, p
 	return r.balance, nil
 }
 
+func (r *fakeLedgerRepository) GetLastAnalyzedAt(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType) (*time.Time, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (r *fakeLedgerRepository) UpdateLastAnalyzedAt(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType, at time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return nil
+}
+
 type fakeIDGenerator struct {
 	id string
 }

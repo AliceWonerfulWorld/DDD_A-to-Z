@@ -12,7 +12,6 @@ interface ContributionAnalysisProps {
 export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) {
   const [phase, setPhase] = useState<"analyzing" | "complete" | "error">("analyzing");
   const [progress, setProgress] = useState(0);
-  const [currentMessageIdx, setCurrentMessageIdx] = useState(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
   useEffect(() => {
@@ -25,38 +24,30 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
       setProgress((prev) => {
         if (!alive) return prev;
         const next = prev + Math.random() * 4 + 1;
-        return Math.min(next, 85);
+        return Math.min(next, 99);
       });
     };
 
-    const msgTimer = setInterval(() => {
-      setCurrentMessageIdx((prev) => Math.min(prev + 1, 6));
-    }, 1200);
-
-    const progTimer = setInterval(advanceProgress, 700);
+    const progTimer = setInterval(advanceProgress, 1400);
 
     analyzeContribution()
       .then((data) => {
         if (!alive) return;
         setResult(data);
-        clearInterval(msgTimer);
         clearInterval(progTimer);
         setProgress(100);
-        setCurrentMessageIdx(6);
         completeTimer = setTimeout(() => {
           if (alive) setPhase("complete");
         }, 600);
       })
       .catch(() => {
         if (!alive) return;
-        clearInterval(msgTimer);
         clearInterval(progTimer);
         if (alive) setPhase("error");
       });
 
     return () => {
       alive = false;
-      clearInterval(msgTimer);
       clearInterval(progTimer);
       if (completeTimer !== null) clearTimeout(completeTimer);
     };
@@ -68,7 +59,6 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
 
   const handleRetry = useCallback(() => {
     setProgress(0);
-    setCurrentMessageIdx(0);
     setPhase("analyzing");
   }, []);
 
@@ -114,7 +104,7 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
       />
 
       {phase === "analyzing" ? (
-        <AnalyzingPanel progress={progress} currentMessageIdx={currentMessageIdx} />
+        <AnalyzingPanel progress={progress} />
       ) : phase === "error" ? (
         <div
           style={{

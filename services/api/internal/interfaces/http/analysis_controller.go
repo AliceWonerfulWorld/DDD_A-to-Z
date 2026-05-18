@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	stdhttp "net/http"
@@ -10,12 +11,16 @@ import (
 	analysisapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/repositoryanalysis"
 )
 
+type Analyzer interface {
+	Analyze(ctx context.Context, sessionToken string) (analysisapp.AnalysisResult, error)
+}
+
 type AnalysisController struct {
-	usecase *analysisapp.UseCase
+	usecase Analyzer
 	logger  *slog.Logger
 }
 
-func NewAnalysisController(usecase *analysisapp.UseCase, logger *slog.Logger) *AnalysisController {
+func NewAnalysisController(usecase Analyzer, logger *slog.Logger) *AnalysisController {
 	return &AnalysisController{
 		usecase: usecase,
 		logger:  logger,
