@@ -82,27 +82,23 @@ func (s *ContributionPointStore) GetLastAnalyzedAt(ctx context.Context, userID u
 }
 
 func (s *ContributionPointStore) UpdateLastAnalyzedAt(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType, at time.Time) error {
-	result := s.db.WithContext(ctx).
-		Model(&pointAccountRecord{}).
-		Where("user_id = ? AND point_type = ?", userID, pointType).
-		Update("last_analyzed_at", at)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		now := at
-		return s.db.WithContext(ctx).
-			Table("point_accounts").
-			Create(map[string]any{
-				"user_id":          string(userID),
-				"point_type":       pointType,
-				"balance":          0,
+	return s.db.WithContext(ctx).
+		Table("point_accounts").
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "user_id"}, {Name: "point_type"}},
+			DoUpdates: clause.Assignments(map[string]any{
 				"last_analyzed_at": at,
-				"created_at":       now,
-				"updated_at":       now,
-			}).Error
-	}
-	return nil
+				"updated_at":       at,
+			}),
+		}).
+		Create(map[string]any{
+			"user_id":          string(userID),
+			"point_type":       pointType,
+			"balance":          0,
+			"last_analyzed_at": at,
+			"created_at":       at,
+			"updated_at":       at,
+		}).Error
 }
 
 func mapContributionPointStoreError(err error) error {
