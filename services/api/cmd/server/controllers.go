@@ -25,6 +25,7 @@ type controllerSet struct {
 	mypage     *httpapi.MypageController
 	profile    *httpapi.ProfileController
 	analysis   *httpapi.AnalysisController
+	home       *httpapi.HomeController
 }
 
 func (c controllerSet) registrars() []httpapi.RouteRegistrar {
@@ -35,6 +36,7 @@ func (c controllerSet) registrars() []httpapi.RouteRegistrar {
 		c.mypage,
 		c.profile,
 		c.analysis,
+		c.home,
 	}
 }
 
@@ -85,6 +87,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 		newMypageCPReader(contributionPointStore, mypageStore),
 		mypageStore,
 	)
+	homeCPProvider := newHomeCPDataProvider(contributionPointStore, mypageStore)
 	profileUseCase := profileapp.NewUseCase(
 		authStore,
 		profileStore,
@@ -117,6 +120,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 		mypage:     httpapi.NewMypageController(mypageUseCase, logger),
 		profile:    httpapi.NewProfileController(profileUseCase, logger),
 		analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), logger),
+		home:       httpapi.NewHomeController(authStore, homeCPProvider, logger),
 	}, nil
 }
 
