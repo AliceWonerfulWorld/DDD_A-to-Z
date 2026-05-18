@@ -55,6 +55,24 @@ func (s *MyPageStore) GetTotalSpent(ctx context.Context, userID user.ID) (int64,
 	return *total, nil
 }
 
+// GetTodayEarned returns the sum of CP earned today.
+func (s *MyPageStore) GetTodayEarned(ctx context.Context, userID user.ID) (int64, error) {
+	var total *int64
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT COALESCE(SUM(amount), 0)
+		FROM point_ledger
+		WHERE user_id = ? AND point_type = 'CP' AND type = 'earn' AND created_at >= CURRENT_DATE
+	`, userID).Scan(&total).Error
+	if err != nil {
+		return 0, err
+	}
+	if total == nil {
+		return 0, nil
+	}
+
+	return *total, nil
+}
+
 // GetRepositorySummary returns total repository count, language distribution,
 // and the most recently pushed repositories.
 func (s *MyPageStore) GetRepositorySummary(ctx context.Context, userID user.ID, recentLimit int) (mypage.RepositorySummary, error) {
