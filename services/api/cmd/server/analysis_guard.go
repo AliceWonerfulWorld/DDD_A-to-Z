@@ -48,5 +48,5 @@ func (g *analysisGuard) Analyze(ctx context.Context, sessionToken string) (analy
 	l.Lock()
 	defer l.Unlock()
 
-	return g.inner.Analyze(ctx, sessionToken)
+	return g.inner.AnalyzeForUser(ctx, appUser, sessionToken, time.Now())
 }
