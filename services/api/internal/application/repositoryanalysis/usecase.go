@@ -113,6 +113,9 @@ func (u *UseCase) Analyze(ctx context.Context, sessionToken string) (AnalysisRes
 		if repo.Fork || repo.Archived {
 			continue
 		}
+		if repo.GitHubUpdatedAt.Before(since) {
+			continue
+		}
 
 		commits, err := u.commits.ListCommits(ctx, accessToken, repo.Owner, repo.Name, username, since)
 		if err != nil {
