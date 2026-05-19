@@ -74,7 +74,7 @@ func (c *GuildController) getMyGuild(w stdhttp.ResponseWriter, r *stdhttp.Reques
 		return
 	}
 
-	membership, ok, err := c.usecase.GetMyGuild(r.Context(), cookie.Value)
+	details, ok, err := c.usecase.GetMyGuildDetails(r.Context(), cookie.Value)
 	if err != nil {
 		c.writeError(w, err)
 		return
@@ -86,7 +86,7 @@ func (c *GuildController) getMyGuild(w stdhttp.ResponseWriter, r *stdhttp.Reques
 		return
 	}
 
-	if err := writeJSON(w, stdhttp.StatusOK, membershipResponse(membership)); err != nil {
+	if err := writeJSON(w, stdhttp.StatusOK, myGuildDetailsResponse(details)); err != nil {
 		c.logger.Error("failed to write my guild response", "error", err)
 	}
 }
@@ -202,7 +202,20 @@ func membershipResponse(membership guilddomain.MembershipWithGuild) map[string]a
 		"guild": guildResponse(membership.Guild),
 		"membership": map[string]any{
 			"id":        membership.Membership.ID,
+			"user_id":   membership.Membership.UserID,
 			"joined_at": membership.Membership.JoinedAt.Format(time.RFC3339),
+		},
+	}
+}
+
+func myGuildDetailsResponse(details guildapp.MyGuildDetails) map[string]any {
+	return map[string]any{
+		"guild":   guildResponse(details.Guild),
+		"members": memberContributionResponses(details.Members),
+		"membership": map[string]any{
+			"id":        details.Membership.ID,
+			"user_id":   details.Membership.UserID,
+			"joined_at": details.Membership.JoinedAt.Format(time.RFC3339),
 		},
 	}
 }
@@ -218,6 +231,20 @@ func guildResponse(guild guilddomain.Guild) map[string]any {
 		"member_count":         guild.MemberCount,
 		"total_contributed_cp": guild.TotalContributedCP,
 	}
+}
+
+func memberContributionResponses(members []guilddomain.MemberContribution) []map[string]any {
+	responses := make([]map[string]any, 0, len(members))
+	for _, member := range members {
+		responses = append(responses, map[string]any{
+			"user_id":         member.UserID,
+			"name":            member.Name,
+			"total_earned_cp": member.TotalEarnedCP,
+			"joined_at":       member.JoinedAt.Format(time.RFC3339),
+		})
+	}
+
+	return responses
 }
 
 func cpContributionResponses(contributions []guilddomain.CPContribution) []map[string]any {

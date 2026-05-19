@@ -20,6 +20,7 @@ type testRepository struct {
 	updated          *guilddomain.Membership
 	contribution     *guilddomain.CPContribution
 	contributions    []guilddomain.CPContribution
+	members          []guilddomain.MemberContribution
 }
 
 func (r testRepository) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error) {
@@ -45,6 +46,10 @@ func (r testRepository) FindActiveMembershipByUserID(ctx context.Context, userID
 	}
 
 	return *r.activeMembership, true, nil
+}
+
+func (r testRepository) ListActiveMembersByGuild(ctx context.Context, guildID guilddomain.ID) ([]guilddomain.MemberContribution, error) {
+	return r.members, nil
 }
 
 func (r *testRepository) CreateMembership(ctx context.Context, membership guilddomain.Membership) error {

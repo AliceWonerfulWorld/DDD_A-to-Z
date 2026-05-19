@@ -23,6 +23,12 @@ var (
 
 const defaultContributionHistoryLimit = 50
 
+type MyGuildDetails struct {
+	Membership guilddomain.Membership
+	Guild      guilddomain.Guild
+	Members    []guilddomain.MemberContribution
+}
+
 type UseCase struct {
 	repository      Repository
 	current         CurrentUserRepository
@@ -165,6 +171,24 @@ func (u *UseCase) GetMyGuild(ctx context.Context, sessionToken string) (guilddom
 	}
 
 	return u.repository.FindActiveMembershipByUserID(ctx, appUser.ID)
+}
+
+func (u *UseCase) GetMyGuildDetails(ctx context.Context, sessionToken string) (MyGuildDetails, bool, error) {
+	membership, ok, err := u.GetMyGuild(ctx, sessionToken)
+	if err != nil || !ok {
+		return MyGuildDetails{}, ok, err
+	}
+
+	members, err := u.repository.ListActiveMembersByGuild(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return MyGuildDetails{}, false, err
+	}
+
+	return MyGuildDetails{
+		Membership: membership.Membership,
+		Guild:      membership.Guild,
+		Members:    members,
+	}, true, nil
 }
 
 func (u *UseCase) LeaveMyGuild(ctx context.Context, sessionToken string) error {

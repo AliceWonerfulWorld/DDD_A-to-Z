@@ -166,6 +166,40 @@ func (s *GuildStore) FindActiveMembershipByUserID(ctx context.Context, userID us
 	return membership, true, nil
 }
 
+func (s *GuildStore) ListActiveMembersByGuild(ctx context.Context, guildID guilddomain.ID) ([]guilddomain.MemberContribution, error) {
+	var records []guildMemberContributionRecord
+	if err := s.db.WithContext(ctx).Raw(`
+		SELECT
+			gm.user_id,
+			COALESCE(up.display_name, ga.username) AS name,
+			COALESCE(SUM(pl.amount) FILTER (
+				WHERE pl.point_type = ? AND pl.type = ?
+			), 0) AS total_earned_cp,
+			gm.joined_at
+		FROM guild_memberships gm
+		JOIN github_accounts ga ON ga.user_id = gm.user_id
+		LEFT JOIN user_profiles up ON up.user_id = gm.user_id
+		LEFT JOIN point_ledger pl ON pl.user_id = gm.user_id
+		WHERE gm.guild_id = ?
+			AND gm.left_at IS NULL
+		GROUP BY gm.user_id, up.display_name, ga.username, gm.joined_at
+		ORDER BY total_earned_cp DESC, LOWER(COALESCE(up.display_name, ga.username)) ASC, gm.joined_at ASC
+	`, contributionpointdomain.PointTypeCP, contributionpointdomain.EntryTypeEarn, guildID).Scan(&records).Error; err != nil {
+		return nil, err
+	}
+
+	members := make([]guilddomain.MemberContribution, 0, len(records))
+	for _, record := range records {
+		member, err := record.toDomain()
+		if err != nil {
+			return nil, err
+		}
+		members = append(members, member)
+	}
+
+	return members, nil
+}
+
 func (s *GuildStore) CreateMembership(ctx context.Context, membership guilddomain.Membership) error {
 	err := s.db.WithContext(ctx).Exec(`
 		INSERT INTO guild_memberships (id, user_id, guild_id, joined_at, left_at, created_at, updated_at)
@@ -369,6 +403,22 @@ type guildCPContributionRecord struct {
 	PointLedgerID string                       `gorm:"column:point_ledger_id"`
 	Amount        int64                        `gorm:"column:amount"`
 	CreatedAt     time.Time                    `gorm:"column:created_at"`
+}
+
+type guildMemberContributionRecord struct {
+	UserID        user.ID   `gorm:"column:user_id"`
+	Name          string    `gorm:"column:name"`
+	TotalEarnedCP int64     `gorm:"column:total_earned_cp"`
+	JoinedAt      time.Time `gorm:"column:joined_at"`
+}
+
+func (r guildMemberContributionRecord) toDomain() (guilddomain.MemberContribution, error) {
+	return guilddomain.NewMemberContribution(guilddomain.MemberContribution{
+		UserID:        r.UserID,
+		Name:          r.Name,
+		TotalEarnedCP: r.TotalEarnedCP,
+		JoinedAt:      r.JoinedAt,
+	})
 }
 
 func (r guildCPContributionRecord) toDomain() (guilddomain.CPContribution, error) {
