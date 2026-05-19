@@ -235,7 +235,7 @@ export function useInitialProfileFlow({ onComplete }: InitialProfileFlowArgs) {
 
   const handleBeginJourney = useCallback(() => {
     const trimmedUsername = username.trim();
-    if (isTransitioning) return;
+    if (isSendingOff || isTransitioning) return;
 
     if (!trimmedUsername) {
       setIsGopherAngry(true);
@@ -261,7 +261,7 @@ export function useInitialProfileFlow({ onComplete }: InitialProfileFlowArgs) {
       intervalRef: confirmSpeechIntervalRef,
       speedMs: 82,
     });
-  }, [isTransitioning, playRejectBeep, playSpeech, resetAngryState, username]);
+  }, [isSendingOff, isTransitioning, playRejectBeep, playSpeech, resetAngryState, username]);
 
   const handleConfirmNo = useCallback(() => {
     resetConfirmState();
@@ -269,7 +269,7 @@ export function useInitialProfileFlow({ onComplete }: InitialProfileFlowArgs) {
 
   const handleConfirmYes = useCallback(() => {
     const trimmedUsername = username.trim();
-    if (!trimmedUsername || isTransitioning) return;
+    if (!trimmedUsername || isSendingOff || isTransitioning) return;
 
     resetConfirmState();
     setIsSendingOff(true);
@@ -280,7 +280,7 @@ export function useInitialProfileFlow({ onComplete }: InitialProfileFlowArgs) {
       speedMs: 82,
       onDone: () => startJourney(trimmedUsername),
     });
-  }, [isTransitioning, playSpeech, resetConfirmState, startJourney, username]);
+  }, [isSendingOff, isTransitioning, playSpeech, resetConfirmState, startJourney, username]);
 
   const dialogueText = isConfirmingName
     ? confirmText

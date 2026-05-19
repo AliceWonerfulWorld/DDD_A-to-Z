@@ -22,16 +22,18 @@ export function ProfileActions({
     return <ConfirmActions onConfirmNo={onConfirmNo} onConfirmYes={onConfirmYes} />;
   }
 
+  const isDisabled = isSendingOff || isTransitioning;
+
   return (
     <motion.button
-      whileHover={isTransitioning ? undefined : { scale: 1.02, filter: "brightness(1.1)" }}
+      whileHover={isDisabled ? undefined : { scale: 1.02, filter: "brightness(1.1)" }}
       whileTap={
-        isTransitioning
+        isDisabled
           ? undefined
           : { scale: 0.98, y: 4, boxShadow: "0px 0px 0 var(--color-gold-dark)" }
       }
       onClick={onBeginJourney}
-      disabled={isTransitioning}
+      disabled={isDisabled}
       animate={
         isTransitioning
           ? {
@@ -56,9 +58,9 @@ export function ProfileActions({
         color: "#000",
         border: "none",
         boxShadow: "0px 4px 0 var(--color-gold-dark)",
-        cursor: isTransitioning ? "not-allowed" : "pointer",
+        cursor: isDisabled ? "not-allowed" : "pointer",
         letterSpacing: "0.05em",
-        opacity: isTransitioning ? 0.75 : 1,
+        opacity: isDisabled ? 0.75 : 1,
       }}
     >
       {isTransitioning ? "START!" : isSendingOff ? "GOOD LUCK!" : "BEGIN JOURNEY"}
