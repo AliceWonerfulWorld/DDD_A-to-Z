@@ -26,7 +26,11 @@ export function HomeFirstVisitGuide({ onDismiss }: HomeFirstVisitGuideProps) {
         pointerEvents: "auto",
         background:
           "radial-gradient(circle at 50% 54%, rgba(0,245,255,0.08), rgba(4,8,18,0.62) 48%, rgba(4,8,18,0.82) 100%)",
-        overflow: "hidden",
+        overflow: "auto",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "clamp(16px, 4vw, 32px)",
       }}
     >
       <motion.div
@@ -48,11 +52,11 @@ export function HomeFirstVisitGuide({ onDismiss }: HomeFirstVisitGuideProps) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ delay: 0.18, duration: 0.38, ease: steppedEase(5) }}
         style={{
-          position: "absolute",
-          left: "50%",
-          top: "54%",
-          transform: "translate(-50%, -50%)",
           width: "min(640px, calc(100vw - 28px))",
+          maxHeight: "calc(100svh - 32px)",
+          overflowY: "auto",
+          position: "relative",
+          zIndex: 1,
           border: "3px solid #ffd700",
           background: "rgba(14, 28, 64, 0.94)",
           boxShadow: "0 0 28px rgba(0,245,255,0.25), 7px 7px 0 rgba(0,0,0,0.66)",
