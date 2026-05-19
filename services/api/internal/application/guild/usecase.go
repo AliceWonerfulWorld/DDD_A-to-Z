@@ -93,22 +93,6 @@ func (u *UseCase) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error) {
 	return u.repository.ListGuilds(ctx)
 }
 
-func (u *UseCase) ListGuildMembers(ctx context.Context, guildID guilddomain.ID) ([]guilddomain.MemberContribution, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(string(guildID)) == "" {
-		return nil, ErrGuildNotFound
-	}
-	if _, ok, err := u.repository.FindGuildByID(ctx, guildID); err != nil {
-		return nil, err
-	} else if !ok {
-		return nil, ErrGuildNotFound
-	}
-
-	return u.repository.ListActiveMembersByGuild(ctx, guildID)
-}
-
 func (u *UseCase) JoinGuild(ctx context.Context, sessionToken string, guildID guilddomain.ID) (guilddomain.MembershipWithGuild, error) {
 	if strings.TrimSpace(sessionToken) == "" {
 		return guilddomain.MembershipWithGuild{}, ErrUnauthenticated

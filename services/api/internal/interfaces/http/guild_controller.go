@@ -27,7 +27,6 @@ func NewGuildController(usecase *guildapp.UseCase, logger *slog.Logger) *GuildCo
 func (c *GuildController) RegisterRoutes(mux *stdhttp.ServeMux) {
 	mux.HandleFunc("GET /guilds", c.listGuilds)
 	mux.HandleFunc("POST /guilds/{guildID}/join", c.joinGuild)
-	mux.HandleFunc("GET /guilds/{guildID}/members", c.listGuildMembers)
 	mux.HandleFunc("GET /guilds/{guildID}/cp-contributions", c.listGuildCPContributions)
 	mux.HandleFunc("GET /me/guild", c.getMyGuild)
 	mux.HandleFunc("DELETE /me/guild", c.leaveMyGuild)
@@ -47,20 +46,6 @@ func (c *GuildController) listGuilds(w stdhttp.ResponseWriter, r *stdhttp.Reques
 		"guilds": guildResponses(guilds),
 	}); err != nil {
 		c.logger.Error("failed to write guild list response", "error", err)
-	}
-}
-
-func (c *GuildController) listGuildMembers(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	members, err := c.usecase.ListGuildMembers(r.Context(), guilddomain.ID(r.PathValue("guildID")))
-	if err != nil {
-		c.writeError(w, err)
-		return
-	}
-
-	if err := writeJSON(w, stdhttp.StatusOK, map[string]any{
-		"members": memberContributionResponses(members),
-	}); err != nil {
-		c.logger.Error("failed to write guild member list response", "error", err)
 	}
 }
 
