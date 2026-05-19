@@ -26,6 +26,7 @@ export interface AnalysisResult {
 }
 
 interface CompletePanelProps {
+  isDeparting?: boolean;
   result: AnalysisResult;
   onContinue: () => void;
 }
@@ -60,12 +61,29 @@ function langMeta(name: string): { color: string; icon: string } {
 
 const steppedEase = (steps: number) => (t: number) => Math.floor(t * steps) / steps;
 
-export function CompletePanel({ result, onContinue }: CompletePanelProps) {
+export function CompletePanel({ isDeparting = false, result, onContinue }: CompletePanelProps) {
   return (
     <motion.div
       initial={{ scaleY: 0, opacity: 0 }}
-      animate={{ scaleY: 1, opacity: 1 }}
-      transition={{ duration: 0.4, ease: steppedEase(6) }}
+      animate={{
+        scaleY: 1,
+        opacity: isDeparting ? 0.85 : 1,
+        y: isDeparting ? [0, -8, 0] : 0,
+        filter: isDeparting
+          ? [
+              "brightness(1)",
+              "brightness(1.7)",
+              "brightness(0.85)",
+              "brightness(1.45)",
+              "brightness(1)",
+            ]
+          : "brightness(1)",
+      }}
+      transition={
+        isDeparting
+          ? { duration: 0.68, ease: steppedEase(6) }
+          : { duration: 0.4, ease: steppedEase(6) }
+      }
       style={{
         position: "relative",
         zIndex: 2,
@@ -343,12 +361,32 @@ export function CompletePanel({ result, onContinue }: CompletePanelProps) {
       </motion.div>
 
       <motion.button
-        whileHover={{ scale: 1.02, filter: "brightness(1.1)" }}
-        whileTap={{ scale: 0.98, y: 4, boxShadow: "0px 0px 0 var(--color-gold-dark)" }}
+        whileHover={isDeparting ? undefined : { scale: 1.02, filter: "brightness(1.1)" }}
+        whileTap={
+          isDeparting
+            ? undefined
+            : { scale: 0.98, y: 4, boxShadow: "0px 0px 0 var(--color-gold-dark)" }
+        }
         onClick={onContinue}
+        disabled={isDeparting}
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 2.5, duration: 0.4 }}
+        animate={
+          isDeparting
+            ? {
+                opacity: 0.78,
+                y: 0,
+                backgroundColor: ["var(--color-gold)", "#ffffff", "var(--color-gold)"],
+                boxShadow: [
+                  "0px 4px 0 var(--color-gold-dark)",
+                  "0px 0px 0 var(--color-gold-dark)",
+                  "0px 4px 0 var(--color-gold-dark)",
+                ],
+              }
+            : { opacity: 1, y: 0 }
+        }
+        transition={
+          isDeparting ? { duration: 0.5, ease: steppedEase(4) } : { delay: 2.5, duration: 0.4 }
+        }
         style={{
           marginTop: "0.5rem",
           width: "100%",
@@ -359,11 +397,11 @@ export function CompletePanel({ result, onContinue }: CompletePanelProps) {
           color: "#000",
           border: "none",
           boxShadow: "0px 4px 0 var(--color-gold-dark)",
-          cursor: "pointer",
+          cursor: isDeparting ? "not-allowed" : "pointer",
           letterSpacing: "0.05em",
         }}
       >
-        CONTINUE
+        {isDeparting ? "WARPING..." : "CONTINUE"}
       </motion.button>
     </motion.div>
   );
