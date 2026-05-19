@@ -16,6 +16,7 @@ var (
 	ErrGuildNotFound               = errors.New("guild not found")
 	ErrAlreadyJoined               = errors.New("user already joined a guild")
 	ErrActiveMembershipNotFound    = errors.New("active guild membership not found")
+	ErrGuildAccessDenied           = errors.New("guild access denied")
 	ErrInvalidCPContribution       = errors.New("guild cp contribution amount must be positive")
 	ErrInvalidCPContributionLedger = errors.New("guild cp contribution ledger is invalid")
 	ErrCPServiceUnavailable        = errors.New("contribution point service is unavailable")
@@ -189,6 +190,34 @@ func (u *UseCase) GetMyGuildDetails(ctx context.Context, sessionToken string) (M
 		Guild:      membership.Guild,
 		Members:    members,
 	}, true, nil
+}
+
+func (u *UseCase) GetGuildDashboard(ctx context.Context, sessionToken string, guildID guilddomain.ID) (MyGuildDetails, error) {
+	if strings.TrimSpace(string(guildID)) == "" {
+		return MyGuildDetails{}, ErrGuildNotFound
+	}
+
+	membership, ok, err := u.GetMyGuild(ctx, sessionToken)
+	if err != nil {
+		return MyGuildDetails{}, err
+	}
+	if !ok {
+		return MyGuildDetails{}, ErrActiveMembershipNotFound
+	}
+	if membership.Membership.GuildID != guildID {
+		return MyGuildDetails{}, ErrGuildAccessDenied
+	}
+
+	members, err := u.repository.ListActiveMembersByGuild(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return MyGuildDetails{}, err
+	}
+
+	return MyGuildDetails{
+		Membership: membership.Membership,
+		Guild:      membership.Guild,
+		Members:    members,
+	}, nil
 }
 
 func (u *UseCase) LeaveMyGuild(ctx context.Context, sessionToken string) error {

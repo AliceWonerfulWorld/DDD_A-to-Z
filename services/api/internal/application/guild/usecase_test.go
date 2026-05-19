@@ -309,6 +309,106 @@ func TestUseCaseGetMyGuildDetailsListsMembersForActiveGuild(t *testing.T) {
 	}
 }
 
+func TestUseCaseGetGuildDashboardRequiresOwnGuild(t *testing.T) {
+	now := time.Date(2026, 5, 19, 9, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:                 "guild_go",
+			Slug:               "go",
+			Name:               "Go",
+			Description:        "シンプルさと並列処理で前に進むギルド。",
+			Icon:               "GO",
+			Color:              "#00acd7",
+			SortOrder:          1,
+			MemberCount:        2,
+			TotalContributedCP: 160,
+			CreatedAt:          now,
+			UpdatedAt:          now,
+		},
+	}
+	usecase := NewUseCase(&testRepository{
+		activeMembership: &activeMembership,
+		membersByGuild: map[guilddomain.ID][]guilddomain.MemberContribution{
+			"guild_go": {{
+				UserID:        "user_1",
+				Name:          "Alice",
+				TotalEarnedCP: 120,
+				JoinedAt:      now,
+			}},
+		},
+	}, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "membership_unused"})
+
+	dashboard, err := usecase.GetGuildDashboard(context.Background(), "session-token", "guild_go")
+	if err != nil {
+		t.Fatalf("GetGuildDashboard() がエラーを返しました: %v", err)
+	}
+	if dashboard.Guild.TotalContributedCP != 160 {
+		t.Fatalf("total contributed cp = %d, 期待値 160", dashboard.Guild.TotalContributedCP)
+	}
+	if len(dashboard.Members) != 1 {
+		t.Fatalf("members length = %d, 期待値 1", len(dashboard.Members))
+	}
+}
+
+func TestUseCaseGetGuildDashboardRejectsOtherGuild(t *testing.T) {
+	now := time.Date(2026, 5, 19, 9, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	usecase := NewUseCase(&testRepository{
+		activeMembership: &activeMembership,
+	}, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "membership_unused"})
+
+	_, err := usecase.GetGuildDashboard(context.Background(), "session-token", "guild_python")
+	if !errors.Is(err, ErrGuildAccessDenied) {
+		t.Fatalf("GetGuildDashboard() error = %v, 期待値 ErrGuildAccessDenied", err)
+	}
+}
+
+func TestUseCaseGetGuildDashboardRejectsUserWithoutGuild(t *testing.T) {
+	usecase := NewUseCase(&testRepository{}, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "membership_unused"})
+
+	_, err := usecase.GetGuildDashboard(context.Background(), "session-token", "guild_go")
+	if !errors.Is(err, ErrActiveMembershipNotFound) {
+		t.Fatalf("GetGuildDashboard() error = %v, 期待値 ErrActiveMembershipNotFound", err)
+	}
+}
+
 func TestUseCaseLeaveMyGuild(t *testing.T) {
 	now := time.Date(2026, 5, 16, 13, 0, 0, 0, time.UTC)
 	activeMembership := guilddomain.MembershipWithGuild{
