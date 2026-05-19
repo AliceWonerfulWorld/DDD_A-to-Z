@@ -88,10 +88,26 @@ ensure_secret() {
 add_secret_version() {
   local name="$1"
   local value="$2"
+
+  if gcloud secrets versions access latest \
+      --secret="${name}" \
+      --project="${PROJECT_ID}" &>/dev/null; then
+    local current_value
+    current_value="$(gcloud secrets versions access latest \
+      --secret="${name}" \
+      --project="${PROJECT_ID}")"
+
+    if [ "${current_value}" = "${value}" ]; then
+      echo "  (latest version と同じ値のためスキップ: ${name})"
+      return
+    fi
+  fi
+
   echo -n "${value}" \
     | gcloud secrets versions add "${name}" \
         --data-file=- \
         --project="${PROJECT_ID}"
+  echo "  登録しました。"
 }
 
 # ── 開始 ─────────────────────────────────────────────────────
@@ -106,37 +122,31 @@ echo ""
 echo "[1/6] lang-war-database-url"
 ensure_secret "lang-war-database-url"
 add_secret_version "lang-war-database-url" "${NEON_DATABASE_URL}"
-echo "  登録しました。"
 echo ""
 
 echo "[2/6] lang-war-github-client-id"
 ensure_secret "lang-war-github-client-id"
 add_secret_version "lang-war-github-client-id" "${GITHUB_CLIENT_ID}"
-echo "  登録しました。"
 echo ""
 
 echo "[3/6] lang-war-github-client-secret"
 ensure_secret "lang-war-github-client-secret"
 add_secret_version "lang-war-github-client-secret" "${GITHUB_CLIENT_SECRET}"
-echo "  登録しました。"
 echo ""
 
 echo "[4/6] lang-war-github-redirect-url"
 ensure_secret "lang-war-github-redirect-url"
 add_secret_version "lang-war-github-redirect-url" "${GITHUB_REDIRECT_URL}"
-echo "  登録しました。"
 echo ""
 
 echo "[5/6] lang-war-auth-cookie-secret"
 ensure_secret "lang-war-auth-cookie-secret"
 add_secret_version "lang-war-auth-cookie-secret" "${AUTH_COOKIE_SECRET}"
-echo "  登録しました。"
 echo ""
 
 echo "[6/6] lang-war-github-token-encryption-secret"
 ensure_secret "lang-war-github-token-encryption-secret"
 add_secret_version "lang-war-github-token-encryption-secret" "${GITHUB_TOKEN_ENCRYPTION_SECRET}"
-echo "  登録しました。"
 echo ""
 
 # ── 登録済みシークレット一覧を表示 ───────────────────────────
