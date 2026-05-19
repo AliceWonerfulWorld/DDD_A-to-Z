@@ -3,7 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PATHS } from "../../constants/paths";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { useAudioSettings } from "../../features/audio/useAudioSettings";
-import { fetchMyGuild, leaveGuild, type GuildMemberContribution } from "../../features/guild/api";
+import {
+  fetchGuildMembers,
+  fetchMyGuild,
+  leaveGuild,
+  type GuildMemberContribution,
+} from "../../features/guild/api";
 import { toDisplayGuild, type DisplayGuild } from "../../features/guild/presentation";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { steppedEase } from "../../lib/animationUtils";
@@ -103,7 +108,7 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
     let isMounted = true;
 
     fetchMyGuild()
-      .then((data) => {
+      .then(async (data) => {
         if (!isMounted) {
           return;
         }
@@ -113,10 +118,13 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
           return;
         }
 
-        setGuild(toDisplayGuild(data.guild));
-        setMembers(
-          (data.members ?? []).map((member) => toGuildMember(member, data.membership?.user_id)),
-        );
+        const displayGuild = toDisplayGuild(data.guild);
+        setGuild(displayGuild);
+        const memberData =
+          data.members && data.members.length > 0
+            ? data.members
+            : await fetchGuildMembers(displayGuild.id);
+        setMembers(memberData.map((member) => toGuildMember(member, data.membership?.user_id)));
       })
       .catch((error) => {
         if (!isMounted) {

@@ -247,6 +247,57 @@ func TestGuildControllerJoinGuild(t *testing.T) {
 	}
 }
 
+func TestGuildControllerListGuildMembers(t *testing.T) {
+	now := time.Date(2026, 5, 19, 9, 0, 0, 0, time.UTC)
+	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
+		guilds: []guilddomain.Guild{{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			MemberCount: 1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}},
+		members: []guilddomain.MemberContribution{{
+			UserID:        "user_1",
+			Name:          "Alice",
+			TotalEarnedCP: 120,
+			JoinedAt:      now,
+		}},
+	}, guildTestCurrentUserRepository{ok: true}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodGet, "/guilds/guild_go/members", nil)
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusOK {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusOK)
+	}
+
+	var body struct {
+		Members []struct {
+			UserID        string `json:"user_id"`
+			Name          string `json:"name"`
+			TotalEarnedCP int64  `json:"total_earned_cp"`
+		} `json:"members"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
+	}
+	if len(body.Members) != 1 {
+		t.Fatalf("members length = %d, 期待値 1", len(body.Members))
+	}
+	if body.Members[0].Name != "Alice" {
+		t.Fatalf("members[0].name = %q, 期待値 Alice", body.Members[0].Name)
+	}
+}
+
 func TestGuildControllerGetMyGuild(t *testing.T) {
 	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
 	activeMembership := guilddomain.MembershipWithGuild{

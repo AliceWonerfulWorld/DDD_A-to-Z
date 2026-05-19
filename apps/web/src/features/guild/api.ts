@@ -35,6 +35,11 @@ export async function fetchGuilds(): Promise<Guild[]> {
   return data.guilds;
 }
 
+export async function fetchGuildMembers(guildID: string): Promise<GuildMemberContribution[]> {
+  const data = await apiFetch<{ members: GuildMemberContribution[] }>(`/guilds/${guildID}/members`);
+  return data.members;
+}
+
 export async function fetchMyGuild(): Promise<GuildMembershipResponse | null> {
   try {
     return await apiFetch<GuildMembershipResponse>("/me/guild");

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchMyGuild, joinGuild, leaveGuild } from "./api";
+import { fetchGuildMembers, fetchMyGuild, joinGuild, leaveGuild } from "./api";
 
 function mockFetch(status: number, body: unknown = null) {
   vi.stubGlobal(
@@ -62,6 +62,27 @@ describe("guild api", () => {
     expect(fetch).toHaveBeenCalledWith(
       "/api/guilds/guild_go/join",
       expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("fetchGuildMembers は指定ギルドの参加ユーザー一覧を取得する", async () => {
+    mockFetch(200, {
+      members: [
+        {
+          user_id: "user_1",
+          name: "Alice",
+          total_earned_cp: 120,
+          joined_at: "2026-05-18T00:00:00Z",
+        },
+      ],
+    });
+
+    const result = await fetchGuildMembers("guild_go");
+
+    expect(result[0]?.name).toBe("Alice");
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/guilds/guild_go/members",
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 
