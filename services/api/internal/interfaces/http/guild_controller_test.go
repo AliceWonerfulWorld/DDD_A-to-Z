@@ -480,6 +480,22 @@ func TestGuildControllerGetGuildDashboardRejectsMembershipNotFound(t *testing.T)
 	}
 }
 
+func TestGuildControllerGetGuildDashboardUnauthenticated(t *testing.T) {
+	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{}, guildTestCurrentUserRepository{
+		ok: false,
+	}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodGet, "/guilds/guild_go/dashboard", nil)
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusUnauthorized {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusUnauthorized)
+	}
+}
+
 func TestGuildControllerLeaveMyGuild(t *testing.T) {
 	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
 	activeMembership := guilddomain.MembershipWithGuild{
