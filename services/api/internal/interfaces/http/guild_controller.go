@@ -1,11 +1,13 @@
 package http
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	stdhttp "net/http"
 	"time"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 )
@@ -25,8 +27,11 @@ func NewGuildController(usecase *guildapp.UseCase, logger *slog.Logger) *GuildCo
 func (c *GuildController) RegisterRoutes(mux *stdhttp.ServeMux) {
 	mux.HandleFunc("GET /guilds", c.listGuilds)
 	mux.HandleFunc("POST /guilds/{guildID}/join", c.joinGuild)
+	mux.HandleFunc("GET /guilds/{guildID}/cp-contributions", c.listGuildCPContributions)
 	mux.HandleFunc("GET /me/guild", c.getMyGuild)
 	mux.HandleFunc("DELETE /me/guild", c.leaveMyGuild)
+	mux.HandleFunc("POST /me/guild/cp-contributions", c.contributeCP)
+	mux.HandleFunc("GET /me/guild/cp-contributions", c.listMyGuildCPContributions)
 }
 
 func (c *GuildController) listGuilds(w stdhttp.ResponseWriter, r *stdhttp.Request) {
@@ -101,6 +106,68 @@ func (c *GuildController) leaveMyGuild(w stdhttp.ResponseWriter, r *stdhttp.Requ
 	w.WriteHeader(stdhttp.StatusNoContent)
 }
 
+func (c *GuildController) contributeCP(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		c.writeError(w, guildapp.ErrUnauthenticated)
+		return
+	}
+
+	var request struct {
+		Amount int64 `json:"amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_request", "invalid request body", 0, nil)
+		return
+	}
+
+	contribution, err := c.usecase.ContributeCP(r.Context(), cookie.Value, request.Amount)
+	if err != nil {
+		c.writeError(w, err)
+		return
+	}
+
+	if err := writeJSON(w, stdhttp.StatusCreated, map[string]any{
+		"contribution": cpContributionResponse(contribution),
+	}); err != nil {
+		c.logger.Error("failed to write guild cp contribution response", "error", err)
+	}
+}
+
+func (c *GuildController) listGuildCPContributions(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	contributions, err := c.usecase.ListGuildCPContributions(r.Context(), guilddomain.ID(r.PathValue("guildID")))
+	if err != nil {
+		c.writeError(w, err)
+		return
+	}
+
+	if err := writeJSON(w, stdhttp.StatusOK, map[string]any{
+		"contributions": cpContributionResponses(contributions),
+	}); err != nil {
+		c.logger.Error("failed to write guild cp contribution list response", "error", err)
+	}
+}
+
+func (c *GuildController) listMyGuildCPContributions(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		c.writeError(w, guildapp.ErrUnauthenticated)
+		return
+	}
+
+	contributions, err := c.usecase.ListMyGuildCPContributions(r.Context(), cookie.Value)
+	if err != nil {
+		c.writeError(w, err)
+		return
+	}
+
+	if err := writeJSON(w, stdhttp.StatusOK, map[string]any{
+		"contributions": cpContributionResponses(contributions),
+	}); err != nil {
+		c.logger.Error("failed to write my guild cp contribution list response", "error", err)
+	}
+}
+
 func (c *GuildController) writeError(w stdhttp.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, guildapp.ErrUnauthenticated):
@@ -111,6 +178,10 @@ func (c *GuildController) writeError(w stdhttp.ResponseWriter, err error) {
 		writeAPIError(w, stdhttp.StatusConflict, "already_joined_guild", "user already joined a guild", 0, nil)
 	case errors.Is(err, guildapp.ErrActiveMembershipNotFound):
 		writeAPIError(w, stdhttp.StatusNotFound, "guild_membership_not_found", "active guild membership not found", 0, nil)
+	case errors.Is(err, guildapp.ErrInvalidCPContribution):
+		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_cp_contribution", "guild cp contribution amount must be positive", 0, nil)
+	case errors.Is(err, contributionpointapp.ErrInsufficientBalance):
+		writeAPIError(w, stdhttp.StatusConflict, "insufficient_cp_balance", "contribution point balance is insufficient", 0, nil)
 	default:
 		c.logger.Error("guild request failed", "error", err)
 		writeAPIError(w, stdhttp.StatusInternalServerError, "internal_error", "Internal Server Error", 0, nil)
@@ -138,12 +209,33 @@ func membershipResponse(membership guilddomain.MembershipWithGuild) map[string]a
 
 func guildResponse(guild guilddomain.Guild) map[string]any {
 	return map[string]any{
-		"id":           guild.ID,
-		"slug":         guild.Slug,
-		"name":         guild.Name,
-		"description":  guild.Description,
-		"icon":         guild.Icon,
-		"color":        guild.Color,
-		"member_count": guild.MemberCount,
+		"id":                   guild.ID,
+		"slug":                 guild.Slug,
+		"name":                 guild.Name,
+		"description":          guild.Description,
+		"icon":                 guild.Icon,
+		"color":                guild.Color,
+		"member_count":         guild.MemberCount,
+		"total_contributed_cp": guild.TotalContributedCP,
+	}
+}
+
+func cpContributionResponses(contributions []guilddomain.CPContribution) []map[string]any {
+	responses := make([]map[string]any, 0, len(contributions))
+	for _, contribution := range contributions {
+		responses = append(responses, cpContributionResponse(contribution))
+	}
+
+	return responses
+}
+
+func cpContributionResponse(contribution guilddomain.CPContribution) map[string]any {
+	return map[string]any{
+		"id":              contribution.ID,
+		"guild_id":        contribution.GuildID,
+		"user_id":         contribution.UserID,
+		"point_ledger_id": contribution.PointLedgerID,
+		"amount":          contribution.Amount,
+		"created_at":      contribution.CreatedAt.Format(time.RFC3339),
 	}
 }

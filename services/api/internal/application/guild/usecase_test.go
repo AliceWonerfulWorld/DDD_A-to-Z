@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
+	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
@@ -16,6 +18,8 @@ type testRepository struct {
 	activeMembership *guilddomain.MembershipWithGuild
 	created          *guilddomain.Membership
 	updated          *guilddomain.Membership
+	contribution     *guilddomain.CPContribution
+	contributions    []guilddomain.CPContribution
 }
 
 func (r testRepository) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error) {
@@ -53,6 +57,34 @@ func (r *testRepository) UpdateMembership(ctx context.Context, membership guildd
 	return nil
 }
 
+func (r *testRepository) CreateCPContribution(ctx context.Context, contribution guilddomain.CPContribution) error {
+	r.contribution = &contribution
+	r.contributions = append(r.contributions, contribution)
+	return nil
+}
+
+func (r testRepository) ListCPContributionsByGuild(ctx context.Context, guildID guilddomain.ID, limit int) ([]guilddomain.CPContribution, error) {
+	var contributions []guilddomain.CPContribution
+	for _, contribution := range r.contributions {
+		if contribution.GuildID == guildID {
+			contributions = append(contributions, contribution)
+		}
+	}
+
+	return contributions, nil
+}
+
+func (r testRepository) ListCPContributionsByUser(ctx context.Context, userID user.ID, limit int) ([]guilddomain.CPContribution, error) {
+	var contributions []guilddomain.CPContribution
+	for _, contribution := range r.contributions {
+		if contribution.UserID == userID {
+			contributions = append(contributions, contribution)
+		}
+	}
+
+	return contributions, nil
+}
+
 type testCurrentUserRepository struct {
 	appUser user.User
 	ok      bool
@@ -68,6 +100,35 @@ type testIDGenerator struct {
 
 func (g testIDGenerator) NewID() (string, error) {
 	return g.id, nil
+}
+
+type testCPSpender struct {
+	err     error
+	command contributionpointapp.SpendCommand
+	entry   contributionpointdomain.LedgerEntry
+}
+
+func (s *testCPSpender) Spend(ctx context.Context, command contributionpointapp.SpendCommand) (contributionpointdomain.LedgerEntry, error) {
+	s.command = command
+	if s.err != nil {
+		return contributionpointdomain.LedgerEntry{}, s.err
+	}
+	if s.entry.ID == "" {
+		s.entry = contributionpointdomain.LedgerEntry{
+			ID:           "cp_ledger_1",
+			UserID:       command.UserID,
+			PointType:    command.PointType,
+			Amount:       -command.Amount,
+			Type:         contributionpointdomain.EntryTypeSpend,
+			Reason:       command.Reason,
+			SourceType:   command.SourceType,
+			SourceID:     command.SourceID,
+			BalanceAfter: 60,
+			CreatedAt:    time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC),
+		}
+	}
+
+	return s.entry, nil
 }
 
 func TestUseCaseListGuilds(t *testing.T) {
@@ -237,6 +298,141 @@ func TestUseCaseLeaveMyGuildRejectsMembershipNotFound(t *testing.T) {
 	err := usecase.LeaveMyGuild(context.Background(), "session-token")
 	if !errors.Is(err, ErrActiveMembershipNotFound) {
 		t.Fatalf("LeaveMyGuild() error = %v, 期待値 ErrActiveMembershipNotFound", err)
+	}
+}
+
+func TestUseCaseContributeCPSpendsCPAndRecordsContribution(t *testing.T) {
+	now := time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	repository := &testRepository{activeMembership: &activeMembership}
+	cp := &testCPSpender{}
+	usecase := NewUseCaseWithCP(
+		repository,
+		testCurrentUserRepository{appUser: user.User{ID: "user_1"}, ok: true},
+		testIDGenerator{id: "membership_1"},
+		testIDGenerator{id: "guild_cp_contribution_1"},
+		cp,
+	)
+	usecase.now = func() time.Time { return now }
+
+	contribution, err := usecase.ContributeCP(context.Background(), "session-token", 40)
+	if err != nil {
+		t.Fatalf("ContributeCP() がエラーを返しました: %v", err)
+	}
+	if contribution.ID != "guild_cp_contribution_1" {
+		t.Fatalf("contribution id = %q, 期待値 guild_cp_contribution_1", contribution.ID)
+	}
+	if contribution.GuildID != "guild_go" {
+		t.Fatalf("guild id = %q, 期待値 guild_go", contribution.GuildID)
+	}
+	if contribution.UserID != "user_1" {
+		t.Fatalf("user id = %q, 期待値 user_1", contribution.UserID)
+	}
+	if contribution.PointLedgerID != "cp_ledger_1" {
+		t.Fatalf("point ledger id = %q, 期待値 cp_ledger_1", contribution.PointLedgerID)
+	}
+	if cp.command.Amount != 40 {
+		t.Fatalf("CP spend amount = %d, 期待値 40", cp.command.Amount)
+	}
+	if cp.command.PointType != contributionpointdomain.PointTypeCP {
+		t.Fatalf("CP point type = %q, 期待値 CP", cp.command.PointType)
+	}
+	if cp.command.SourceType != "guild_cp_contribution" {
+		t.Fatalf("CP source type = %q, 期待値 guild_cp_contribution", cp.command.SourceType)
+	}
+	if repository.contribution == nil {
+		t.Fatal("CreateCPContribution() が呼ばれる必要があります")
+	}
+}
+
+func TestUseCaseContributeCPRejectsUserWithoutGuild(t *testing.T) {
+	usecase := NewUseCaseWithCP(
+		&testRepository{},
+		testCurrentUserRepository{appUser: user.User{ID: "user_1"}, ok: true},
+		testIDGenerator{id: "membership_1"},
+		testIDGenerator{id: "guild_cp_contribution_1"},
+		&testCPSpender{},
+	)
+
+	_, err := usecase.ContributeCP(context.Background(), "session-token", 40)
+	if !errors.Is(err, ErrActiveMembershipNotFound) {
+		t.Fatalf("ContributeCP() error = %v, 期待値 ErrActiveMembershipNotFound", err)
+	}
+}
+
+func TestUseCaseContributeCPRejectsInsufficientBalance(t *testing.T) {
+	now := time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	repository := &testRepository{activeMembership: &activeMembership}
+	usecase := NewUseCaseWithCP(
+		repository,
+		testCurrentUserRepository{appUser: user.User{ID: "user_1"}, ok: true},
+		testIDGenerator{id: "membership_1"},
+		testIDGenerator{id: "guild_cp_contribution_1"},
+		&testCPSpender{err: contributionpointapp.ErrInsufficientBalance},
+	)
+
+	_, err := usecase.ContributeCP(context.Background(), "session-token", 40)
+	if !errors.Is(err, contributionpointapp.ErrInsufficientBalance) {
+		t.Fatalf("ContributeCP() error = %v, 期待値 ErrInsufficientBalance", err)
+	}
+	if repository.contribution != nil {
+		t.Fatal("CP不足時は CreateCPContribution() を呼ばない必要があります")
+	}
+}
+
+func TestUseCaseListGuildCPContributionsRejectsUnknownGuild(t *testing.T) {
+	usecase := NewUseCaseWithCP(
+		&testRepository{},
+		testCurrentUserRepository{appUser: user.User{ID: "user_1"}, ok: true},
+		testIDGenerator{id: "membership_1"},
+		testIDGenerator{id: "guild_cp_contribution_1"},
+		&testCPSpender{},
+	)
+
+	_, err := usecase.ListGuildCPContributions(context.Background(), "guild_missing")
+	if !errors.Is(err, ErrGuildNotFound) {
+		t.Fatalf("ListGuildCPContributions() error = %v, 期待値 ErrGuildNotFound", err)
 	}
 }
 

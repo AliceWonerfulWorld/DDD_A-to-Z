@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
+	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"gorm.io/gorm"
@@ -37,21 +38,20 @@ func (s *GuildStore) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error
 			g.sort_order,
 			g.created_at,
 			g.updated_at,
-			COUNT(gm.id) AS member_count
+			COALESCE(gm.member_count, 0) AS member_count,
+			COALESCE(gc.total_contributed_cp, 0) AS total_contributed_cp
 		FROM guilds g
-		LEFT JOIN guild_memberships gm
-			ON gm.guild_id = g.id
-			AND gm.left_at IS NULL
-		GROUP BY
-			g.id,
-			g.slug,
-			g.name,
-			g.description,
-			g.icon,
-			g.color,
-			g.sort_order,
-			g.created_at,
-			g.updated_at
+		LEFT JOIN (
+			SELECT guild_id, COUNT(*) AS member_count
+			FROM guild_memberships
+			WHERE left_at IS NULL
+			GROUP BY guild_id
+		) gm ON gm.guild_id = g.id
+		LEFT JOIN (
+			SELECT guild_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id
+		) gc ON gc.guild_id = g.id
 		ORDER BY g.sort_order ASC, g.name ASC
 	`).Scan(&records).Error; err != nil {
 		return nil, err
@@ -82,22 +82,21 @@ func (s *GuildStore) FindGuildByID(ctx context.Context, guildID guilddomain.ID) 
 			g.sort_order,
 			g.created_at,
 			g.updated_at,
-			COUNT(gm.id) AS member_count
+			COALESCE(gm.member_count, 0) AS member_count,
+			COALESCE(gc.total_contributed_cp, 0) AS total_contributed_cp
 		FROM guilds g
-		LEFT JOIN guild_memberships gm
-			ON gm.guild_id = g.id
-			AND gm.left_at IS NULL
+		LEFT JOIN (
+			SELECT guild_id, COUNT(*) AS member_count
+			FROM guild_memberships
+			WHERE left_at IS NULL
+			GROUP BY guild_id
+		) gm ON gm.guild_id = g.id
+		LEFT JOIN (
+			SELECT guild_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id
+		) gc ON gc.guild_id = g.id
 		WHERE g.id = ?
-		GROUP BY
-			g.id,
-			g.slug,
-			g.name,
-			g.description,
-			g.icon,
-			g.color,
-			g.sort_order,
-			g.created_at,
-			g.updated_at
 	`, guildID).Scan(&record)
 	if result.Error != nil {
 		return guilddomain.Guild{}, false, result.Error
@@ -134,31 +133,23 @@ func (s *GuildStore) FindActiveMembershipByUserID(ctx context.Context, userID us
 			g.sort_order,
 			g.created_at,
 			g.updated_at,
-			COUNT(active_gm.id) AS member_count
+			COALESCE(active_gm.member_count, 0) AS member_count,
+			COALESCE(gc.total_contributed_cp, 0) AS total_contributed_cp
 		FROM guild_memberships gm
 		JOIN guilds g ON g.id = gm.guild_id
-		LEFT JOIN guild_memberships active_gm
-			ON active_gm.guild_id = g.id
-			AND active_gm.left_at IS NULL
+		LEFT JOIN (
+			SELECT guild_id, COUNT(*) AS member_count
+			FROM guild_memberships
+			WHERE left_at IS NULL
+			GROUP BY guild_id
+		) active_gm ON active_gm.guild_id = g.id
+		LEFT JOIN (
+			SELECT guild_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id
+		) gc ON gc.guild_id = g.id
 		WHERE gm.user_id = ?
 			AND gm.left_at IS NULL
-		GROUP BY
-			gm.id,
-			gm.user_id,
-			gm.guild_id,
-			gm.joined_at,
-			gm.left_at,
-			gm.created_at,
-			gm.updated_at,
-			g.id,
-			g.slug,
-			g.name,
-			g.description,
-			g.icon,
-			g.color,
-			g.sort_order,
-			g.created_at,
-			g.updated_at
 	`, userID).Scan(&record)
 	if result.Error != nil {
 		return guilddomain.MembershipWithGuild{}, false, result.Error
@@ -211,31 +202,105 @@ func (s *GuildStore) UpdateMembership(ctx context.Context, membership guilddomai
 	return nil
 }
 
+func (s *GuildStore) CreateCPContribution(ctx context.Context, contribution guilddomain.CPContribution) error {
+	result := s.db.WithContext(ctx).Exec(`
+		INSERT INTO guild_cp_contributions (id, guild_id, user_id, point_ledger_id, amount, created_at)
+		SELECT ?, ?, ?, pl.id, ?, ?
+		FROM point_ledger pl
+		WHERE pl.id = ?
+			AND pl.user_id = ?
+			AND pl.point_type = ?
+			AND pl.type = ?
+			AND pl.amount = ?
+			AND pl.source_type = ?
+			AND pl.source_id = ?
+	`,
+		contribution.ID,
+		contribution.GuildID,
+		contribution.UserID,
+		contribution.Amount,
+		contribution.CreatedAt,
+		contribution.PointLedgerID,
+		contribution.UserID,
+		contributionpointdomain.PointTypeCP,
+		contributionpointdomain.EntryTypeSpend,
+		-contribution.Amount,
+		"guild_cp_contribution",
+		contribution.ID,
+	)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return guildapp.ErrInvalidCPContributionLedger
+	}
+
+	return nil
+}
+
+func (s *GuildStore) ListCPContributionsByGuild(ctx context.Context, guildID guilddomain.ID, limit int) ([]guilddomain.CPContribution, error) {
+	return s.listCPContributions(ctx, "guild_id = ?", guildID, limit)
+}
+
+func (s *GuildStore) ListCPContributionsByUser(ctx context.Context, userID user.ID, limit int) ([]guilddomain.CPContribution, error) {
+	return s.listCPContributions(ctx, "user_id = ?", userID, limit)
+}
+
+func (s *GuildStore) listCPContributions(ctx context.Context, where string, value any, limit int) ([]guilddomain.CPContribution, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	var records []guildCPContributionRecord
+	if err := s.db.WithContext(ctx).Raw(`
+		SELECT id, guild_id, user_id, point_ledger_id, amount, created_at
+		FROM guild_cp_contributions
+		WHERE `+where+`
+		ORDER BY created_at DESC, id DESC
+		LIMIT ?
+	`, value, limit).Scan(&records).Error; err != nil {
+		return nil, err
+	}
+
+	contributions := make([]guilddomain.CPContribution, 0, len(records))
+	for _, record := range records {
+		contribution, err := record.toDomain()
+		if err != nil {
+			return nil, err
+		}
+		contributions = append(contributions, contribution)
+	}
+
+	return contributions, nil
+}
+
 type guildRecord struct {
-	ID          guilddomain.ID `gorm:"column:id"`
-	Slug        string         `gorm:"column:slug"`
-	Name        string         `gorm:"column:name"`
-	Description string         `gorm:"column:description"`
-	Icon        string         `gorm:"column:icon"`
-	Color       string         `gorm:"column:color"`
-	SortOrder   int            `gorm:"column:sort_order"`
-	MemberCount int64          `gorm:"column:member_count"`
-	CreatedAt   time.Time      `gorm:"column:created_at"`
-	UpdatedAt   time.Time      `gorm:"column:updated_at"`
+	ID                 guilddomain.ID `gorm:"column:id"`
+	Slug               string         `gorm:"column:slug"`
+	Name               string         `gorm:"column:name"`
+	Description        string         `gorm:"column:description"`
+	Icon               string         `gorm:"column:icon"`
+	Color              string         `gorm:"column:color"`
+	SortOrder          int            `gorm:"column:sort_order"`
+	MemberCount        int64          `gorm:"column:member_count"`
+	TotalContributedCP int64          `gorm:"column:total_contributed_cp"`
+	CreatedAt          time.Time      `gorm:"column:created_at"`
+	UpdatedAt          time.Time      `gorm:"column:updated_at"`
 }
 
 func (r guildRecord) toDomain() (guilddomain.Guild, error) {
 	return guilddomain.NewGuild(guilddomain.Guild{
-		ID:          r.ID,
-		Slug:        r.Slug,
-		Name:        r.Name,
-		Description: r.Description,
-		Icon:        r.Icon,
-		Color:       r.Color,
-		SortOrder:   r.SortOrder,
-		MemberCount: r.MemberCount,
-		CreatedAt:   r.CreatedAt,
-		UpdatedAt:   r.UpdatedAt,
+		ID:                 r.ID,
+		Slug:               r.Slug,
+		Name:               r.Name,
+		Description:        r.Description,
+		Icon:               r.Icon,
+		Color:              r.Color,
+		SortOrder:          r.SortOrder,
+		MemberCount:        r.MemberCount,
+		TotalContributedCP: r.TotalContributedCP,
+		CreatedAt:          r.CreatedAt,
+		UpdatedAt:          r.UpdatedAt,
 	})
 }
 
@@ -255,6 +320,7 @@ type guildMembershipWithGuildRecord struct {
 	Color               string                   `gorm:"column:color"`
 	SortOrder           int                      `gorm:"column:sort_order"`
 	MemberCount         int64                    `gorm:"column:member_count"`
+	TotalContributedCP  int64                    `gorm:"column:total_contributed_cp"`
 	CreatedAt           time.Time                `gorm:"column:created_at"`
 	UpdatedAt           time.Time                `gorm:"column:updated_at"`
 }
@@ -274,16 +340,17 @@ func (r guildMembershipWithGuildRecord) toDomain() (guilddomain.MembershipWithGu
 	}
 
 	foundGuild, err := guilddomain.NewGuild(guilddomain.Guild{
-		ID:          r.ID,
-		Slug:        r.Slug,
-		Name:        r.Name,
-		Description: r.Description,
-		Icon:        r.Icon,
-		Color:       r.Color,
-		SortOrder:   r.SortOrder,
-		MemberCount: r.MemberCount,
-		CreatedAt:   r.CreatedAt,
-		UpdatedAt:   r.UpdatedAt,
+		ID:                 r.ID,
+		Slug:               r.Slug,
+		Name:               r.Name,
+		Description:        r.Description,
+		Icon:               r.Icon,
+		Color:              r.Color,
+		SortOrder:          r.SortOrder,
+		MemberCount:        r.MemberCount,
+		TotalContributedCP: r.TotalContributedCP,
+		CreatedAt:          r.CreatedAt,
+		UpdatedAt:          r.UpdatedAt,
 	})
 	if err != nil {
 		return guilddomain.MembershipWithGuild{}, err
@@ -293,4 +360,24 @@ func (r guildMembershipWithGuildRecord) toDomain() (guilddomain.MembershipWithGu
 		Membership: membership,
 		Guild:      foundGuild,
 	}, nil
+}
+
+type guildCPContributionRecord struct {
+	ID            guilddomain.CPContributionID `gorm:"column:id"`
+	GuildID       guilddomain.ID               `gorm:"column:guild_id"`
+	UserID        user.ID                      `gorm:"column:user_id"`
+	PointLedgerID string                       `gorm:"column:point_ledger_id"`
+	Amount        int64                        `gorm:"column:amount"`
+	CreatedAt     time.Time                    `gorm:"column:created_at"`
+}
+
+func (r guildCPContributionRecord) toDomain() (guilddomain.CPContribution, error) {
+	return guilddomain.NewCPContribution(guilddomain.CPContribution{
+		ID:            r.ID,
+		GuildID:       r.GuildID,
+		UserID:        r.UserID,
+		PointLedgerID: r.PointLedgerID,
+		Amount:        r.Amount,
+		CreatedAt:     r.CreatedAt,
+	})
 }

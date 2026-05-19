@@ -7,9 +7,13 @@ import (
 	"testing"
 	"time"
 
+	authapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/auth"
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
+	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
+	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/security"
 	"gorm.io/gorm"
 )
 
@@ -265,6 +269,306 @@ func TestGuildStoreUpdateMembershipRejectsAlreadyLeftMembership(t *testing.T) {
 	}
 }
 
+func TestGuildStoreCPContributions(t *testing.T) {
+	ctx := context.Background()
+	tx := beginPostgresTestTransaction(t, ctx)
+	store, err := NewGuildStore(tx)
+	if err != nil {
+		t.Fatalf("NewGuildStore() がエラーを返しました: %v", err)
+	}
+	cpStore := NewContributionPointStore(tx)
+
+	now := time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC)
+	guildID := fmt.Sprintf("guild_cp_test_%d", uniqueGitHubID())
+	insertPostgresTestGuild(t, ctx, tx, testGuild{
+		ID:          guildID,
+		Slug:        guildID,
+		Name:        "CP Test",
+		Description: "CP投入履歴用のテストギルド。",
+		Icon:        "CP",
+		Color:       "#123abc",
+		SortOrder:   1,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+	appUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
+	insertPostgresTestMembership(t, ctx, tx, "membership_cp_"+string(appUser.ID), appUser.ID, guildID, now, nil)
+
+	earned, err := contributionpointdomain.NewLedgerEntry(
+		"point_ledger_guild_cp_earn_"+string(appUser.ID),
+		appUser.ID,
+		contributionpointdomain.PointTypeCP,
+		100,
+		contributionpointdomain.EntryTypeEarn,
+		"guild cp contribution setup",
+		"test",
+		"guild_cp_setup_"+string(appUser.ID),
+		now,
+	)
+	if err != nil {
+		t.Fatalf("NewLedgerEntry() がエラーを返しました: %v", err)
+	}
+	if _, err := cpStore.Record(ctx, earned); err != nil {
+		t.Fatalf("CP獲得履歴保存でエラーが発生しました: %v", err)
+	}
+	spent, err := contributionpointdomain.NewLedgerEntry(
+		"point_ledger_guild_cp_spend_"+string(appUser.ID),
+		appUser.ID,
+		contributionpointdomain.PointTypeCP,
+		-40,
+		contributionpointdomain.EntryTypeSpend,
+		"guild cp contribution",
+		"guild_cp_contribution",
+		"guild_cp_contribution_"+string(appUser.ID),
+		now.Add(time.Minute),
+	)
+	if err != nil {
+		t.Fatalf("NewLedgerEntry() がエラーを返しました: %v", err)
+	}
+	recordedSpend, err := cpStore.Record(ctx, spent)
+	if err != nil {
+		t.Fatalf("CP消費履歴保存でエラーが発生しました: %v", err)
+	}
+
+	contribution := guilddomain.CPContribution{
+		ID:            guilddomain.CPContributionID("guild_cp_contribution_" + string(appUser.ID)),
+		GuildID:       guilddomain.ID(guildID),
+		UserID:        appUser.ID,
+		PointLedgerID: recordedSpend.ID,
+		Amount:        40,
+		CreatedAt:     recordedSpend.CreatedAt,
+	}
+	if err := store.CreateCPContribution(ctx, contribution); err != nil {
+		if isMissingSchemaError(err) {
+			t.Skipf("PostgreSQL 結合テストをスキップします: guild cp contribution schema が migrate されていません: %v", err)
+		}
+		t.Fatalf("CreateCPContribution() がエラーを返しました: %v", err)
+	}
+
+	byGuild, err := store.ListCPContributionsByGuild(ctx, guilddomain.ID(guildID), 10)
+	if err != nil {
+		t.Fatalf("ListCPContributionsByGuild() がエラーを返しました: %v", err)
+	}
+	if len(byGuild) != 1 {
+		t.Fatalf("guild contributions length = %d, 期待値 1", len(byGuild))
+	}
+	if byGuild[0].Amount != 40 {
+		t.Fatalf("guild contribution amount = %d, 期待値 40", byGuild[0].Amount)
+	}
+
+	byUser, err := store.ListCPContributionsByUser(ctx, appUser.ID, 10)
+	if err != nil {
+		t.Fatalf("ListCPContributionsByUser() がエラーを返しました: %v", err)
+	}
+	if len(byUser) != 1 {
+		t.Fatalf("user contributions length = %d, 期待値 1", len(byUser))
+	}
+
+	guilds, err := store.ListGuilds(ctx)
+	if err != nil {
+		t.Fatalf("ListGuilds() がエラーを返しました: %v", err)
+	}
+	for _, guild := range guilds {
+		if string(guild.ID) == guildID {
+			if guild.TotalContributedCP != 40 {
+				t.Fatalf("TotalContributedCP = %d, 期待値 40", guild.TotalContributedCP)
+			}
+			return
+		}
+	}
+	t.Fatalf("テスト用 guild %q が一覧に含まれていません", guildID)
+}
+
+func TestGuildStoreCreateCPContributionRejectsMismatchedLedger(t *testing.T) {
+	ctx := context.Background()
+	tx := beginPostgresTestTransaction(t, ctx)
+	store, err := NewGuildStore(tx)
+	if err != nil {
+		t.Fatalf("NewGuildStore() がエラーを返しました: %v", err)
+	}
+	cpStore := NewContributionPointStore(tx)
+
+	now := time.Date(2026, 5, 18, 13, 0, 0, 0, time.UTC)
+	guildID := fmt.Sprintf("guild_cp_invalid_ledger_test_%d", uniqueGitHubID())
+	insertPostgresTestGuild(t, ctx, tx, testGuild{
+		ID:          guildID,
+		Slug:        guildID,
+		Name:        "Invalid Ledger Test",
+		Description: "CP投入履歴とledgerの整合性テストギルド。",
+		Icon:        "IL",
+		Color:       "#123abc",
+		SortOrder:   1,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+	appUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
+
+	earned, err := contributionpointdomain.NewLedgerEntry(
+		"point_ledger_invalid_setup_"+string(appUser.ID),
+		appUser.ID,
+		contributionpointdomain.PointTypeCP,
+		100,
+		contributionpointdomain.EntryTypeEarn,
+		"setup",
+		"test",
+		"invalid_setup_"+string(appUser.ID),
+		now,
+	)
+	if err != nil {
+		t.Fatalf("NewLedgerEntry() がエラーを返しました: %v", err)
+	}
+	if _, err := cpStore.Record(ctx, earned); err != nil {
+		t.Fatalf("CP獲得履歴保存でエラーが発生しました: %v", err)
+	}
+	spent, err := contributionpointdomain.NewLedgerEntry(
+		"point_ledger_invalid_spend_"+string(appUser.ID),
+		appUser.ID,
+		contributionpointdomain.PointTypeCP,
+		-40,
+		contributionpointdomain.EntryTypeSpend,
+		"guild cp contribution",
+		"guild_cp_contribution",
+		"different_contribution_id",
+		now.Add(time.Minute),
+	)
+	if err != nil {
+		t.Fatalf("NewLedgerEntry() がエラーを返しました: %v", err)
+	}
+	recordedSpend, err := cpStore.Record(ctx, spent)
+	if err != nil {
+		t.Fatalf("CP消費履歴保存でエラーが発生しました: %v", err)
+	}
+
+	err = store.CreateCPContribution(ctx, guilddomain.CPContribution{
+		ID:            guilddomain.CPContributionID("guild_cp_contribution_invalid_" + string(appUser.ID)),
+		GuildID:       guilddomain.ID(guildID),
+		UserID:        appUser.ID,
+		PointLedgerID: recordedSpend.ID,
+		Amount:        40,
+		CreatedAt:     recordedSpend.CreatedAt,
+	})
+	if !errors.Is(err, guildapp.ErrInvalidCPContributionLedger) {
+		t.Fatalf("CreateCPContribution() error = %v, 期待値 ErrInvalidCPContributionLedger", err)
+	}
+}
+
+func TestGuildCPContributionTransactionRollsBackSpendWhenContributionInsertFails(t *testing.T) {
+	ctx := context.Background()
+	tx := beginPostgresTestTransaction(t, ctx)
+	guildStore, err := NewGuildStore(tx)
+	if err != nil {
+		t.Fatalf("NewGuildStore() がエラーを返しました: %v", err)
+	}
+	cpStore := NewContributionPointStore(tx)
+	authStore := NewAuthStore(tx, newTestTokenCipher(t))
+
+	now := time.Date(2026, 5, 18, 14, 0, 0, 0, time.UTC)
+	guildID := fmt.Sprintf("guild_cp_rollback_test_%d", uniqueGitHubID())
+	insertPostgresTestGuild(t, ctx, tx, testGuild{
+		ID:          guildID,
+		Slug:        guildID,
+		Name:        "Rollback Test",
+		Description: "CP投入transactionのrollbackテストギルド。",
+		Icon:        "RB",
+		Color:       "#123abc",
+		SortOrder:   1,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+	appUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
+	insertPostgresTestMembership(t, ctx, tx, "membership_cp_rollback_"+string(appUser.ID), appUser.ID, guildID, now, nil)
+	if err := authStore.Save(ctx, authapp.Session{
+		Token:     "session-token",
+		UserID:    appUser.ID,
+		ExpiresAt: time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatalf("session 保存でエラーが発生しました: %v", err)
+	}
+
+	earned, err := contributionpointdomain.NewLedgerEntry(
+		"point_ledger_rollback_earn_"+string(appUser.ID),
+		appUser.ID,
+		contributionpointdomain.PointTypeCP,
+		100,
+		contributionpointdomain.EntryTypeEarn,
+		"setup",
+		"test",
+		"rollback_setup_"+string(appUser.ID),
+		now,
+	)
+	if err != nil {
+		t.Fatalf("NewLedgerEntry() がエラーを返しました: %v", err)
+	}
+	if _, err := cpStore.Record(ctx, earned); err != nil {
+		t.Fatalf("CP獲得履歴保存でエラーが発生しました: %v", err)
+	}
+
+	duplicateContributionID := "guild_cp_contribution_rollback_" + string(appUser.ID)
+	existingSpend, err := contributionpointdomain.NewLedgerEntry(
+		"point_ledger_rollback_existing_spend_"+string(appUser.ID),
+		appUser.ID,
+		contributionpointdomain.PointTypeCP,
+		-10,
+		contributionpointdomain.EntryTypeSpend,
+		"guild cp contribution",
+		"guild_cp_contribution",
+		duplicateContributionID,
+		now.Add(time.Minute),
+	)
+	if err != nil {
+		t.Fatalf("NewLedgerEntry() がエラーを返しました: %v", err)
+	}
+	recordedExistingSpend, err := cpStore.Record(ctx, existingSpend)
+	if err != nil {
+		t.Fatalf("既存CP消費履歴保存でエラーが発生しました: %v", err)
+	}
+	if err := guildStore.CreateCPContribution(ctx, guilddomain.CPContribution{
+		ID:            guilddomain.CPContributionID(duplicateContributionID),
+		GuildID:       guilddomain.ID(guildID),
+		UserID:        appUser.ID,
+		PointLedgerID: recordedExistingSpend.ID,
+		Amount:        10,
+		CreatedAt:     recordedExistingSpend.CreatedAt,
+	}); err != nil {
+		t.Fatalf("既存CP投入履歴保存でエラーが発生しました: %v", err)
+	}
+
+	transactioner := NewGuildCPContributionTransactioner(tx, fixedPostgresTestIDGenerator{id: "point_ledger_rollback_new_spend_" + string(appUser.ID)})
+	usecase := guildapp.NewUseCaseWithCPTransaction(
+		guildStore,
+		authStore,
+		security.NewIDGenerator("membership_unused"),
+		fixedPostgresTestIDGenerator{id: duplicateContributionID},
+		contributionpointapp.NewUseCase(cpStore, fixedPostgresTestIDGenerator{id: "point_ledger_unused"}),
+		transactioner,
+	)
+
+	_, err = usecase.ContributeCP(ctx, "session-token", 40)
+	if err == nil {
+		t.Fatal("ContributeCP() error = nil, 期待値 duplicate contribution error")
+	}
+
+	balance, err := cpStore.GetBalance(ctx, appUser.ID, contributionpointdomain.PointTypeCP)
+	if err != nil {
+		t.Fatalf("GetBalance() がエラーを返しました: %v", err)
+	}
+	if balance != 90 {
+		t.Fatalf("balance = %d, 期待値 90", balance)
+	}
+
+	var newLedgerCount int64
+	if err := tx.WithContext(ctx).Raw(`
+		SELECT COUNT(*)
+		FROM point_ledger
+		WHERE id = ?
+	`, "point_ledger_rollback_new_spend_"+string(appUser.ID)).Scan(&newLedgerCount).Error; err != nil {
+		t.Fatalf("point_ledger 件数確認でエラーが発生しました: %v", err)
+	}
+	if newLedgerCount != 0 {
+		t.Fatalf("rollback後の新規ledger件数 = %d, 期待値 0", newLedgerCount)
+	}
+}
+
 func TestNewGuildStoreRejectsNilDB(t *testing.T) {
 	store, err := NewGuildStore(nil)
 	if err == nil {
@@ -276,6 +580,14 @@ func TestNewGuildStoreRejectsNilDB(t *testing.T) {
 	if store != nil {
 		t.Fatalf("NewGuildStore(nil) store = %#v, 期待値 nil", store)
 	}
+}
+
+type fixedPostgresTestIDGenerator struct {
+	id string
+}
+
+func (g fixedPostgresTestIDGenerator) NewID() (string, error) {
+	return g.id, nil
 }
 
 type testGuild struct {

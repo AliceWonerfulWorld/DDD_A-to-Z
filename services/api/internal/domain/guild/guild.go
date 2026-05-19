@@ -12,16 +12,17 @@ import (
 type ID string
 
 type Guild struct {
-	ID          ID
-	Slug        string
-	Name        string
-	Description string
-	Icon        string
-	Color       string
-	SortOrder   int
-	MemberCount int64
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                 ID
+	Slug               string
+	Name               string
+	Description        string
+	Icon               string
+	Color              string
+	SortOrder          int
+	MemberCount        int64
+	TotalContributedCP int64
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 type MembershipID string
@@ -39,6 +40,17 @@ type Membership struct {
 type MembershipWithGuild struct {
 	Membership Membership
 	Guild      Guild
+}
+
+type CPContributionID string
+
+type CPContribution struct {
+	ID            CPContributionID
+	GuildID       ID
+	UserID        user.ID
+	PointLedgerID string
+	Amount        int64
+	CreatedAt     time.Time
 }
 
 func NewGuild(guild Guild) (Guild, error) {
@@ -66,6 +78,9 @@ func NewGuild(guild Guild) (Guild, error) {
 	if guild.MemberCount < 0 {
 		return Guild{}, errors.New("guild member count cannot be negative")
 	}
+	if guild.TotalContributedCP < 0 {
+		return Guild{}, errors.New("guild total contributed cp cannot be negative")
+	}
 	if guild.CreatedAt.IsZero() {
 		return Guild{}, errors.New("guild created at is required")
 	}
@@ -74,6 +89,29 @@ func NewGuild(guild Guild) (Guild, error) {
 	}
 
 	return guild, nil
+}
+
+func NewCPContribution(contribution CPContribution) (CPContribution, error) {
+	if contribution.ID == "" {
+		return CPContribution{}, errors.New("guild cp contribution id is required")
+	}
+	if contribution.GuildID == "" {
+		return CPContribution{}, errors.New("guild cp contribution guild id is required")
+	}
+	if contribution.UserID == "" {
+		return CPContribution{}, errors.New("guild cp contribution user id is required")
+	}
+	if strings.TrimSpace(contribution.PointLedgerID) == "" {
+		return CPContribution{}, errors.New("guild cp contribution point ledger id is required")
+	}
+	if contribution.Amount <= 0 {
+		return CPContribution{}, errors.New("guild cp contribution amount must be positive")
+	}
+	if contribution.CreatedAt.IsZero() {
+		return CPContribution{}, errors.New("guild cp contribution created at is required")
+	}
+
+	return contribution, nil
 }
 
 func NewMembership(membership Membership) (Membership, error) {

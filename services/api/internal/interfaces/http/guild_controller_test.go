@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -10,7 +11,9 @@ import (
 	"testing"
 	"time"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
+	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
@@ -19,6 +22,7 @@ type guildTestRepository struct {
 	guilds           []guilddomain.Guild
 	activeMembership *guilddomain.MembershipWithGuild
 	updated          *guilddomain.Membership
+	contributions    []guilddomain.CPContribution
 }
 
 func (r guildTestRepository) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error) {
@@ -60,6 +64,32 @@ func (r *guildTestRepository) UpdateMembership(ctx context.Context, membership g
 	return nil
 }
 
+func (r guildTestRepository) CreateCPContribution(ctx context.Context, contribution guilddomain.CPContribution) error {
+	return nil
+}
+
+func (r guildTestRepository) ListCPContributionsByGuild(ctx context.Context, guildID guilddomain.ID, limit int) ([]guilddomain.CPContribution, error) {
+	var contributions []guilddomain.CPContribution
+	for _, contribution := range r.contributions {
+		if contribution.GuildID == guildID {
+			contributions = append(contributions, contribution)
+		}
+	}
+
+	return contributions, nil
+}
+
+func (r guildTestRepository) ListCPContributionsByUser(ctx context.Context, userID user.ID, limit int) ([]guilddomain.CPContribution, error) {
+	var contributions []guilddomain.CPContribution
+	for _, contribution := range r.contributions {
+		if contribution.UserID == userID {
+			contributions = append(contributions, contribution)
+		}
+	}
+
+	return contributions, nil
+}
+
 type guildTestCurrentUserRepository struct {
 	appUser user.User
 	ok      bool
@@ -75,20 +105,50 @@ func (g guildTestIDGenerator) NewID() (string, error) {
 	return "membership_1", nil
 }
 
+type guildContributionTestIDGenerator struct{}
+
+func (g guildContributionTestIDGenerator) NewID() (string, error) {
+	return "guild_cp_contribution_1", nil
+}
+
+type guildControllerTestCPSpender struct {
+	err error
+}
+
+func (s guildControllerTestCPSpender) Spend(ctx context.Context, command contributionpointapp.SpendCommand) (contributionpointdomain.LedgerEntry, error) {
+	if s.err != nil {
+		return contributionpointdomain.LedgerEntry{}, s.err
+	}
+
+	return contributionpointdomain.LedgerEntry{
+		ID:           "cp_ledger_1",
+		UserID:       command.UserID,
+		PointType:    command.PointType,
+		Amount:       -command.Amount,
+		Type:         contributionpointdomain.EntryTypeSpend,
+		Reason:       command.Reason,
+		SourceType:   command.SourceType,
+		SourceID:     command.SourceID,
+		BalanceAfter: 60,
+		CreatedAt:    time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC),
+	}, nil
+}
+
 func TestGuildControllerListGuilds(t *testing.T) {
 	now := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
 	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
 		guilds: []guilddomain.Guild{{
-			ID:          "guild_typescript",
-			Slug:        "typescript",
-			Name:        "TypeScript",
-			Description: "型の力で支えるギルド。",
-			Icon:        "📘",
-			Color:       "#3178c6",
-			SortOrder:   5,
-			MemberCount: 12,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ID:                 "guild_typescript",
+			Slug:               "typescript",
+			Name:               "TypeScript",
+			Description:        "型の力で支えるギルド。",
+			Icon:               "📘",
+			Color:              "#3178c6",
+			SortOrder:          5,
+			MemberCount:        12,
+			TotalContributedCP: 120,
+			CreatedAt:          now,
+			UpdatedAt:          now,
 		}},
 	}, guildTestCurrentUserRepository{ok: true}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	router := stdhttp.NewServeMux()
@@ -104,13 +164,14 @@ func TestGuildControllerListGuilds(t *testing.T) {
 
 	var body struct {
 		Guilds []struct {
-			ID          string `json:"id"`
-			Slug        string `json:"slug"`
-			Name        string `json:"name"`
-			Description string `json:"description"`
-			Icon        string `json:"icon"`
-			Color       string `json:"color"`
-			MemberCount int64  `json:"member_count"`
+			ID                 string `json:"id"`
+			Slug               string `json:"slug"`
+			Name               string `json:"name"`
+			Description        string `json:"description"`
+			Icon               string `json:"icon"`
+			Color              string `json:"color"`
+			MemberCount        int64  `json:"member_count"`
+			TotalContributedCP int64  `json:"total_contributed_cp"`
 		} `json:"guilds"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
@@ -124,6 +185,9 @@ func TestGuildControllerListGuilds(t *testing.T) {
 	}
 	if body.Guilds[0].MemberCount != 12 {
 		t.Fatalf("member_count = %d, 期待値 12", body.Guilds[0].MemberCount)
+	}
+	if body.Guilds[0].TotalContributedCP != 120 {
+		t.Fatalf("total_contributed_cp = %d, 期待値 120", body.Guilds[0].TotalContributedCP)
 	}
 }
 
@@ -190,16 +254,17 @@ func TestGuildControllerGetMyGuild(t *testing.T) {
 			UpdatedAt: now,
 		},
 		Guild: guilddomain.Guild{
-			ID:          "guild_go",
-			Slug:        "go",
-			Name:        "Go",
-			Description: "シンプルさと並列処理で前に進むギルド。",
-			Icon:        "GO",
-			Color:       "#00acd7",
-			SortOrder:   1,
-			MemberCount: 1,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ID:                 "guild_go",
+			Slug:               "go",
+			Name:               "Go",
+			Description:        "シンプルさと並列処理で前に進むギルド。",
+			Icon:               "GO",
+			Color:              "#00acd7",
+			SortOrder:          1,
+			MemberCount:        1,
+			TotalContributedCP: 80,
+			CreatedAt:          now,
+			UpdatedAt:          now,
 		},
 	}
 	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
@@ -222,7 +287,8 @@ func TestGuildControllerGetMyGuild(t *testing.T) {
 
 	var body struct {
 		Guild struct {
-			ID string `json:"id"`
+			ID                 string `json:"id"`
+			TotalContributedCP int64  `json:"total_contributed_cp"`
 		} `json:"guild"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
@@ -230,6 +296,9 @@ func TestGuildControllerGetMyGuild(t *testing.T) {
 	}
 	if body.Guild.ID != "guild_go" {
 		t.Fatalf("guild id = %q, 期待値 guild_go", body.Guild.ID)
+	}
+	if body.Guild.TotalContributedCP != 80 {
+		t.Fatalf("total_contributed_cp = %d, 期待値 80", body.Guild.TotalContributedCP)
 	}
 }
 
@@ -314,6 +383,188 @@ func TestGuildControllerLeaveMyGuildRejectsMembershipNotFound(t *testing.T) {
 	}
 	if body.Error.Message != "active guild membership not found" {
 		t.Fatalf("error.message = %q, 期待値 active guild membership not found", body.Error.Message)
+	}
+}
+
+func TestGuildControllerContributeCP(t *testing.T) {
+	now := time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			MemberCount: 1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	controller := NewGuildController(guildapp.NewUseCaseWithCP(&guildTestRepository{
+		activeMembership: &activeMembership,
+	}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}, guildContributionTestIDGenerator{}, guildControllerTestCPSpender{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodPost, "/me/guild/cp-contributions", bytes.NewBufferString(`{"amount":40}`))
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusCreated {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusCreated)
+	}
+
+	var body struct {
+		Contribution struct {
+			ID            string `json:"id"`
+			GuildID       string `json:"guild_id"`
+			UserID        string `json:"user_id"`
+			PointLedgerID string `json:"point_ledger_id"`
+			Amount        int64  `json:"amount"`
+			CreatedAt     string `json:"created_at"`
+		} `json:"contribution"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
+	}
+	if body.Contribution.Amount != 40 {
+		t.Fatalf("amount = %d, 期待値 40", body.Contribution.Amount)
+	}
+	if body.Contribution.GuildID != "guild_go" {
+		t.Fatalf("guild_id = %q, 期待値 guild_go", body.Contribution.GuildID)
+	}
+	if body.Contribution.PointLedgerID != "cp_ledger_1" {
+		t.Fatalf("point_ledger_id = %q, 期待値 cp_ledger_1", body.Contribution.PointLedgerID)
+	}
+}
+
+func TestGuildControllerContributeCPRejectsInsufficientBalance(t *testing.T) {
+	now := time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			MemberCount: 1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	controller := NewGuildController(guildapp.NewUseCaseWithCP(&guildTestRepository{
+		activeMembership: &activeMembership,
+	}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}, guildContributionTestIDGenerator{}, guildControllerTestCPSpender{
+		err: contributionpointapp.ErrInsufficientBalance,
+	}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodPost, "/me/guild/cp-contributions", bytes.NewBufferString(`{"amount":40}`))
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusConflict {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusConflict)
+	}
+}
+
+func TestGuildControllerListCPContributions(t *testing.T) {
+	now := time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC)
+	controller := NewGuildController(guildapp.NewUseCaseWithCP(&guildTestRepository{
+		guilds: []guilddomain.Guild{{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}},
+		contributions: []guilddomain.CPContribution{{
+			ID:            "guild_cp_contribution_1",
+			GuildID:       "guild_go",
+			UserID:        "user_1",
+			PointLedgerID: "cp_ledger_1",
+			Amount:        40,
+			CreatedAt:     now,
+		}},
+	}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}, guildContributionTestIDGenerator{}, guildControllerTestCPSpender{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodGet, "/guilds/guild_go/cp-contributions", nil)
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusOK {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusOK)
+	}
+
+	var body struct {
+		Contributions []struct {
+			ID     string `json:"id"`
+			Amount int64  `json:"amount"`
+		} `json:"contributions"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
+	}
+	if len(body.Contributions) != 1 {
+		t.Fatalf("contributions length = %d, 期待値 1", len(body.Contributions))
+	}
+	if body.Contributions[0].Amount != 40 {
+		t.Fatalf("amount = %d, 期待値 40", body.Contributions[0].Amount)
+	}
+}
+
+func TestGuildControllerListCPContributionsRejectsUnknownGuild(t *testing.T) {
+	controller := NewGuildController(guildapp.NewUseCaseWithCP(&guildTestRepository{}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}, guildContributionTestIDGenerator{}, guildControllerTestCPSpender{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodGet, "/guilds/guild_missing/cp-contributions", nil)
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusNotFound {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusNotFound)
 	}
 }
 
