@@ -24,6 +24,7 @@ type guildTestRepository struct {
 	updated          *guilddomain.Membership
 	contributions    []guilddomain.CPContribution
 	members          []guilddomain.MemberContribution
+	expectedGuildID  guilddomain.ID
 }
 
 func (r guildTestRepository) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error) {
@@ -49,6 +50,10 @@ func (r guildTestRepository) FindActiveMembershipByUserID(ctx context.Context, u
 }
 
 func (r guildTestRepository) ListActiveMembersByGuild(ctx context.Context, guildID guilddomain.ID) ([]guilddomain.MemberContribution, error) {
+	if r.expectedGuildID != "" && guildID != r.expectedGuildID {
+		return []guilddomain.MemberContribution{}, nil
+	}
+
 	return r.members, nil
 }
 
@@ -274,6 +279,7 @@ func TestGuildControllerGetMyGuild(t *testing.T) {
 	}
 	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
 		activeMembership: &activeMembership,
+		expectedGuildID:  "guild_go",
 		members: []guilddomain.MemberContribution{{
 			UserID:        "user_1",
 			Name:          "Alice",

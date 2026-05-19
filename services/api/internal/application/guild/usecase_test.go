@@ -20,7 +20,7 @@ type testRepository struct {
 	updated          *guilddomain.Membership
 	contribution     *guilddomain.CPContribution
 	contributions    []guilddomain.CPContribution
-	members          []guilddomain.MemberContribution
+	membersByGuild   map[guilddomain.ID][]guilddomain.MemberContribution
 }
 
 func (r testRepository) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error) {
@@ -49,7 +49,7 @@ func (r testRepository) FindActiveMembershipByUserID(ctx context.Context, userID
 }
 
 func (r testRepository) ListActiveMembersByGuild(ctx context.Context, guildID guilddomain.ID) ([]guilddomain.MemberContribution, error) {
-	return r.members, nil
+	return r.membersByGuild[guildID], nil
 }
 
 func (r *testRepository) CreateMembership(ctx context.Context, membership guilddomain.Membership) error {
@@ -244,6 +244,68 @@ func TestUseCaseJoinGuildRejectsUnknownGuild(t *testing.T) {
 	_, err := usecase.JoinGuild(context.Background(), "session-token", "guild_missing")
 	if !errors.Is(err, ErrGuildNotFound) {
 		t.Fatalf("JoinGuild() error = %v, 期待値 ErrGuildNotFound", err)
+	}
+}
+
+func TestUseCaseGetMyGuildDetailsListsMembersForActiveGuild(t *testing.T) {
+	now := time.Date(2026, 5, 19, 9, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	usecase := NewUseCase(&testRepository{
+		activeMembership: &activeMembership,
+		membersByGuild: map[guilddomain.ID][]guilddomain.MemberContribution{
+			"guild_go": {{
+				UserID:        "user_1",
+				Name:          "Alice",
+				TotalEarnedCP: 120,
+				JoinedAt:      now,
+			}},
+			"guild_python": {{
+				UserID:        "user_2",
+				Name:          "Bob",
+				TotalEarnedCP: 80,
+				JoinedAt:      now,
+			}},
+		},
+	}, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "membership_unused"})
+
+	details, ok, err := usecase.GetMyGuildDetails(context.Background(), "session-token")
+	if err != nil {
+		t.Fatalf("GetMyGuildDetails() がエラーを返しました: %v", err)
+	}
+	if !ok {
+		t.Fatal("GetMyGuildDetails() ok = false, 期待値 true")
+	}
+	if details.Guild.ID != "guild_go" {
+		t.Fatalf("guild id = %q, 期待値 guild_go", details.Guild.ID)
+	}
+	if len(details.Members) != 1 {
+		t.Fatalf("members length = %d, 期待値 1", len(details.Members))
+	}
+	if details.Members[0].UserID != "user_1" {
+		t.Fatalf("members[0].UserID = %q, 期待値 user_1", details.Members[0].UserID)
 	}
 }
 
