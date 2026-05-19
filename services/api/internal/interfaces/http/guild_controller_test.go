@@ -339,6 +339,147 @@ func TestGuildControllerGetMyGuild(t *testing.T) {
 	}
 }
 
+func TestGuildControllerGetGuildDashboard(t *testing.T) {
+	now := time.Date(2026, 5, 19, 9, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:                 "guild_go",
+			Slug:               "go",
+			Name:               "Go",
+			Description:        "シンプルさと並列処理で前に進むギルド。",
+			Icon:               "GO",
+			Color:              "#00acd7",
+			SortOrder:          1,
+			MemberCount:        2,
+			TotalContributedCP: 180,
+			CreatedAt:          now,
+			UpdatedAt:          now,
+		},
+	}
+	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
+		activeMembership: &activeMembership,
+		expectedGuildID:  "guild_go",
+		members: []guilddomain.MemberContribution{{
+			UserID:        "user_1",
+			Name:          "Alice",
+			TotalEarnedCP: 120,
+			JoinedAt:      now,
+		}},
+	}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodGet, "/guilds/guild_go/dashboard", nil)
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusOK {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusOK)
+	}
+
+	var body struct {
+		State string `json:"state"`
+		Guild struct {
+			ID                 string `json:"id"`
+			MemberCount        int64  `json:"member_count"`
+			TotalContributedCP int64  `json:"total_contributed_cp"`
+		} `json:"guild"`
+		Members []struct {
+			UserID string `json:"user_id"`
+		} `json:"members"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
+	}
+	if body.State != "joined" {
+		t.Fatalf("state = %q, 期待値 joined", body.State)
+	}
+	if body.Guild.ID != "guild_go" {
+		t.Fatalf("guild id = %q, 期待値 guild_go", body.Guild.ID)
+	}
+	if body.Guild.MemberCount != 2 {
+		t.Fatalf("member_count = %d, 期待値 2", body.Guild.MemberCount)
+	}
+	if body.Guild.TotalContributedCP != 180 {
+		t.Fatalf("total_contributed_cp = %d, 期待値 180", body.Guild.TotalContributedCP)
+	}
+	if len(body.Members) != 1 {
+		t.Fatalf("members length = %d, 期待値 1", len(body.Members))
+	}
+}
+
+func TestGuildControllerGetGuildDashboardRejectsOtherGuild(t *testing.T) {
+	now := time.Date(2026, 5, 19, 9, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
+		activeMembership: &activeMembership,
+	}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodGet, "/guilds/guild_python/dashboard", nil)
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusForbidden {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusForbidden)
+	}
+}
+
+func TestGuildControllerGetGuildDashboardRejectsMembershipNotFound(t *testing.T) {
+	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodGet, "/guilds/guild_go/dashboard", nil)
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusNotFound {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusNotFound)
+	}
+}
+
 func TestGuildControllerLeaveMyGuild(t *testing.T) {
 	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
 	activeMembership := guilddomain.MembershipWithGuild{

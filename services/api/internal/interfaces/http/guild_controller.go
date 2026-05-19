@@ -27,6 +27,7 @@ func NewGuildController(usecase *guildapp.UseCase, logger *slog.Logger) *GuildCo
 func (c *GuildController) RegisterRoutes(mux *stdhttp.ServeMux) {
 	mux.HandleFunc("GET /guilds", c.listGuilds)
 	mux.HandleFunc("POST /guilds/{guildID}/join", c.joinGuild)
+	mux.HandleFunc("GET /guilds/{guildID}/dashboard", c.getGuildDashboard)
 	mux.HandleFunc("GET /guilds/{guildID}/cp-contributions", c.listGuildCPContributions)
 	mux.HandleFunc("GET /me/guild", c.getMyGuild)
 	mux.HandleFunc("DELETE /me/guild", c.leaveMyGuild)
@@ -88,6 +89,24 @@ func (c *GuildController) getMyGuild(w stdhttp.ResponseWriter, r *stdhttp.Reques
 
 	if err := writeJSON(w, stdhttp.StatusOK, myGuildDetailsResponse(details)); err != nil {
 		c.logger.Error("failed to write my guild response", "error", err)
+	}
+}
+
+func (c *GuildController) getGuildDashboard(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		c.writeError(w, guildapp.ErrUnauthenticated)
+		return
+	}
+
+	details, err := c.usecase.GetGuildDashboard(r.Context(), cookie.Value, guilddomain.ID(r.PathValue("guildID")))
+	if err != nil {
+		c.writeError(w, err)
+		return
+	}
+
+	if err := writeJSON(w, stdhttp.StatusOK, guildDashboardResponse(details)); err != nil {
+		c.logger.Error("failed to write guild dashboard response", "error", err)
 	}
 }
 
@@ -178,6 +197,8 @@ func (c *GuildController) writeError(w stdhttp.ResponseWriter, err error) {
 		writeAPIError(w, stdhttp.StatusConflict, "already_joined_guild", "user already joined a guild", 0, nil)
 	case errors.Is(err, guildapp.ErrActiveMembershipNotFound):
 		writeAPIError(w, stdhttp.StatusNotFound, "guild_membership_not_found", "active guild membership not found", 0, nil)
+	case errors.Is(err, guildapp.ErrGuildAccessDenied):
+		writeAPIError(w, stdhttp.StatusForbidden, "guild_access_denied", "guild access denied", 0, nil)
 	case errors.Is(err, guildapp.ErrInvalidCPContribution):
 		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_cp_contribution", "guild cp contribution amount must be positive", 0, nil)
 	case errors.Is(err, contributionpointapp.ErrInsufficientBalance):
@@ -218,6 +239,13 @@ func myGuildDetailsResponse(details guildapp.MyGuildDetails) map[string]any {
 			"joined_at": details.Membership.JoinedAt.Format(time.RFC3339),
 		},
 	}
+}
+
+func guildDashboardResponse(details guildapp.MyGuildDetails) map[string]any {
+	response := myGuildDetailsResponse(details)
+	response["state"] = "joined"
+
+	return response
 }
 
 func guildResponse(guild guilddomain.Guild) map[string]any {
