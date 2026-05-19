@@ -452,6 +452,62 @@ func TestGuildStoreCreateCPContributionRejectsMismatchedLedger(t *testing.T) {
 	}
 }
 
+func TestGuildStoreListActiveMembersByGuild(t *testing.T) {
+	ctx := context.Background()
+	tx := beginPostgresTestTransaction(t, ctx)
+	store, err := NewGuildStore(tx)
+	if err != nil {
+		t.Fatalf("NewGuildStore() がエラーを返しました: %v", err)
+	}
+	cpStore := NewContributionPointStore(tx)
+
+	now := time.Date(2026, 5, 19, 8, 0, 0, 0, time.UTC)
+	guildID := fmt.Sprintf("guild_members_test_%d", uniqueGitHubID())
+	insertPostgresTestGuild(t, ctx, tx, testGuild{
+		ID:          guildID,
+		Slug:        guildID,
+		Name:        "Members Test",
+		Description: "ギルドメンバー一覧のテストギルド。",
+		Icon:        "MT",
+		Color:       "#0fbcf9",
+		SortOrder:   1,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+
+	firstUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
+	secondUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
+	leftUser := createPostgresTestUserWithPointAccount(t, ctx, tx)
+	insertPostgresTestMembership(t, ctx, tx, "membership_first_"+string(firstUser.ID), firstUser.ID, guildID, now.Add(-2*time.Hour), nil)
+	insertPostgresTestMembership(t, ctx, tx, "membership_second_"+string(secondUser.ID), secondUser.ID, guildID, now.Add(-time.Hour), nil)
+	leftAt := now
+	insertPostgresTestMembership(t, ctx, tx, "membership_left_"+string(leftUser.ID), leftUser.ID, guildID, now.Add(-3*time.Hour), &leftAt)
+
+	recordEarnedCP(t, ctx, cpStore, firstUser.ID, 70, now.Add(-90*time.Minute))
+	recordEarnedCP(t, ctx, cpStore, secondUser.ID, 120, now.Add(-30*time.Minute))
+	recordEarnedCP(t, ctx, cpStore, leftUser.ID, 999, now.Add(-15*time.Minute))
+
+	members, err := store.ListActiveMembersByGuild(ctx, guilddomain.ID(guildID))
+	if err != nil {
+		if isMissingSchemaError(err) {
+			t.Skipf("PostgreSQL 結合テストをスキップします: guild member schema が migrate されていません: %v", err)
+		}
+		t.Fatalf("ListActiveMembersByGuild() がエラーを返しました: %v", err)
+	}
+	if len(members) != 2 {
+		t.Fatalf("members length = %d, 期待値 2", len(members))
+	}
+	if members[0].UserID != secondUser.ID {
+		t.Fatalf("members[0].UserID = %q, 期待値 %q", members[0].UserID, secondUser.ID)
+	}
+	if members[0].TotalEarnedCP != 120 {
+		t.Fatalf("members[0].TotalEarnedCP = %d, 期待値 120", members[0].TotalEarnedCP)
+	}
+	if members[1].UserID != firstUser.ID {
+		t.Fatalf("members[1].UserID = %q, 期待値 %q", members[1].UserID, firstUser.ID)
+	}
+}
+
 func TestGuildCPContributionTransactionRollsBackSpendWhenContributionInsertFails(t *testing.T) {
 	ctx := context.Background()
 	tx := beginPostgresTestTransaction(t, ctx)
@@ -627,5 +683,27 @@ func insertPostgresTestMembership(t *testing.T, ctx context.Context, tx *gorm.DB
 			t.Skipf("PostgreSQL 結合テストをスキップします: guild membership schema が migrate されていません: %v", err)
 		}
 		t.Fatalf("guild_memberships INSERT でエラーが発生しました: %v", err)
+	}
+}
+
+func recordEarnedCP(t *testing.T, ctx context.Context, store *ContributionPointStore, userID user.ID, amount int64, createdAt time.Time) {
+	t.Helper()
+
+	entry, err := contributionpointdomain.NewLedgerEntry(
+		"point_ledger_earn_"+string(userID),
+		userID,
+		contributionpointdomain.PointTypeCP,
+		amount,
+		contributionpointdomain.EntryTypeEarn,
+		"guild member cp setup",
+		"test",
+		"guild_member_cp_"+string(userID),
+		createdAt,
+	)
+	if err != nil {
+		t.Fatalf("NewLedgerEntry() がエラーを返しました: %v", err)
+	}
+	if _, err := store.Record(ctx, entry); err != nil {
+		t.Fatalf("CP獲得履歴保存でエラーが発生しました: %v", err)
 	}
 }

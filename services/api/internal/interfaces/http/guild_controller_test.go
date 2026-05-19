@@ -23,6 +23,8 @@ type guildTestRepository struct {
 	activeMembership *guilddomain.MembershipWithGuild
 	updated          *guilddomain.Membership
 	contributions    []guilddomain.CPContribution
+	members          []guilddomain.MemberContribution
+	expectedGuildID  guilddomain.ID
 }
 
 func (r guildTestRepository) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error) {
@@ -45,6 +47,14 @@ func (r guildTestRepository) FindActiveMembershipByUserID(ctx context.Context, u
 	}
 
 	return *r.activeMembership, true, nil
+}
+
+func (r guildTestRepository) ListActiveMembersByGuild(ctx context.Context, guildID guilddomain.ID) ([]guilddomain.MemberContribution, error) {
+	if r.expectedGuildID != "" && guildID != r.expectedGuildID {
+		return []guilddomain.MemberContribution{}, nil
+	}
+
+	return r.members, nil
 }
 
 func (r guildTestRepository) CreateMembership(ctx context.Context, membership guilddomain.Membership) error {
@@ -269,6 +279,18 @@ func TestGuildControllerGetMyGuild(t *testing.T) {
 	}
 	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
 		activeMembership: &activeMembership,
+		expectedGuildID:  "guild_go",
+		members: []guilddomain.MemberContribution{{
+			UserID:        "user_1",
+			Name:          "Alice",
+			TotalEarnedCP: 120,
+			JoinedAt:      now.Add(-time.Hour),
+		}, {
+			UserID:        "user_2",
+			Name:          "Bob",
+			TotalEarnedCP: 80,
+			JoinedAt:      now,
+		}},
 	}, guildTestCurrentUserRepository{
 		appUser: user.User{ID: "user_1"},
 		ok:      true,
@@ -290,6 +312,12 @@ func TestGuildControllerGetMyGuild(t *testing.T) {
 			ID                 string `json:"id"`
 			TotalContributedCP int64  `json:"total_contributed_cp"`
 		} `json:"guild"`
+		Members []struct {
+			UserID        string `json:"user_id"`
+			Name          string `json:"name"`
+			TotalEarnedCP int64  `json:"total_earned_cp"`
+			JoinedAt      string `json:"joined_at"`
+		} `json:"members"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
 		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
@@ -299,6 +327,15 @@ func TestGuildControllerGetMyGuild(t *testing.T) {
 	}
 	if body.Guild.TotalContributedCP != 80 {
 		t.Fatalf("total_contributed_cp = %d, 期待値 80", body.Guild.TotalContributedCP)
+	}
+	if len(body.Members) != 2 {
+		t.Fatalf("members length = %d, 期待値 2", len(body.Members))
+	}
+	if body.Members[0].Name != "Alice" {
+		t.Fatalf("members[0].name = %q, 期待値 Alice", body.Members[0].Name)
+	}
+	if body.Members[0].TotalEarnedCP != 120 {
+		t.Fatalf("members[0].total_earned_cp = %d, 期待値 120", body.Members[0].TotalEarnedCP)
 	}
 }
 

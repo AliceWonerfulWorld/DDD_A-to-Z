@@ -8,16 +8,26 @@ export interface Guild {
   icon: string;
   color: string;
   member_count: number;
+  total_contributed_cp: number;
 }
 
 export interface GuildMembership {
   id: string;
+  user_id?: string;
+  joined_at: string;
+}
+
+export interface GuildMemberContribution {
+  user_id: string;
+  name: string;
+  total_earned_cp: number;
   joined_at: string;
 }
 
 export interface GuildMembershipResponse {
   guild: Guild | null;
   membership?: GuildMembership;
+  members?: GuildMemberContribution[];
 }
 
 export async function fetchGuilds(): Promise<Guild[]> {

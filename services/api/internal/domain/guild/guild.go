@@ -42,6 +42,13 @@ type MembershipWithGuild struct {
 	Guild      Guild
 }
 
+type MemberContribution struct {
+	UserID        user.ID
+	Name          string
+	TotalEarnedCP int64
+	JoinedAt      time.Time
+}
+
 type CPContributionID string
 
 type CPContribution struct {
@@ -112,6 +119,23 @@ func NewCPContribution(contribution CPContribution) (CPContribution, error) {
 	}
 
 	return contribution, nil
+}
+
+func NewMemberContribution(member MemberContribution) (MemberContribution, error) {
+	if member.UserID == "" {
+		return MemberContribution{}, errors.New("guild member user id is required")
+	}
+	if strings.TrimSpace(member.Name) == "" {
+		return MemberContribution{}, errors.New("guild member name is required")
+	}
+	if member.TotalEarnedCP < 0 {
+		return MemberContribution{}, errors.New("guild member total earned cp cannot be negative")
+	}
+	if member.JoinedAt.IsZero() {
+		return MemberContribution{}, errors.New("guild member joined at is required")
+	}
+
+	return member, nil
 }
 
 func NewMembership(membership Membership) (Membership, error) {

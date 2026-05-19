@@ -27,16 +27,27 @@ describe("guild api", () => {
         icon: "GO",
         color: "#00acd7",
         member_count: 3,
+        total_contributed_cp: 120,
       },
       membership: {
         id: "guild_membership_1",
+        user_id: "user_1",
         joined_at: "2026-05-18T00:00:00Z",
       },
+      members: [
+        {
+          user_id: "user_1",
+          name: "Alice",
+          total_earned_cp: 80,
+          joined_at: "2026-05-18T00:00:00Z",
+        },
+      ],
     });
 
     const result = await fetchMyGuild();
 
     expect(result?.guild?.id).toBe("guild_go");
+    expect(result?.members?.[0]?.total_earned_cp).toBe(80);
     expect(fetch).toHaveBeenCalledWith(
       "/api/me/guild",
       expect.objectContaining({ credentials: "include" }),
