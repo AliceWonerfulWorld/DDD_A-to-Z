@@ -1,7 +1,8 @@
-import { useState, useMemo, type ReactNode } from "react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { useGuardedNavigation } from "../../hooks/useGuardedNavigation";
+import { fetchMyPage, type MyPageResponse } from "../../features/mypage/api";
 
 interface MyPageProps {
   onNavigate: (path: string) => void;
@@ -9,10 +10,41 @@ interface MyPageProps {
 
 const steppedEase = (steps: number) => (t: number) => Math.floor(t * steps) / steps;
 
-/* ─── Mock Data ─── */
+const LANG_DISPLAY: Record<string, { icon: string; color: string }> = {
+  TypeScript: { icon: "📘", color: "#3178c6" },
+  JavaScript: { icon: "📒", color: "#f7df1e" },
+  Rust: { icon: "🦀", color: "#ff6b35" },
+  Go: { icon: "🐹", color: "#00acd7" },
+  Python: { icon: "🐍", color: "#f0c040" },
+  Ruby: { icon: "💎", color: "#701516" },
+  Java: { icon: "☕", color: "#b07219" },
+  Kotlin: { icon: "🅺", color: "#a97bff" },
+  Swift: { icon: "🍎", color: "#f05138" },
+  "C++": { icon: "⚙️", color: "#f34b7d" },
+  C: { icon: "⚙️", color: "#555555" },
+  "C#": { icon: "🎯", color: "#178600" },
+  PHP: { icon: "🐘", color: "#4f5d95" },
+  Shell: { icon: "🐚", color: "#89e051" },
+  Dockerfile: { icon: "🐳", color: "#384d54" },
+  HTML: { icon: "🌐", color: "#e34c26" },
+  CSS: { icon: "🎨", color: "#563d7c" },
+  Scala: { icon: "🔥", color: "#c22d40" },
+  Dart: { icon: "🎯", color: "#00b4ab" },
+  Lua: { icon: "🌙", color: "#000080" },
+  Haskell: { icon: "λ", color: "#5e5086" },
+};
+
+function langDisplay(name: string): { icon: string; color: string } {
+  return LANG_DISPLAY[name] ?? { icon: "◇", color: "#888" };
+}
+
+interface LangEntry {
+  name: string;
+  pct: number;
+  count: number;
+}
 
 const MOCK = {
-  user: { name: "DevSamurai", title: "Apprentice", rankName: "Code Seeker" },
   season: {
     label: "SEASON 1",
     start: "2024/05/01",
@@ -29,99 +61,11 @@ const MOCK = {
     total: 156,
     cp: 24680,
   },
-  langs: [
-    {
-      name: "TypeScript",
-      pct: 42,
-      icon: "📘",
-      color: "#3178c6",
-      atk: 120,
-      def: 95,
-      mag: 130,
-      spd: 85,
-      luk: 70,
-    },
-    {
-      name: "Rust",
-      pct: 26,
-      icon: "🦀",
-      color: "#ff6b35",
-      atk: 145,
-      def: 135,
-      mag: 60,
-      spd: 55,
-      luk: 50,
-    },
-    {
-      name: "Python",
-      pct: 18,
-      icon: "🐍",
-      color: "#f0c040",
-      atk: 70,
-      def: 60,
-      mag: 140,
-      spd: 80,
-      luk: 90,
-    },
-    {
-      name: "Go",
-      pct: 8,
-      icon: "🐹",
-      color: "#00acd7",
-      atk: 90,
-      def: 85,
-      mag: 45,
-      spd: 110,
-      luk: 75,
-    },
-    {
-      name: "Other",
-      pct: 6,
-      icon: "🔮",
-      color: "#888",
-      atk: 55,
-      def: 50,
-      mag: 60,
-      spd: 65,
-      luk: 40,
-    },
-  ],
   goal: { current: 2150, target: 3300 },
   title: {
     name: "Consistency Master",
     line: "Consistency is key. Daily efforts build the future.",
   },
-  badges: [
-    { id: 1, icon: "🌱", name: "はじめの一歩", desc: "100 Commit達成", color: "#4caf50" },
-    { id: 2, icon: "🌿", name: "草生やし名人", desc: "10日連続コミット", color: "#4caf50" },
-    { id: 3, icon: "🔄", name: "プルリク職人", desc: "50 PR作成", color: "#00e5ff" },
-    { id: 4, icon: "🔀", name: "マージマスター", desc: "100 Merged", color: "#9c27b0" },
-    {
-      id: 5,
-      icon: "🌟",
-      name: "コミット王",
-      desc: "500 Commit達成",
-      color: "#f0c040",
-      star: "500",
-    },
-    { id: 6, icon: "🔥", name: "ファイヤー", desc: "30日連続コミット", color: "#ff6b35" },
-    { id: 7, icon: "🌙", name: "ナイトオウル", desc: "深夜の貢献者", color: "#1a237e" },
-    { id: 8, icon: "💎", name: "レジェンド", desc: "1,000 Commit達成", color: "#7b1fa2" },
-  ],
-  messages: [
-    "よく来たな、若きエンジニアよ。\n今日も己のコードを刻め。",
-    "知識という名の剣は、使えば使うほど\n研ぎ澄まされていくものだ。",
-    "眠れぬ夜の一振りが、やがて\n城を築く礎となる。",
-    "焦る必要はない。確かな一歩を\n積み重ねるのだ。",
-    "コミットの数だけ、お前は強くなる。\nさあ、今日も戦場へ赴こう。",
-  ],
-  todayLog: [
-    "Fix: resolve type error in UserService",
-    "Review: PR #42 — feat: add cache layer",
-    "Add: unit tests for auth middleware",
-    "Docs: update API endpoint comments",
-    "Chore: bump dependencies",
-  ],
 };
 
 function generateContributions() {
@@ -231,6 +175,28 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const contribs = useMemo(() => generateContributions(), []);
   const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
   const guardedNavigate = useGuardedNavigation(onNavigate);
+  const [mypageData, setMypageData] = useState<MyPageResponse | null>(null);
+  const [apiError, setApiError] = useState(false);
+
+  useEffect(() => {
+    fetchMyPage()
+      .then(setMypageData)
+      .catch(() => setApiError(true));
+  }, []);
+
+  const langEntries: LangEntry[] = useMemo(() => {
+    if (!mypageData) return [];
+    const summary = mypageData.repositories.language_summary;
+    const total = mypageData.repositories.total_count;
+    return Object.entries(summary)
+      .map(([name, count]) => ({
+        name,
+        count,
+        pct: total > 0 ? Math.round((count / total) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [mypageData]);
+
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -392,7 +358,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                     color: "#e8e8d0",
                   }}
                 >
-                  {MOCK.user.name}
+                  {mypageData?.user.username ?? "-"}
                 </div>
                 <div
                   style={{
@@ -402,7 +368,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                     fontFamily: '"Press Start 2P", monospace',
                   }}
                 >
-                  {MOCK.user.title}
+                  -
                 </div>
                 <div
                   style={{
@@ -432,7 +398,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                         fontFamily: '"Press Start 2P", monospace',
                       }}
                     >
-                      {MOCK.user.rankName}
+                      -
                     </span>
                   </div>
                 </div>
@@ -871,74 +837,97 @@ export function MyPage({ onNavigate }: MyPageProps) {
           <Panel borderColor="rgba(191,0,255,0.3)">
             <SectionTitle text="LANGUAGES" color="#bf00ff" />
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {MOCK.langs.map((lang, i) => (
-                <motion.div
-                  key={lang.name}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + i * 0.08, duration: 0.35, ease: steppedEase(6) }}
+              {langEntries.length === 0 ? (
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "rgba(232,232,208,0.3)",
+                    fontFamily: '"Press Start 2P", monospace',
+                    textAlign: "center",
+                    padding: "20px 0",
+                  }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      marginBottom: "3px",
-                    }}
-                  >
-                    <span>{lang.icon}</span>
-                    <span
-                      style={{
-                        fontSize: "0.8rem",
-                        color: lang.color,
-                        minWidth: "72px",
-                        fontFamily: '"Press Start 2P", monospace',
-                      }}
+                  {apiError ? "Failed to load" : "Loading..."}
+                </div>
+              ) : (
+                langEntries.map((lang, i) => {
+                  const meta = langDisplay(lang.name);
+                  return (
+                    <motion.div
+                      key={lang.name}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 + i * 0.08, duration: 0.35, ease: steppedEase(6) }}
                     >
-                      {lang.name}
-                    </span>
-                    <div
-                      style={{
-                        flex: 1,
-                        height: "8px",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                        background: "rgba(0,0,0,0.4)",
-                        position: "relative",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <ProgressBarFill pct={lang.pct} color={lang.color} delay={0.4 + i * 0.08} />
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        color: lang.color,
-                        minWidth: "28px",
-                        textAlign: "right",
-                        fontFamily: '"Press Start 2P", monospace',
-                      }}
-                    >
-                      {lang.pct}%
-                    </span>
-                  </div>
-                  <div
-                    style={{ display: "flex", gap: "6px", marginLeft: "22px", flexWrap: "wrap" }}
-                  >
-                    {(["atk", "def", "mag", "spd", "luk"] as const).map((s) => (
-                      <span
-                        key={s}
+                      <div
                         style={{
-                          fontSize: "0.6rem",
-                          color: "rgba(232,232,208,0.2)",
-                          fontFamily: '"Press Start 2P", monospace',
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          marginBottom: "3px",
                         }}
                       >
-                        {s.toUpperCase()} {lang[s]}
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
+                        <span>{meta.icon}</span>
+                        <span
+                          style={{
+                            fontSize: "0.8rem",
+                            color: meta.color,
+                            minWidth: "72px",
+                            fontFamily: '"Press Start 2P", monospace',
+                          }}
+                        >
+                          {lang.name}
+                        </span>
+                        <div
+                          style={{
+                            flex: 1,
+                            height: "8px",
+                            border: "1px solid rgba(255,255,255,0.06)",
+                            background: "rgba(0,0,0,0.4)",
+                            position: "relative",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <ProgressBarFill
+                            pct={lang.pct}
+                            color={meta.color}
+                            delay={0.4 + i * 0.08}
+                          />
+                        </div>
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            color: meta.color,
+                            minWidth: "28px",
+                            textAlign: "right",
+                            fontFamily: '"Press Start 2P", monospace',
+                          }}
+                        >
+                          {lang.pct}%
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "6px",
+                          marginLeft: "22px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.6rem",
+                            color: "rgba(232,232,208,0.2)",
+                            fontFamily: '"Press Start 2P", monospace',
+                          }}
+                        >
+                          {lang.count} REPOS
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
             </div>
           </Panel>
 
@@ -1022,13 +1011,35 @@ export function MyPage({ onNavigate }: MyPageProps) {
           {/* Right: (empty or mini stats) */}
           <Panel borderColor="rgba(0,229,255,0.2)">
             <SectionTitle text="QUICK STATS" color="#00e5ff" />
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <MiniStat label="Today's Commits" value="8" />
-              <MiniStat label="This Week" value="34" />
-              <MiniStat label="Total PRs" value="127" />
-              <MiniStat label="Open Issues" value="3" />
-              <MiniStat label="Streak" value={`${streak} days`} />
-            </div>
+            {mypageData ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <MiniStat
+                  label="CP Balance"
+                  value={mypageData.contribution_points.balance.toLocaleString()}
+                />
+                <MiniStat
+                  label="Total Earned"
+                  value={mypageData.contribution_points.total_earned.toLocaleString()}
+                />
+                <MiniStat
+                  label="Total Spent"
+                  value={mypageData.contribution_points.total_spent.toLocaleString()}
+                />
+                <MiniStat label="Streak" value={`${streak} days`} />
+              </div>
+            ) : (
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "rgba(232,232,208,0.3)",
+                  fontFamily: '"Press Start 2P", monospace',
+                  textAlign: "center",
+                  padding: "20px 0",
+                }}
+              >
+                {apiError ? "Failed to load" : "Loading..."}
+              </div>
+            )}
           </Panel>
         </div>
       </div>
