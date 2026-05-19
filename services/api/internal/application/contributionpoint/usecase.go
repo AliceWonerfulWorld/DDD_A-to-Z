@@ -10,6 +10,7 @@ import (
 )
 
 var ErrInsufficientBalance = errors.New("contribution point balance is insufficient")
+var ErrUnsupportedPointType = errors.New("unsupported point type")
 
 type UseCase struct {
 	ledger LedgerRepository

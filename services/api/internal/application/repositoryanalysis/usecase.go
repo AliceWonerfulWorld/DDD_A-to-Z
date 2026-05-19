@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/repositoryanalysis"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
@@ -28,6 +29,7 @@ type UseCase struct {
 	prs       GitHubPRClient
 	languages GitHubLanguageClient
 	cp        CPEarner
+	sp        SPEarner
 	cpBalance CPBalanceProvider
 	now       func() time.Time
 }
@@ -42,6 +44,7 @@ func NewUseCase(
 	languages GitHubLanguageClient,
 	cp CPEarner,
 	cpBalance CPBalanceProvider,
+	sp SPEarner,
 ) *UseCase {
 	return &UseCase{
 		current:   current,
@@ -52,6 +55,7 @@ func NewUseCase(
 		prs:       prs,
 		languages: languages,
 		cp:        cp,
+		sp:        sp,
 		cpBalance: cpBalance,
 		now:       time.Now,
 	}
@@ -237,6 +241,14 @@ func (u *UseCase) AnalyzeForUser(ctx context.Context, appUser user.User, session
 	if !apiErr {
 		if totalCP > 0 {
 			if err := u.cp.Earn(ctx, appUser.ID, totalCP, "contribution analysis reward", "analysis", "initial"); err != nil {
+				return AnalysisResult{}, err
+			}
+		}
+		for lang, cp := range langCP {
+			if err := u.sp.EarnSP(ctx, appUser.ID, lang, cp, "skill point from contribution analysis", "analysis", "initial"); err != nil {
+				if errors.Is(err, contributionpointapp.ErrUnsupportedPointType) {
+					continue
+				}
 				return AnalysisResult{}, err
 			}
 		}

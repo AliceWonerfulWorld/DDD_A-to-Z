@@ -1,4 +1,4 @@
-h1:jOrXQEFGT8cIQH0Ing7Mz+DumX6yTxmgN6USp2Bgr8Y=
+h1:lv8sHFZBYR6iIcOQ+DxwsAeMEVg2FsM/Y/5OFj/hkYs=
 20260511165019_create_auth_tables.sql h1:xBhU31KhHPurVx2RqVxMmiyIjEg1sqKV3RUJyU6gr9Y=
 20260513090000_create_cp_tables.sql h1:3Ax1icNsujVhIX3ObVtWMEbIP/a3XPD2JQHeLhQG5Mg=
 20260514113146_contribution_point.sql h1:ZUdMX0wLF3+SpmuKtFVvhtIdFQSC+P0fjO8k/eYmEhA=
@@ -9,3 +9,6 @@ h1:jOrXQEFGT8cIQH0Ing7Mz+DumX6yTxmgN6USp2Bgr8Y=
 20260517000000_add_last_analyzed_at.sql h1:1lYeqfv/rKQRCfgWQlGgfh1ONMAoy64/ZL2ayp+oNmo=
 20260518090000_guild_town.sql h1:WZK+us4qKXmQhrcrHzJ3B/w3+gyfeDFqASwsy9AtLFY=
 20260519174745_guild_cp_contributions.sql h1:hUbCUgv37MWrsGo19+1YwzG0OYsR3vKujLTSU7pYMWw=
+20260519200000_redesign_point_types_for_sp.sql h1:K3lb2rZ+A+pVwcBLwKGVwpSc1SCjGCpAH/q1UpHgp88=
+20260519200001_update_point_triggers.sql h1:X2xjyMVDd6QDPX77IgrNiBxgYsIzHtp9zpF/6SpTZpw=
+20260519200002_add_missing_sp_languages.sql h1:dmx86ZmkqNmzYY7y4c2rPJMJDy9XDI+f4BQQNIJtObc=

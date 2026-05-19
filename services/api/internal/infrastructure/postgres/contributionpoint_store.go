@@ -24,16 +24,34 @@ func NewContributionPointStore(db *gorm.DB) *ContributionPointStore {
 }
 
 func (s *ContributionPointStore) Record(ctx context.Context, entry contributionpointdomain.LedgerEntry) (contributionpointdomain.LedgerEntry, error) {
+	if err := s.db.WithContext(ctx).
+		Table("point_accounts").
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "point_type_code"}, {Name: "language"}},
+			DoNothing: true,
+		}).
+		Create(map[string]any{
+			"user_id":         string(entry.UserID),
+			"point_type_code": entry.PointType.Code,
+			"language":        entry.PointType.Language,
+			"balance":         0,
+			"created_at":      entry.CreatedAt,
+			"updated_at":      entry.CreatedAt,
+		}).Error; err != nil {
+		return contributionpointdomain.LedgerEntry{}, mapContributionPointStoreError(err)
+	}
+
 	record := pointLedgerRecord{
-		ID:         entry.ID,
-		UserID:     string(entry.UserID),
-		PointType:  entry.PointType,
-		Amount:     entry.Amount,
-		Type:       entry.Type,
-		Reason:     entry.Reason,
-		SourceType: entry.SourceType,
-		SourceID:   entry.SourceID,
-		CreatedAt:  entry.CreatedAt,
+		ID:            entry.ID,
+		UserID:        string(entry.UserID),
+		PointTypeCode: entry.PointType.Code,
+		Language:      entry.PointType.Language,
+		Amount:        entry.Amount,
+		Type:          entry.Type,
+		Reason:        entry.Reason,
+		SourceType:    entry.SourceType,
+		SourceID:      entry.SourceID,
+		CreatedAt:     entry.CreatedAt,
 	}
 	result := s.db.WithContext(ctx).
 		Clauses(clause.Returning{}).
@@ -53,7 +71,7 @@ func (s *ContributionPointStore) GetBalance(ctx context.Context, userID user.ID,
 	result := s.db.WithContext(ctx).
 		Model(&pointAccountRecord{}).
 		Select("balance").
-		Where("user_id = ? AND point_type = ?", userID, pointType).
+		Where("user_id = ? AND point_type_code = ? AND language = ?", userID, pointType.Code, pointType.Language).
 		Take(&record)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -70,7 +88,7 @@ func (s *ContributionPointStore) GetLastAnalyzedAt(ctx context.Context, userID u
 	result := s.db.WithContext(ctx).
 		Model(&pointAccountRecord{}).
 		Select("last_analyzed_at").
-		Where("user_id = ? AND point_type = ?", userID, pointType).
+		Where("user_id = ? AND point_type_code = ? AND language = ?", userID, pointType.Code, pointType.Language).
 		Take(&record)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -85,7 +103,7 @@ func (s *ContributionPointStore) UpdateLastAnalyzedAt(ctx context.Context, userI
 	return s.db.WithContext(ctx).
 		Table("point_accounts").
 		Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "user_id"}, {Name: "point_type"}},
+			Columns: []clause.Column{{Name: "user_id"}, {Name: "point_type_code"}, {Name: "language"}},
 			DoUpdates: clause.Assignments(map[string]any{
 				"last_analyzed_at": at,
 				"updated_at":       at,
@@ -93,7 +111,8 @@ func (s *ContributionPointStore) UpdateLastAnalyzedAt(ctx context.Context, userI
 		}).
 		Create(map[string]any{
 			"user_id":          string(userID),
-			"point_type":       pointType,
+			"point_type_code":  pointType.Code,
+			"language":         pointType.Language,
 			"balance":          0,
 			"last_analyzed_at": at,
 			"created_at":       at,
@@ -103,26 +122,30 @@ func (s *ContributionPointStore) UpdateLastAnalyzedAt(ctx context.Context, userI
 
 func mapContributionPointStoreError(err error) error {
 	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) &&
-		pgErr.Code == "23514" &&
-		strings.Contains(pgErr.Message, "point balance cannot be negative") {
-		return fmt.Errorf("%w: %v", contributionpointapp.ErrInsufficientBalance, err)
+	if !errors.As(err, &pgErr) {
+		return err
 	}
-
+	switch {
+	case pgErr.Code == "23514" && strings.Contains(pgErr.Message, "point balance cannot be negative"):
+		return fmt.Errorf("%w: %v", contributionpointapp.ErrInsufficientBalance, err)
+	case pgErr.Code == "23503" && strings.Contains(pgErr.ConstraintName, "point_type_code_language_fkey"):
+		return fmt.Errorf("%w: %v", contributionpointapp.ErrUnsupportedPointType, err)
+	}
 	return err
 }
 
 type pointLedgerRecord struct {
-	ID           string                            `gorm:"column:id"`
-	UserID       string                            `gorm:"column:user_id"`
-	PointType    contributionpointdomain.PointType `gorm:"column:point_type"`
-	Amount       int64                             `gorm:"column:amount"`
-	Type         contributionpointdomain.EntryType `gorm:"column:type"`
-	Reason       string                            `gorm:"column:reason"`
-	SourceType   string                            `gorm:"column:source_type"`
-	SourceID     string                            `gorm:"column:source_id"`
-	BalanceAfter int64                             `gorm:"column:balance_after"`
-	CreatedAt    time.Time                         `gorm:"column:created_at"`
+	ID            string                            `gorm:"column:id"`
+	UserID        string                            `gorm:"column:user_id"`
+	PointTypeCode string                            `gorm:"column:point_type_code"`
+	Language      string                            `gorm:"column:language"`
+	Amount        int64                             `gorm:"column:amount"`
+	Type          contributionpointdomain.EntryType `gorm:"column:type"`
+	Reason        string                            `gorm:"column:reason"`
+	SourceType    string                            `gorm:"column:source_type"`
+	SourceID      string                            `gorm:"column:source_id"`
+	BalanceAfter  int64                             `gorm:"column:balance_after"`
+	CreatedAt     time.Time                         `gorm:"column:created_at"`
 }
 
 func (pointLedgerRecord) TableName() string {
@@ -133,7 +156,7 @@ func (r pointLedgerRecord) toDomain() contributionpointdomain.LedgerEntry {
 	return contributionpointdomain.LedgerEntry{
 		ID:           r.ID,
 		UserID:       user.ID(r.UserID),
-		PointType:    r.PointType,
+		PointType:    contributionpointdomain.PointType{Code: r.PointTypeCode, Language: r.Language},
 		Amount:       r.Amount,
 		Type:         r.Type,
 		Reason:       r.Reason,
@@ -145,10 +168,11 @@ func (r pointLedgerRecord) toDomain() contributionpointdomain.LedgerEntry {
 }
 
 type pointAccountRecord struct {
-	UserID         string                            `gorm:"column:user_id"`
-	PointType      contributionpointdomain.PointType `gorm:"column:point_type"`
-	Balance        int64                             `gorm:"column:balance"`
-	LastAnalyzedAt *time.Time                        `gorm:"column:last_analyzed_at"`
+	UserID         string     `gorm:"column:user_id"`
+	PointTypeCode  string     `gorm:"column:point_type_code"`
+	Language       string     `gorm:"column:language"`
+	Balance        int64      `gorm:"column:balance"`
+	LastAnalyzedAt *time.Time `gorm:"column:last_analyzed_at"`
 }
 
 func (pointAccountRecord) TableName() string {

@@ -40,6 +40,10 @@ type CPEarner interface {
 	Earn(ctx context.Context, userID user.ID, amount int64, reason, sourceType, sourceID string) error
 }
 
+type SPEarner interface {
+	EarnSP(ctx context.Context, userID user.ID, language string, amount int64, reason, sourceType, sourceID string) error
+}
+
 type CPBalanceProvider interface {
 	GetBalance(ctx context.Context, userID user.ID) (int64, error)
 	GetLastAnalyzedAt(ctx context.Context, userID user.ID) (*time.Time, error)

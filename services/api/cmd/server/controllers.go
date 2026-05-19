@@ -119,6 +119,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 		repositoryClient,
 		cpManager,
 		cpManager,
+		cpManager,
 	)
 
 	return controllerSet{

@@ -25,36 +25,83 @@ CREATE INDEX sessions_user_id_idx ON sessions(user_id);
 CREATE INDEX sessions_expires_at_idx ON sessions(expires_at);
 
 CREATE TABLE point_types (
-  code  TEXT PRIMARY KEY,
-  label TEXT NOT NULL
+  code     TEXT NOT NULL,
+  language TEXT NOT NULL DEFAULT '',
+  label    TEXT NOT NULL,
+  PRIMARY KEY (code, language)
 );
 
-INSERT INTO point_types (code, label) VALUES
-  ('CP',        'Contribution Point'),
-  ('Golang_SP', 'Golang Skill Point'),
-  ('TypeScript_SP',     'TypeScript Skill Point');
+INSERT INTO point_types (code, language, label) VALUES
+  ('CP', '',            'Contribution Point'),
+  ('SP', 'Go',          'Go Skill Point'),
+  ('SP', 'Python',      'Python Skill Point'),
+  ('SP', 'JavaScript',  'JavaScript Skill Point'),
+  ('SP', 'TypeScript',  'TypeScript Skill Point'),
+  ('SP', 'Rust',        'Rust Skill Point'),
+  ('SP', 'Java',        'Java Skill Point'),
+  ('SP', 'C',           'C Skill Point'),
+  ('SP', 'C++',         'C++ Skill Point'),
+  ('SP', 'C#',          'C# Skill Point'),
+  ('SP', 'Ruby',        'Ruby Skill Point'),
+  ('SP', 'PHP',         'PHP Skill Point'),
+  ('SP', 'Swift',       'Swift Skill Point'),
+  ('SP', 'Kotlin',      'Kotlin Skill Point'),
+  ('SP', 'Scala',       'Scala Skill Point'),
+  ('SP', 'Haskell',     'Haskell Skill Point'),
+  ('SP', 'Elixir',      'Elixir Skill Point'),
+  ('SP', 'Erlang',      'Erlang Skill Point'),
+  ('SP', 'Clojure',     'Clojure Skill Point'),
+  ('SP', 'Dart',        'Dart Skill Point'),
+  ('SP', 'Lua',         'Lua Skill Point'),
+  ('SP', 'Shell',       'Shell Skill Point'),
+  ('SP', 'PowerShell',  'PowerShell Skill Point'),
+  ('SP', 'R',           'R Skill Point'),
+  ('SP', 'Julia',       'Julia Skill Point'),
+  ('SP', 'Nim',         'Nim Skill Point'),
+  ('SP', 'Zig',         'Zig Skill Point'),
+  ('SP', 'OCaml',       'OCaml Skill Point'),
+  ('SP', 'F#',          'F# Skill Point'),
+  ('SP', 'Groovy',      'Groovy Skill Point'),
+  ('SP', 'Perl',        'Perl Skill Point'),
+  ('SP', 'MATLAB',      'MATLAB Skill Point'),
+  ('SP', 'Objective-C', 'Objective-C Skill Point'),
+  ('SP', 'Crystal',     'Crystal Skill Point'),
+  ('SP', 'Elm',         'Elm Skill Point'),
+  ('SP', 'D',           'D Skill Point'),
+  ('SP', 'Haxe',        'Haxe Skill Point'),
+  ('SP', 'Mojo',        'Mojo Skill Point'),
+  ('SP', 'GDScript',    'GDScript Skill Point'),
+  ('SP', 'Cuda',        'Cuda Skill Point'),
+  ('SP', 'PLpgSQL',     'PLpgSQL Skill Point'),
+  ('SP', 'CSS',         'CSS Skill Point'),
+  ('SP', 'Nix',         'Nix Skill Point'),
+  ('SP', 'HCL',         'HCL Skill Point');
 
 CREATE TABLE point_accounts (
-  user_id         TEXT NOT NULL REFERENCES users(id),
-  point_type      TEXT NOT NULL REFERENCES point_types(code),
-  balance         BIGINT NOT NULL DEFAULT 0 CHECK (balance >= 0),
+  user_id          TEXT NOT NULL REFERENCES users(id),
+  point_type_code  TEXT NOT NULL,
+  language         TEXT NOT NULL DEFAULT '',
+  balance          BIGINT NOT NULL DEFAULT 0 CHECK (balance >= 0),
   last_analyzed_at TIMESTAMPTZ,
-  created_at      TIMESTAMPTZ NOT NULL,
-  updated_at      TIMESTAMPTZ NOT NULL,
-  PRIMARY KEY (user_id, point_type)
+  created_at       TIMESTAMPTZ NOT NULL,
+  updated_at       TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (user_id, point_type_code, language),
+  FOREIGN KEY (point_type_code, language) REFERENCES point_types(code, language)
 );
 
 CREATE TABLE point_ledger (
-  id           TEXT PRIMARY KEY,
-  user_id      TEXT NOT NULL REFERENCES users(id),
-  point_type   TEXT NOT NULL REFERENCES point_types(code),
-  amount       BIGINT NOT NULL CHECK (amount <> 0),
-  type         TEXT NOT NULL CHECK (type IN ('earn', 'spend', 'adjust')),
-  reason       TEXT NOT NULL CHECK (length(reason) > 0),
-  source_type  TEXT NOT NULL CHECK (length(source_type) > 0),
-  source_id    TEXT NOT NULL CHECK (length(source_id) > 0),
-  balance_after BIGINT NOT NULL CHECK (balance_after >= 0),
-  created_at   TIMESTAMPTZ NOT NULL,
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES users(id),
+  point_type_code TEXT NOT NULL,
+  language        TEXT NOT NULL DEFAULT '',
+  amount          BIGINT NOT NULL CHECK (amount <> 0),
+  type            TEXT NOT NULL CHECK (type IN ('earn', 'spend', 'adjust')),
+  reason          TEXT NOT NULL CHECK (length(reason) > 0),
+  source_type     TEXT NOT NULL CHECK (length(source_type) > 0),
+  source_id       TEXT NOT NULL CHECK (length(source_id) > 0),
+  balance_after   BIGINT NOT NULL CHECK (balance_after >= 0),
+  created_at      TIMESTAMPTZ NOT NULL,
+  FOREIGN KEY (point_type_code, language) REFERENCES point_types(code, language),
   CHECK (
     (type = 'earn' AND amount > 0)
     OR (type = 'spend' AND amount < 0)
@@ -62,7 +109,7 @@ CREATE TABLE point_ledger (
   )
 );
 
-CREATE INDEX point_ledger_user_id_created_at_idx ON point_ledger(user_id, point_type, created_at DESC);
+CREATE INDEX point_ledger_user_id_created_at_idx ON point_ledger(user_id, point_type_code, language, created_at DESC);
 CREATE INDEX point_ledger_source_idx ON point_ledger(source_type, source_id);
 
 CREATE FUNCTION reject_nonzero_point_account_insert()
@@ -114,23 +161,23 @@ BEGIN
   SELECT balance + NEW.amount
   INTO next_balance
   FROM point_accounts
-  WHERE user_id = NEW.user_id AND point_type = NEW.point_type
+  WHERE user_id = NEW.user_id AND point_type_code = NEW.point_type_code AND language = NEW.language
   FOR UPDATE;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'point account not found for user_id % point_type %', NEW.user_id, NEW.point_type
+    RAISE EXCEPTION 'point account not found for user_id % point_type_code % language %', NEW.user_id, NEW.point_type_code, NEW.language
       USING ERRCODE = '23503';
   END IF;
 
   IF next_balance < 0 THEN
-    RAISE EXCEPTION 'point balance cannot be negative for user_id % point_type %', NEW.user_id, NEW.point_type
+    RAISE EXCEPTION 'point balance cannot be negative for user_id % point_type_code % language %', NEW.user_id, NEW.point_type_code, NEW.language
       USING ERRCODE = '23514';
   END IF;
 
   UPDATE point_accounts
   SET balance    = next_balance,
       updated_at = NEW.created_at
-  WHERE user_id = NEW.user_id AND point_type = NEW.point_type;
+  WHERE user_id = NEW.user_id AND point_type_code = NEW.point_type_code AND language = NEW.language;
 
   NEW.balance_after = next_balance;
   RETURN NEW;

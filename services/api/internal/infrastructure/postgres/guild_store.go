@@ -209,7 +209,8 @@ func (s *GuildStore) CreateCPContribution(ctx context.Context, contribution guil
 		FROM point_ledger pl
 		WHERE pl.id = ?
 			AND pl.user_id = ?
-			AND pl.point_type = ?
+			AND pl.point_type_code = ?
+			AND pl.language = ?
 			AND pl.type = ?
 			AND pl.amount = ?
 			AND pl.source_type = ?
@@ -222,7 +223,8 @@ func (s *GuildStore) CreateCPContribution(ctx context.Context, contribution guil
 		contribution.CreatedAt,
 		contribution.PointLedgerID,
 		contribution.UserID,
-		contributionpointdomain.PointTypeCP,
+		contributionpointdomain.PointTypeCP.Code,
+		contributionpointdomain.PointTypeCP.Language,
 		contributionpointdomain.EntryTypeSpend,
 		-contribution.Amount,
 		"guild_cp_contribution",
