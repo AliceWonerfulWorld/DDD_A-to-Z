@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
+	spapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/sp"
 	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"gorm.io/gorm"
@@ -118,6 +119,28 @@ func (s *ContributionPointStore) UpdateLastAnalyzedAt(ctx context.Context, userI
 			"created_at":       at,
 			"updated_at":       at,
 		}).Error
+}
+
+func (s *ContributionPointStore) GetSPBalances(ctx context.Context, userID user.ID) ([]spapp.SPBalance, error) {
+	type row struct {
+		Language string `gorm:"column:language"`
+		Balance  int64  `gorm:"column:balance"`
+	}
+	var rows []row
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT language, balance
+		FROM point_accounts
+		WHERE user_id = ? AND point_type_code = 'SP' AND balance > 0
+		ORDER BY language
+	`, userID).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	balances := make([]spapp.SPBalance, 0, len(rows))
+	for _, r := range rows {
+		balances = append(balances, spapp.SPBalance{Language: r.Language, Balance: r.Balance})
+	}
+	return balances, nil
 }
 
 func mapContributionPointStoreError(err error) error {

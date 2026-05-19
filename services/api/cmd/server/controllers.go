@@ -11,6 +11,7 @@ import (
 	mypageapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/mypage"
 	profileapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/profile"
 	analysisapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/repositoryanalysis"
+	spapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/sp"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/config"
 	infragithub "github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/github"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/postgres"
@@ -28,6 +29,7 @@ type controllerSet struct {
 	profile    *httpapi.ProfileController
 	analysis   *httpapi.AnalysisController
 	home       *httpapi.HomeController
+	sp         *httpapi.SPController
 }
 
 func (c controllerSet) registrars() []httpapi.RouteRegistrar {
@@ -40,6 +42,7 @@ func (c controllerSet) registrars() []httpapi.RouteRegistrar {
 		c.profile,
 		c.analysis,
 		c.home,
+		c.sp,
 	}
 }
 
@@ -103,6 +106,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 		newMypageCPReader(contributionPointStore, mypageStore),
 		mypageStore,
 	)
+	spUseCase := spapp.NewUseCase(authStore, contributionPointStore)
 	homeCPProvider := newHomeCPDataProvider(contributionPointStore, mypageStore)
 	profileUseCase := profileapp.NewUseCase(
 		authStore,
@@ -137,6 +141,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 		profile:    httpapi.NewProfileController(profileUseCase, logger),
 		analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), logger),
 		home:       httpapi.NewHomeController(authStore, homeCPProvider, logger),
+		sp:         httpapi.NewSPController(spUseCase, logger),
 	}, nil
 }
 
