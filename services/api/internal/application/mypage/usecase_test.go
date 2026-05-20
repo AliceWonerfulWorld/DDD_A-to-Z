@@ -50,6 +50,25 @@ func (s *stubRepoReader) GetRepositorySummary(_ context.Context, _ user.ID, _ in
 	return s.summary, s.err
 }
 
+type stubGitHubStatsReader struct {
+	stats *mypage.GitHubStats
+	err   error
+}
+
+func (s *stubGitHubStatsReader) FetchStats(_ context.Context, _, _ string) (*mypage.GitHubStats, error) {
+	return s.stats, s.err
+}
+
+type stubGitHubTokenRepo struct {
+	token string
+	found bool
+	err   error
+}
+
+func (s *stubGitHubTokenRepo) GitHubAccessToken(_ context.Context, _ user.ID) (string, bool, error) {
+	return s.token, s.found, s.err
+}
+
 // --- tests ---
 
 func TestGetMyPage_EmptyToken(t *testing.T) {
@@ -57,6 +76,8 @@ func TestGetMyPage_EmptyToken(t *testing.T) {
 		&stubCurrentUser{},
 		&stubCPReader{},
 		&stubRepoReader{},
+		&stubGitHubStatsReader{},
+		&stubGitHubTokenRepo{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "")
@@ -70,6 +91,8 @@ func TestGetMyPage_SessionNotFound(t *testing.T) {
 		&stubCurrentUser{found: false},
 		&stubCPReader{},
 		&stubRepoReader{},
+		&stubGitHubStatsReader{},
+		&stubGitHubTokenRepo{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "invalid-token")
@@ -98,6 +121,8 @@ func TestGetMyPage_Success(t *testing.T) {
 				{GitHubID: 1, FullName: "testuser/repo1", Language: "Go", HTMLURL: "https://github.com/testuser/repo1"},
 			},
 		}},
+		&stubGitHubStatsReader{},
+		&stubGitHubTokenRepo{},
 	)
 
 	result, err := uc.GetMyPage(context.Background(), "valid-token")
@@ -133,6 +158,8 @@ func TestGetMyPage_CPError(t *testing.T) {
 		&stubCurrentUser{user: testUser, found: true},
 		&stubCPReader{err: cpErr},
 		&stubRepoReader{},
+		&stubGitHubStatsReader{},
+		&stubGitHubTokenRepo{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "valid-token")
@@ -149,6 +176,8 @@ func TestGetMyPage_RepoError(t *testing.T) {
 		&stubCurrentUser{user: testUser, found: true},
 		&stubCPReader{balance: 0, totalEarned: 0, totalSpent: 0},
 		&stubRepoReader{err: repoErr},
+		&stubGitHubStatsReader{},
+		&stubGitHubTokenRepo{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "valid-token")

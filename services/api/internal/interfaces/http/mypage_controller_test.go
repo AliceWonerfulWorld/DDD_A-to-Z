@@ -54,6 +54,25 @@ func (s *stubMypageRepoReader) GetRepositorySummary(_ context.Context, _ user.ID
 	return s.summary, nil
 }
 
+type stubMypageGitHubStatsReader struct {
+	stats *mypage.GitHubStats
+	err   error
+}
+
+func (s *stubMypageGitHubStatsReader) FetchStats(_ context.Context, _, _ string) (*mypage.GitHubStats, error) {
+	return s.stats, s.err
+}
+
+type stubMypageGitHubTokenRepo struct {
+	token string
+	found bool
+	err   error
+}
+
+func (s *stubMypageGitHubTokenRepo) GitHubAccessToken(_ context.Context, _ user.ID) (string, bool, error) {
+	return s.token, s.found, s.err
+}
+
 // --- tests ---
 
 func TestMypageController_NoCookie(t *testing.T) {
@@ -61,6 +80,8 @@ func TestMypageController_NoCookie(t *testing.T) {
 		&stubMypageCurrentUser{},
 		&stubMypageCPReader{},
 		&stubMypageRepoReader{},
+		&stubMypageGitHubStatsReader{},
+		&stubMypageGitHubTokenRepo{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)
@@ -98,6 +119,8 @@ func TestMypageController_Success(t *testing.T) {
 				{GitHubID: 1, FullName: "octocat/repo", Language: "Go", HTMLURL: "https://github.com/octocat/repo"},
 			},
 		}},
+		&stubMypageGitHubStatsReader{},
+		&stubMypageGitHubTokenRepo{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)
