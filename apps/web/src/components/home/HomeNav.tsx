@@ -29,9 +29,9 @@ export function HomeNav({
       aria-label="Main navigation"
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
         gap: "14px",
-        width: "min(100%, 900px)",
+        width: "min(100%, 1240px)",
         justifySelf: "center",
       }}
     >
