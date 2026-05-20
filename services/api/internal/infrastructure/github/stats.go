@@ -1,7 +1,9 @@
 package github
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -30,7 +32,7 @@ func (c *RepositoryClient) FetchStats(ctx context.Context, accessToken, username
 		repos       []repoItem
 		totalPRs    int
 		totalIssues int
-		daily       []repositoryanalysis.DailyContribution
+		yearly      *yearlyStats
 	)
 
 	errs := make(chan error, 5)
@@ -57,8 +59,7 @@ func (c *RepositoryClient) FetchStats(ctx context.Context, accessToken, username
 	}()
 	go func() {
 		var err error
-		since := time.Now().AddDate(0, 0, -364)
-		daily, err = c.listUserContributions(ctx, accessToken, username, since)
+		yearly, err = c.fetchYearlyContributions(ctx, accessToken, username)
 		errs <- err
 	}()
 
@@ -78,8 +79,10 @@ func (c *RepositoryClient) FetchStats(ctx context.Context, accessToken, username
 	}
 
 	yearlyCommits := 0
-	for _, d := range daily {
-		yearlyCommits += d.Count
+	yearlyContributions := 0
+	if yearly != nil {
+		yearlyCommits = yearly.totalCommits
+		yearlyContributions = yearly.contributionDays
 	}
 
 	return &mypageapp.GitHubStats{
@@ -90,7 +93,7 @@ func (c *RepositoryClient) FetchStats(ctx context.Context, accessToken, username
 		PublicRepos:         user.PublicRepos,
 		GitHubCreatedAt:     user.CreatedAt,
 		YearlyCommits:       yearlyCommits,
-		YearlyContributions: len(daily),
+		YearlyContributions: yearlyContributions,
 	}, nil
 }
 
@@ -162,64 +165,99 @@ func (c *RepositoryClient) searchIssueCount(ctx context.Context, accessToken, qu
 	return payload.TotalCount, nil
 }
 
-func (c *RepositoryClient) listUserContributions(ctx context.Context, accessToken, username string, since time.Time) ([]repositoryanalysis.DailyContribution, error) {
-	page := 1
-	perPage := 100
-	dateCounts := map[string]int{}
+type yearlyStats struct {
+	totalCommits     int
+	contributionDays int
+	daily            []repositoryanalysis.DailyContribution
+}
 
-	for {
-		requestURL := fmt.Sprintf("%s/search/commits?q=author:%s+committer-date:>=%s&per_page=%d&page=%d",
-			c.baseURL, username, since.Format("2006-01-02"), perPage, page)
+func (c *RepositoryClient) fetchYearlyContributions(ctx context.Context, accessToken, username string) (*yearlyStats, error) {
+	year := time.Now().Year() - 1
+	query := fmt.Sprintf(`{
+		user(login: "%s") {
+			contributionsCollection(from: "%d-01-01T00:00:00Z", to: "%d-12-31T23:59:59Z") {
+				totalCommitContributions
+				contributionCalendar {
+					totalContributions
+					weeks {
+						contributionDays {
+							date
+							contributionCount
+						}
+					}
+				}
+			}
+		}
+	}`, username, year, year)
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Accept", "application/vnd.github+json")
-		req.Header.Set("Authorization", "Bearer "+accessToken)
-		req.Header.Set("User-Agent", userAgent)
-		req.Header.Set("X-GitHub-Api-Version", gitHubAPIVersion)
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			return nil, err
-		}
-
-		var payload struct {
-			TotalCount int `json:"total_count"`
-			Items      []struct {
-				Commit struct {
-					Author struct {
-						Date time.Time `json:"date"`
-					} `json:"author"`
-				} `json:"commit"`
-			} `json:"items"`
-		}
-		if err := decodeResponse(resp, &payload); err != nil {
-			return nil, err
-		}
-
-		for _, item := range payload.Items {
-			date := item.Commit.Author.Date.Format("2006-01-02")
-			dateCounts[date]++
-		}
-
-		if len(payload.Items) < perPage || page >= 10 {
-			break
-		}
-		page++
+	body := map[string]string{
+		"query": query,
+	}
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
 	}
 
-	var contributions []repositoryanalysis.DailyContribution
-	start := since
-	end := time.Now()
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.github.com/graphql", bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", userAgent)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var result struct {
+		Data struct {
+			User struct {
+				ContributionsCollection struct {
+					TotalCommitContributions int `json:"totalCommitContributions"`
+					ContributionCalendar     struct {
+						TotalContributions int `json:"totalContributions"`
+						Weeks              []struct {
+							ContributionDays []struct {
+								Date  string `json:"date"`
+								Count int    `json:"contributionCount"`
+							} `json:"contributionDays"`
+						} `json:"weeks"`
+					} `json:"contributionCalendar"`
+				} `json:"contributionsCollection"`
+			} `json:"user"`
+		} `json:"data"`
+	}
+
+	if err := decodeResponse(resp, &result); err != nil {
+		return nil, err
+	}
+
+	coll := result.Data.User.ContributionsCollection
+
+	dailyMap := map[string]int{}
+
+	for _, week := range coll.ContributionCalendar.Weeks {
+		for _, day := range week.ContributionDays {
+			dailyMap[day.Date] = day.Count
+		}
+	}
+
+	start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(year, 12, 31, 23, 59, 59, 0, time.UTC)
+	var daily []repositoryanalysis.DailyContribution
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		dateKey := d.Format("2006-01-02")
-		contributions = append(contributions, repositoryanalysis.DailyContribution{
+		daily = append(daily, repositoryanalysis.DailyContribution{
 			Date:  d,
-			Count: dateCounts[dateKey],
+			Count: dailyMap[dateKey],
 		})
 	}
 
-	return contributions, nil
+	return &yearlyStats{
+		totalCommits:     coll.TotalCommitContributions,
+		contributionDays: coll.ContributionCalendar.TotalContributions,
+		daily:            daily,
+	}, nil
 }
