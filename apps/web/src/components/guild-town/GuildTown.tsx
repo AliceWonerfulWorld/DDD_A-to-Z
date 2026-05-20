@@ -60,6 +60,7 @@ export function GuildTown({
   const [inventoryVisible, setInventoryVisible] = useState(true);
   const [selectedPlacedItemId, setSelectedPlacedItemId] = useState<string | null>(null);
   const [storingPlacedItemIds, setStoringPlacedItemIds] = useState<string[]>([]);
+  const [buildFeedbackMessage, setBuildFeedbackMessage] = useState<string | null>(null);
   const [userCp, setUserCp] = useState(1200);
   const [currentGuildLanguage, setCurrentGuildLanguage] = useState<GuildSpLanguage>(() =>
     getCurrentGuildLanguage(),
@@ -249,7 +250,29 @@ export function GuildTown({
       userCp >= firstLevel.upgradeCostCp &&
       userGuildSp >= firstLevel.upgradeCostSp;
 
-    if (!canBuy) return;
+    if (!canBuy) {
+      const failureMessage = getBuyFailureMessage({
+        building,
+        currentGuildLanguage,
+        currentGuildLevel,
+        firstLevel,
+        userCp,
+        userGuildSp,
+      });
+
+      console.debug("failed to buy guild town building", {
+        buildingId: building.id,
+        currentGuildLanguage,
+        currentGuildLevel,
+        requiredGuildLevel: building.requiredGuildLevel,
+        requiredCp: firstLevel.upgradeCostCp,
+        requiredGuildSp: firstLevel.upgradeCostSp,
+        userCp,
+        userGuildSp,
+      });
+      setBuildFeedbackMessage(failureMessage);
+      return;
+    }
 
     setUserCp((currentValue) => currentValue - firstLevel.upgradeCostCp);
     setUserGuildSp((currentValue) => currentValue - firstLevel.upgradeCostSp);
@@ -353,6 +376,34 @@ export function GuildTown({
         userGuildSp={userGuildSp}
         visible={inventoryVisible}
       />
+      {buildFeedbackMessage && (
+        <p
+          role="alert"
+          style={{
+            position: "fixed",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
+            left: "50%",
+            zIndex: 12,
+            margin: 0,
+            maxWidth: "min(720px, calc(100vw - 32px))",
+            transform: "translateX(-50%)",
+            border: "2px solid rgba(255, 77, 109, 0.86)",
+            borderBottomColor: "rgba(118, 31, 49, 0.95)",
+            borderRightColor: "rgba(118, 31, 49, 0.95)",
+            background: "rgba(18, 8, 14, 0.94)",
+            boxShadow: "0 0 0 2px rgba(0,0,0,0.68), 4px 4px 0 rgba(0,0,0,0.34)",
+            color: "#ff9aae",
+            fontFamily: '"DotGothic16", monospace',
+            fontSize: "0.92rem",
+            lineHeight: 1.45,
+            padding: "10px 14px",
+            textAlign: "center",
+            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+          }}
+        >
+          {buildFeedbackMessage}
+        </p>
+      )}
       <BuildingInfoPanel item={selectedPlacedItem} onClose={() => setSelectedPlacedItemId(null)} />
       <ZoomControls onZoom={handleZoom} />
 
@@ -373,6 +424,36 @@ export function GuildTown({
 
 function getBuildingMapWidth(viewportWidth: number) {
   return clampValue(viewportWidth * 0.14, 112, 220);
+}
+
+function getBuyFailureMessage({
+  building,
+  currentGuildLanguage,
+  currentGuildLevel,
+  firstLevel,
+  userCp,
+  userGuildSp,
+}: {
+  building: BuildingMaster;
+  currentGuildLanguage: GuildSpLanguage;
+  currentGuildLevel: number;
+  firstLevel: BuildingMaster["levels"][number];
+  userCp: number;
+  userGuildSp: number;
+}) {
+  if (currentGuildLevel < building.requiredGuildLevel) {
+    return `ギルドLV.${building.requiredGuildLevel}で解放されます。`;
+  }
+
+  if (userCp < firstLevel.upgradeCostCp) {
+    return `${building.name}の購入には ${firstLevel.upgradeCostCp.toLocaleString()} CP が必要です。`;
+  }
+
+  if (userGuildSp < firstLevel.upgradeCostSp) {
+    return `${building.name}の購入には ${firstLevel.upgradeCostSp.toLocaleString()} ${currentGuildLanguage}-SP が必要です。`;
+  }
+
+  return `${building.name}を購入できませんでした。`;
 }
 
 function getCurrentGuildLanguage(): GuildSpLanguage {
