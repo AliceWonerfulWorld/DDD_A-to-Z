@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PATHS } from "../../constants/paths";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { useAudioSettings } from "../../features/audio/useAudioSettings";
-import { fetchMyGuild, leaveGuild } from "../../features/guild/api";
+import { fetchMyGuild, leaveGuild, type GuildMemberContribution } from "../../features/guild/api";
 import { toDisplayGuild, type DisplayGuild } from "../../features/guild/presentation";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { steppedEase } from "../../lib/animationUtils";
@@ -17,45 +17,36 @@ interface MyGuildDetailsProps {
 interface GuildMember {
   id: string;
   name: string;
-  title: string;
   avatar: string;
-  contributionCp: number;
+  totalEarnedCp: number;
   isCurrentUser?: boolean;
 }
 
-const MEMBERS: GuildMember[] = [
-  {
-    id: "current-user",
-    name: "TypeSmith",
-    title: "Generic Hero",
-    avatar: "YOU",
-    contributionCp: 35420,
-    isCurrentUser: true,
-  },
-  {
-    id: "null-mage",
-    name: "NullMage",
-    title: "Void Debugger",
-    avatar: "NM",
-    contributionCp: 31980,
-  },
-  {
-    id: "pixel-ninja",
-    name: "PixelNinja",
-    title: "UI Shinobi",
-    avatar: "PN",
-    contributionCp: 28640,
-  },
-  {
-    id: "loop-knight",
-    name: "LoopKnight",
-    title: "Iteration Paladin",
-    avatar: "LK",
-    contributionCp: 25110,
-  },
-];
-
 const panelTransition = { duration: 0.34, ease: steppedEase(6) };
+
+function memberInitials(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return "--";
+  }
+
+  return trimmed
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function toGuildMember(member: GuildMemberContribution, currentUserID?: string): GuildMember {
+  return {
+    id: member.user_id,
+    name: member.name,
+    avatar: member.user_id === currentUserID ? "YOU" : memberInitials(member.name),
+    totalEarnedCp: member.total_earned_cp,
+    isCurrentUser: member.user_id === currentUserID,
+  };
+}
 
 export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
   const { isSeEnabled } = useAudioSettings();
@@ -64,6 +55,7 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
   const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
   const modalConfirmSeRef = useRef<HTMLAudioElement | null>(null);
   const [guild, setGuild] = useState<DisplayGuild | null>(null);
+  const [members, setMembers] = useState<GuildMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLeaving, setIsLeaving] = useState(false);
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
@@ -121,7 +113,11 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
           return;
         }
 
-        setGuild(toDisplayGuild(data.guild));
+        const displayGuild = toDisplayGuild(data.guild);
+        setGuild(displayGuild);
+        setMembers(
+          (data.members ?? []).map((member) => toGuildMember(member, data.membership?.user_id)),
+        );
       })
       .catch((error) => {
         if (!isMounted) {
@@ -277,11 +273,13 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
               <h2 className={styles.panelTitle} id="member-list-title">
                 MEMBER CONTRIBUTION
               </h2>
-              <span className={styles.online}>{MEMBERS.length} OPERATORS ONLINE</span>
+              <span className={styles.online}>
+                {(guild?.memberCount ?? members.length).toLocaleString()} OPERATORS ONLINE
+              </span>
             </header>
 
             <div className={styles.memberList}>
-              {MEMBERS.map((member, index) => (
+              {members.map((member, index) => (
                 <motion.article
                   className={`${styles.memberRow} ${
                     member.isCurrentUser ? styles.memberRowSelf : ""
@@ -297,13 +295,15 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
                   </div>
                   <div>
                     <strong className={styles.memberName}>{member.name}</strong>
-                    <span className={styles.memberTitle}>{member.title}</span>
                   </div>
                   <strong className={styles.memberCp}>
-                    {member.contributionCp.toLocaleString()} CP
+                    {member.totalEarnedCp.toLocaleString()} CP
                   </strong>
                 </motion.article>
               ))}
+              {!isLoading && members.length === 0 && (
+                <p className={styles.emptyMembers}>NO OPERATORS ONLINE</p>
+              )}
             </div>
           </motion.section>
         </div>

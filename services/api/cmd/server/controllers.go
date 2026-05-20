@@ -113,10 +113,11 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 		profileStore,
 	)
 
-	analysisUseCase := analysisapp.NewUseCase(
+	analysisUseCase := analysisapp.NewUseCaseWithContributionStore(
 		authStore,
 		authStore,
 		repositoryClient,
+		repositoryStore,
 		repositoryStore,
 		repositoryClient,
 		repositoryClient,

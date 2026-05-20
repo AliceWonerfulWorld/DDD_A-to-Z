@@ -291,6 +291,15 @@
   white-space: nowrap;
 }
 
+.emptyMembers {
+  margin: 18px 0 0;
+  color: rgba(244, 236, 208, 0.62);
+  font-family: "DotGothic16", monospace;
+  font-size: clamp(0.72rem, 1.2vw, 0.88rem);
+  line-height: 1.6;
+  text-align: center;
+}
+
 .scanline {
   position: fixed;
   inset: 0;

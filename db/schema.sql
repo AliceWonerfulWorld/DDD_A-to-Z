@@ -270,6 +270,23 @@ CREATE TABLE github_repositories (
 CREATE INDEX github_repositories_user_id_pushed_at_idx ON github_repositories(user_id, pushed_at DESC);
 CREATE INDEX github_repositories_user_id_full_name_idx ON github_repositories(user_id, full_name);
 
+CREATE TABLE repository_analysis_contributions (
+  user_id TEXT NOT NULL REFERENCES users(id),
+  repository_full_name TEXT NOT NULL CHECK (length(repository_full_name) > 0),
+  contribution_type TEXT NOT NULL CHECK (contribution_type IN ('commit', 'pull_request')),
+  external_id TEXT NOT NULL CHECK (length(external_id) > 0),
+  message TEXT NOT NULL CHECK (length(message) > 0),
+  language TEXT NOT NULL DEFAULT '',
+  cp BIGINT NOT NULL CHECK (cp > 0),
+  occurred_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (user_id, contribution_type, repository_full_name, external_id)
+);
+
+CREATE INDEX repository_analysis_contributions_occurred_at_idx ON repository_analysis_contributions(occurred_at DESC);
+CREATE INDEX repository_analysis_contributions_user_id_occurred_at_idx ON repository_analysis_contributions(user_id, occurred_at DESC);
+
 CREATE TABLE user_profiles (
   user_id TEXT PRIMARY KEY REFERENCES users(id),
   display_name TEXT NOT NULL CHECK (length(display_name) > 0 AND length(display_name) <= 50),

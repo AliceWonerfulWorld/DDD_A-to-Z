@@ -42,6 +42,30 @@ type MembershipWithGuild struct {
 	Guild      Guild
 }
 
+type MemberContribution struct {
+	UserID        user.ID
+	Name          string
+	TotalEarnedCP int64
+	JoinedAt      time.Time
+}
+
+type ActivityLog struct {
+	ID         string
+	UserID     user.ID
+	Player     string
+	Type       string
+	Repo       string
+	Message    string
+	Language   string
+	CP         int64
+	OccurredAt time.Time
+}
+
+const (
+	ActivityTypeCommit      = "commit"
+	ActivityTypePullRequest = "pull_request"
+)
+
 type CPContributionID string
 
 type CPContribution struct {
@@ -112,6 +136,53 @@ func NewCPContribution(contribution CPContribution) (CPContribution, error) {
 	}
 
 	return contribution, nil
+}
+
+func NewMemberContribution(member MemberContribution) (MemberContribution, error) {
+	if member.UserID == "" {
+		return MemberContribution{}, errors.New("guild member user id is required")
+	}
+	if strings.TrimSpace(member.Name) == "" {
+		return MemberContribution{}, errors.New("guild member name is required")
+	}
+	if member.TotalEarnedCP < 0 {
+		return MemberContribution{}, errors.New("guild member total earned cp cannot be negative")
+	}
+	if member.JoinedAt.IsZero() {
+		return MemberContribution{}, errors.New("guild member joined at is required")
+	}
+
+	return member, nil
+}
+
+func NewActivityLog(log ActivityLog) (ActivityLog, error) {
+	if strings.TrimSpace(log.ID) == "" {
+		return ActivityLog{}, errors.New("guild activity log id is required")
+	}
+	if log.UserID == "" {
+		return ActivityLog{}, errors.New("guild activity log user id is required")
+	}
+	if strings.TrimSpace(log.Player) == "" {
+		return ActivityLog{}, errors.New("guild activity log player is required")
+	}
+	logType := strings.TrimSpace(log.Type)
+	if logType != ActivityTypeCommit && logType != ActivityTypePullRequest {
+		return ActivityLog{}, errors.New("invalid guild activity log type: must be 'commit' or 'pull_request'")
+	}
+	if strings.TrimSpace(log.Repo) == "" {
+		return ActivityLog{}, errors.New("guild activity log repo is required")
+	}
+	if strings.TrimSpace(log.Message) == "" {
+		return ActivityLog{}, errors.New("guild activity log message is required")
+	}
+	if log.CP <= 0 {
+		return ActivityLog{}, errors.New("guild activity log cp must be positive")
+	}
+	if log.OccurredAt.IsZero() {
+		return ActivityLog{}, errors.New("guild activity log occurred at is required")
+	}
+
+	return log, nil
 }
 
 func NewMembership(membership Membership) (Membership, error) {

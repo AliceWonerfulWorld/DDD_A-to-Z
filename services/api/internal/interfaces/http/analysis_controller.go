@@ -49,12 +49,13 @@ func (c *AnalysisController) analyzeContribution(w stdhttp.ResponseWriter, r *st
 	contributions := make([]map[string]any, 0, len(result.Contributions))
 	for _, c := range result.Contributions {
 		contributions = append(contributions, map[string]any{
-			"repo":      c.Repo,
-			"type":      c.Type,
-			"message":   c.Message,
-			"language":  c.Language,
-			"cp":        c.CP,
-			"timestamp": c.Timestamp.Format(time.RFC3339),
+			"repo":        c.Repo,
+			"type":        c.Type,
+			"external_id": c.ExternalID,
+			"message":     c.Message,
+			"language":    c.Language,
+			"cp":          c.CP,
+			"timestamp":   c.Timestamp.Format(time.RFC3339),
 		})
 	}
 

@@ -24,6 +24,10 @@ type RepositoryStore interface {
 	UpsertRepositories(ctx context.Context, repositories []repositoryanalysis.Repository) error
 }
 
+type ContributionStore interface {
+	UpsertAnalysisContributions(ctx context.Context, userID user.ID, contributions []repositoryanalysis.Contribution, recordedAt time.Time) error
+}
+
 type GitHubCommitClient interface {
 	ListCommits(ctx context.Context, accessToken, owner, repo, author string, since time.Time) ([]repositoryanalysis.CommitItem, error)
 }

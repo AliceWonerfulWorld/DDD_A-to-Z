@@ -16,12 +16,23 @@ var (
 	ErrGuildNotFound               = errors.New("guild not found")
 	ErrAlreadyJoined               = errors.New("user already joined a guild")
 	ErrActiveMembershipNotFound    = errors.New("active guild membership not found")
+	ErrGuildAccessDenied           = errors.New("guild access denied")
 	ErrInvalidCPContribution       = errors.New("guild cp contribution amount must be positive")
 	ErrInvalidCPContributionLedger = errors.New("guild cp contribution ledger is invalid")
 	ErrCPServiceUnavailable        = errors.New("contribution point service is unavailable")
 )
 
-const defaultContributionHistoryLimit = 50
+const (
+	defaultContributionHistoryLimit = 50
+	defaultActivityLogLimit         = 20
+	maxActivityLogLimit             = 50
+)
+
+type MyGuildDetails struct {
+	Membership guilddomain.Membership
+	Guild      guilddomain.Guild
+	Members    []guilddomain.MemberContribution
+}
 
 type UseCase struct {
 	repository      Repository
@@ -165,6 +176,81 @@ func (u *UseCase) GetMyGuild(ctx context.Context, sessionToken string) (guilddom
 	}
 
 	return u.repository.FindActiveMembershipByUserID(ctx, appUser.ID)
+}
+
+func (u *UseCase) GetMyGuildDetails(ctx context.Context, sessionToken string) (MyGuildDetails, bool, error) {
+	membership, ok, err := u.GetMyGuild(ctx, sessionToken)
+	if err != nil || !ok {
+		return MyGuildDetails{}, ok, err
+	}
+
+	members, err := u.repository.ListActiveMembersByGuild(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return MyGuildDetails{}, false, err
+	}
+
+	return MyGuildDetails{
+		Membership: membership.Membership,
+		Guild:      membership.Guild,
+		Members:    members,
+	}, true, nil
+}
+
+func (u *UseCase) GetGuildDashboard(ctx context.Context, sessionToken string, guildID guilddomain.ID) (MyGuildDetails, error) {
+	if strings.TrimSpace(string(guildID)) == "" {
+		return MyGuildDetails{}, ErrGuildNotFound
+	}
+
+	membership, ok, err := u.GetMyGuild(ctx, sessionToken)
+	if err != nil {
+		return MyGuildDetails{}, err
+	}
+	if !ok {
+		return MyGuildDetails{}, ErrActiveMembershipNotFound
+	}
+	if membership.Membership.GuildID != guildID {
+		return MyGuildDetails{}, ErrGuildAccessDenied
+	}
+
+	members, err := u.repository.ListActiveMembersByGuild(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return MyGuildDetails{}, err
+	}
+
+	return MyGuildDetails{
+		Membership: membership.Membership,
+		Guild:      membership.Guild,
+		Members:    members,
+	}, nil
+}
+
+func (u *UseCase) ListGuildActivityLogs(ctx context.Context, sessionToken string, guildID guilddomain.ID, limit int) ([]guilddomain.ActivityLog, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(string(guildID)) == "" {
+		return nil, ErrGuildNotFound
+	}
+
+	membership, ok, err := u.GetMyGuild(ctx, sessionToken)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrActiveMembershipNotFound
+	}
+	if membership.Membership.GuildID != guildID {
+		return nil, ErrGuildAccessDenied
+	}
+
+	if limit <= 0 {
+		limit = defaultActivityLogLimit
+	}
+	if limit > maxActivityLogLimit {
+		limit = maxActivityLogLimit
+	}
+
+	return u.repository.ListActivityLogsByGuild(ctx, guildID, limit)
 }
 
 func (u *UseCase) LeaveMyGuild(ctx context.Context, sessionToken string) error {

@@ -48,6 +48,7 @@ function totalEarnedForPlayerLevel(level: number) {
 }
 
 const navItems = [
+  { label: "REPO ANALYSIS", caption: "GITHUB SCAN", path: PATHS.ANALYSIS, accent: "#7cff6b" },
   { label: "WAR MAP", caption: "BATTLE FRONT", path: PATHS.WAR, accent: "#ff5f56" },
   { label: "GUILD BASE", caption: "COMMUNITY HQ", path: PATHS.GUILD, accent: "#00f5ff" },
   { label: "MY STATUS", caption: "PLAYER DATA", path: PATHS.MY_PAGE, accent: "#ffd700" },
@@ -234,9 +235,9 @@ export function Home({ onNavigate }: HomeProps) {
           zIndex: 3,
           minHeight: "100svh",
           display: "grid",
-          gridTemplateRows: "auto 1fr auto",
-          padding: "clamp(16px, 3vw, 32px)",
-          gap: "20px",
+          gridTemplateRows: "auto minmax(96px, 1fr) auto",
+          padding: "clamp(12px, 2.6vmin, 32px)",
+          gap: "clamp(12px, 2svh, 20px)",
         }}
       >
         <HomeHud
@@ -260,7 +261,7 @@ export function Home({ onNavigate }: HomeProps) {
           aria-label="Character placement area"
           style={{
             position: "relative",
-            minHeight: "clamp(220px, 42vh, 520px)",
+            minHeight: "clamp(96px, 20svh, 360px)",
             overflow: "visible",
           }}
         >

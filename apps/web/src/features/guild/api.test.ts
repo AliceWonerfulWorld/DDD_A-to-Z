@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchMyGuild, joinGuild, leaveGuild } from "./api";
+import { fetchGuildActivityLogs, fetchGuilds, fetchMyGuild, joinGuild, leaveGuild } from "./api";
 
 function mockFetch(status: number, body: unknown = null) {
   vi.stubGlobal(
@@ -17,6 +17,32 @@ beforeEach(() => {
 });
 
 describe("guild api", () => {
+  it("fetchGuilds はギルド一覧と集計値を取得する", async () => {
+    mockFetch(200, {
+      guilds: [
+        {
+          id: "guild_go",
+          slug: "go",
+          name: "Go",
+          description: "Go guild",
+          icon: "GO",
+          color: "#00acd7",
+          member_count: 3,
+          total_contributed_cp: 120,
+        },
+      ],
+    });
+
+    const guilds = await fetchGuilds();
+
+    expect(guilds[0]?.member_count).toBe(3);
+    expect(guilds[0]?.total_contributed_cp).toBe(120);
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/guilds",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
   it("fetchMyGuild は現在の所属ギルドを取得する", async () => {
     mockFetch(200, {
       guild: {
@@ -27,16 +53,27 @@ describe("guild api", () => {
         icon: "GO",
         color: "#00acd7",
         member_count: 3,
+        total_contributed_cp: 120,
       },
       membership: {
         id: "guild_membership_1",
+        user_id: "user_1",
         joined_at: "2026-05-18T00:00:00Z",
       },
+      members: [
+        {
+          user_id: "user_1",
+          name: "Alice",
+          total_earned_cp: 80,
+          joined_at: "2026-05-18T00:00:00Z",
+        },
+      ],
     });
 
     const result = await fetchMyGuild();
 
     expect(result?.guild?.id).toBe("guild_go");
+    expect(result?.members?.[0]?.total_earned_cp).toBe(80);
     expect(fetch).toHaveBeenCalledWith(
       "/api/me/guild",
       expect.objectContaining({ credentials: "include" }),
@@ -62,6 +99,32 @@ describe("guild api", () => {
     expect(fetch).toHaveBeenCalledWith(
       "/api/me/guild",
       expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("fetchGuildActivityLogs は指定ギルドのアクティビティログを取得する", async () => {
+    mockFetch(200, {
+      logs: [
+        {
+          id: "user_1:commit:repo:sha",
+          user_id: "user_1",
+          player: "Alice",
+          type: "commit",
+          repo: "jyogi-web/DDD_A-to-Z",
+          message: "Add activity logs",
+          language: "Go",
+          cp: 1,
+          occurred_at: "2026-05-20T00:00:00Z",
+        },
+      ],
+    });
+
+    const logs = await fetchGuildActivityLogs("guild/go", 20);
+
+    expect(logs[0]?.message).toBe("Add activity logs");
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/guilds/guild%2Fgo/activity-logs?limit=20",
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 });
