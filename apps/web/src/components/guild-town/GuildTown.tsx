@@ -15,7 +15,7 @@ import { TownMap } from "./TownMap";
 import { TownStatusHeader } from "./TownStatusHeader";
 import { MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS, INITIAL_INVENTORY } from "./townData";
 import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./townMath";
-import type { InventoryItem, PlacedItem, ViewportSize } from "./types";
+import type { BuildingTargetSpLanguage, InventoryItem, PlacedItem, ViewportSize } from "./types";
 import { ZoomControls } from "./ZoomControls";
 
 interface GuildTownProps {
@@ -39,7 +39,6 @@ export function GuildTown({
 }: GuildTownProps) {
   const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height: 0 });
   const [scale, setScale] = useState(1);
-  const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [inventoryVisible, setInventoryVisible] = useState(true);
   const [selectedPlacedItemId, setSelectedPlacedItemId] = useState<string | null>(null);
@@ -50,6 +49,16 @@ export function GuildTown({
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
   const progress = Math.min(100, Math.max(0, (currentCp / nextLevelCp) * 100));
+  const currentGuildLevel = 3;
+  const userCp = 1200;
+  const userSpMap: Record<BuildingTargetSpLanguage, number> = {
+    Common: 0,
+    Go: 500,
+    Java: 0,
+    Python: 0,
+    Rust: 0,
+    TypeScript: 100,
+  };
   const selectedPlacedItem =
     placedItems.find((placedItem) => placedItem.id === selectedPlacedItemId) ?? null;
   const dragConstraints = {
@@ -154,30 +163,6 @@ export function GuildTown({
     };
   };
 
-  const handleInventoryDragEnd = (
-    item: InventoryItem,
-    _event: MouseEvent | TouchEvent | PointerEvent,
-    info: PanInfo,
-  ) => {
-    if (item.count <= 0) return;
-
-    const itemWidth = getInventoryMapWidth(item, viewport.width);
-    const dropPoint = getMapDropPoint(info.point, itemWidth);
-    if (!dropPoint) return;
-
-    setPlacedItems((currentItems) => [
-      ...currentItems,
-      createPlacedItem(item, {
-        id: `${item.type}-${Date.now()}-${currentItems.length}`,
-        src: item.src,
-        width: itemWidth,
-        x: dropPoint.x,
-        y: dropPoint.y,
-      }),
-    ]);
-    setInventoryCount(item.type, -1);
-  };
-
   const handlePlacedItemDragEnd = (
     item: PlacedItem,
     _event: MouseEvent | TouchEvent | PointerEvent,
@@ -204,21 +189,10 @@ export function GuildTown({
       setPlacedItems((currentItems) =>
         currentItems.filter((placedItem) => placedItem.id !== item.id),
       );
-      setInventoryCount(item.type, 1);
       setStoringPlacedItemIds((currentIds) =>
         currentIds.filter((storingItemId) => storingItemId !== item.id),
       );
     }, STORE_ANIMATION_MS);
-  };
-
-  const setInventoryCount = (type: InventoryItem["type"], delta: number) => {
-    setInventory((currentInventory) =>
-      currentInventory.map((inventoryItem) =>
-        inventoryItem.type === type
-          ? { ...inventoryItem, count: Math.max(0, inventoryItem.count + delta) }
-          : inventoryItem,
-      ),
-    );
   };
 
   return (
@@ -257,11 +231,12 @@ export function GuildTown({
       />
       <BackButton onNavigate={onNavigate} />
       <BuildInventory
-        inventory={inventory}
+        currentGuildLevel={currentGuildLevel}
         inventoryRef={inventoryRef}
-        onDragEnd={handleInventoryDragEnd}
         onToggleVisible={() => setInventoryVisible((currentVisible) => !currentVisible)}
         stopNestedDrag={stopNestedDrag}
+        userCp={userCp}
+        userSpMap={userSpMap}
         visible={inventoryVisible}
       />
       <BuildingInfoPanel item={selectedPlacedItem} onClose={() => setSelectedPlacedItemId(null)} />
