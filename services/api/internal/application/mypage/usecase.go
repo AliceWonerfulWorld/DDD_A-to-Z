@@ -17,6 +17,7 @@ type UseCase struct {
 	repositories RepositorySummaryReader
 	stats        GitHubStatsReader
 	tokens       GitHubTokenRepository
+	guild        GuildMembershipReader
 	now          func() time.Time
 }
 
@@ -26,6 +27,7 @@ func NewUseCase(
 	repositories RepositorySummaryReader,
 	stats GitHubStatsReader,
 	tokens GitHubTokenRepository,
+	guild GuildMembershipReader,
 ) *UseCase {
 	return &UseCase{
 		current:      current,
@@ -33,6 +35,7 @@ func NewUseCase(
 		repositories: repositories,
 		stats:        stats,
 		tokens:       tokens,
+		guild:        guild,
 		now:          time.Now,
 	}
 }
@@ -82,6 +85,16 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 		}
 	}
 
+	var guildInfo *GuildInfo
+	var totalGuilds int
+	if u.guild != nil {
+		guildInfo, _ = u.guild.GetGuildMembership(ctx, appUser.ID)
+		totalGuilds, _ = u.guild.GetTotalGuilds(ctx)
+	}
+	if guildInfo != nil {
+		guildInfo.TotalGuilds = totalGuilds
+	}
+
 	return MyPageData{
 		User: appUser,
 		CP: CPSummary{
@@ -91,6 +104,6 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 		},
 		Repositories: repoSummary,
 		GitHubStats:  ghStats,
-		Guild:        nil,
+		Guild:        guildInfo,
 	}, nil
 }
