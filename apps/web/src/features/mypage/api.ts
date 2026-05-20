@@ -33,11 +33,23 @@ export interface MyPageGuild {
   name: string;
 }
 
+export interface GitHubStats {
+  total_stars: number;
+  total_prs: number;
+  total_issues: number;
+  contributed_to: number;
+  public_repos: number;
+  github_created_at: string;
+  yearly_commits: number;
+  yearly_contributions: number;
+}
+
 export interface MyPageResponse {
   user: MyPageUser;
   contribution_points: MyPageContributionPoints;
   repositories: MyPageRepositories;
   guild: MyPageGuild | null;
+  github_stats: GitHubStats | null;
 }
 
 export async function fetchMyPage(): Promise<MyPageResponse> {
