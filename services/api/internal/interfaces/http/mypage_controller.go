@@ -109,6 +109,8 @@ func (c *MypageController) toResponse(data mypageapp.MyPageData) map[string]any 
 			"yearly_commits":       data.GitHubStats.YearlyCommits,
 			"yearly_contributions": data.GitHubStats.YearlyContributions,
 		}
+	} else {
+		resp["github_stats"] = nil
 	}
 
 	if data.Guild != nil {
@@ -124,6 +126,8 @@ func (c *MypageController) toResponse(data mypageapp.MyPageData) map[string]any 
 			"total_guilds": data.Guild.TotalGuilds,
 			"cp":           data.Guild.CP,
 		}
+	} else {
+		resp["guild"] = nil
 	}
 
 	return resp
