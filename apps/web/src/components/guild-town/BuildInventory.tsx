@@ -57,7 +57,7 @@ export function BuildInventory({
         top: "calc(env(safe-area-inset-top, 0px) + 94px)",
         zIndex: 8,
         display: "flex",
-        width: "clamp(280px, 24vw, 360px)",
+        width: "clamp(340px, 28vw, 420px)",
         maxHeight:
           "calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 118px)",
         alignItems: "stretch",
@@ -154,8 +154,9 @@ export function BuildInventory({
               minHeight: 0,
               flexDirection: "column",
               gap: "10px",
+              overflowX: "hidden",
               overflowY: "auto",
-              paddingRight: "3px",
+              paddingRight: "10px",
             }}
           >
             {BUILDING_MASTERS.map((item) => (
@@ -225,7 +226,7 @@ function BuildingInventoryCard({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "52px 1fr",
+          gridTemplateColumns: "64px minmax(0, 1fr)",
           alignItems: "center",
           gap: "9px",
           minWidth: 0,
@@ -281,7 +282,7 @@ function BuildingInventoryCard({
             style={{
               margin: 0,
               color: isLocked ? "rgba(255, 248, 215, 0.5)" : "#ffd966",
-              fontSize: "0.62rem",
+              fontSize: "0.56rem",
               lineHeight: 1.45,
               overflowWrap: "anywhere",
             }}
@@ -312,10 +313,10 @@ function BuildingInventoryCard({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
             gap: "6px",
             fontFamily: '"DotGothic16", monospace',
-            fontSize: "0.78rem",
+            fontSize: "0.68rem",
             lineHeight: 1.2,
           }}
         >
@@ -400,12 +401,14 @@ function CostPill({ isShort, label, tone }: CostPillProps) {
         background: "rgba(1, 8, 22, 0.76)",
         boxShadow: `inset 0 0 10px rgba(0,0,0,0.58), 0 0 10px ${isShort ? "#ef444455" : `${tone}44`}`,
         color: isShort ? "#ef4444" : tone,
+        display: "grid",
+        lineHeight: 1.25,
         minWidth: 0,
         overflow: "hidden",
         padding: "6px 5px",
+        placeItems: "center",
         textAlign: "center",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
+        overflowWrap: "anywhere",
       }}
       title={label}
     >
