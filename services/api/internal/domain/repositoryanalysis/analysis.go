@@ -17,6 +17,7 @@ type PullRequestItem struct {
 type LanguageContribution struct {
 	Name string
 	CP   int64
+	SP   int64
 }
 
 type Contribution struct {

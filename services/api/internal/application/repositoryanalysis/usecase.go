@@ -230,13 +230,7 @@ func (u *UseCase) AnalyzeForUser(ctx context.Context, appUser user.User, session
 		totalCP += cp
 	}
 
-	breakdown := make([]repositoryanalysis.LanguageContribution, 0, len(langCP))
-	for name, cp := range langCP {
-		breakdown = append(breakdown, repositoryanalysis.LanguageContribution{Name: name, CP: cp})
-	}
-	sort.Slice(breakdown, func(i, j int) bool {
-		return breakdown[i].CP > breakdown[j].CP
-	})
+	langSP := make(map[string]int64, len(langCP))
 
 	if !apiErr {
 		if totalCP > 0 {
@@ -251,11 +245,20 @@ func (u *UseCase) AnalyzeForUser(ctx context.Context, appUser user.User, session
 				}
 				return AnalysisResult{}, err
 			}
+			langSP[lang] = cp
 		}
 		if err := u.cpBalance.UpdateLastAnalyzedAt(ctx, appUser.ID, now); err != nil {
 			return AnalysisResult{}, err
 		}
 	}
+
+	breakdown := make([]repositoryanalysis.LanguageContribution, 0, len(langCP))
+	for name, cp := range langCP {
+		breakdown = append(breakdown, repositoryanalysis.LanguageContribution{Name: name, CP: cp, SP: langSP[name]})
+	}
+	sort.Slice(breakdown, func(i, j int) bool {
+		return breakdown[i].CP > breakdown[j].CP
+	})
 
 	balance, err := u.cpBalance.GetBalance(ctx, appUser.ID)
 	if err != nil {

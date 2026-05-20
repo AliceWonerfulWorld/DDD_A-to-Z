@@ -63,6 +63,7 @@ func (c *AnalysisController) analyzeContribution(w stdhttp.ResponseWriter, r *st
 		breakdown = append(breakdown, map[string]any{
 			"name": lb.Name,
 			"cp":   lb.CP,
+			"sp":   lb.SP,
 		})
 	}
 
