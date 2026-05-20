@@ -235,18 +235,36 @@ function BuildingInventoryCard({
           aria-hidden="true"
           style={{
             display: "grid",
-            width: "52px",
-            height: "52px",
+            width: "64px",
+            height: "64px",
             placeItems: "center",
             border: `2px solid ${languageStyle.color}`,
-            background:
-              "radial-gradient(circle at 50% 40%, rgba(255,255,255,0.16), rgba(0,0,0,0.18) 42%, rgba(0,0,0,0.62))",
+            background: item.previewSrc
+              ? "rgba(1, 8, 22, 0.78)"
+              : "radial-gradient(circle at 50% 40%, rgba(255,255,255,0.16), rgba(0,0,0,0.18) 42%, rgba(0,0,0,0.62))",
             boxShadow: `0 0 14px ${languageStyle.color}55, inset 0 0 12px rgba(0,0,0,0.7)`,
             color: languageStyle.color,
             fontSize: "0.58rem",
+            overflow: "hidden",
           }}
         >
-          {languageStyle.label}
+          {item.previewSrc ? (
+            <img
+              className="pixelated"
+              src={item.previewSrc}
+              alt=""
+              draggable={false}
+              style={{
+                display: "block",
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                pointerEvents: "none",
+              }}
+            />
+          ) : (
+            languageStyle.label
+          )}
         </div>
         <div style={{ minWidth: 0 }}>
           <p

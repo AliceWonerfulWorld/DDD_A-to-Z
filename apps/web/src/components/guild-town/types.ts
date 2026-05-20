@@ -26,6 +26,7 @@ export interface BuildingMaster {
   id: string;
   name: string;
   description: string;
+  previewSrc?: string;
   requiredGuildLevel: number;
   buffType: BuildingBuffType;
   targetSpLanguage: BuildingTargetSpLanguage;
