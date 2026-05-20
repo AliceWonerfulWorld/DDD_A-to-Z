@@ -13,7 +13,17 @@ export type BuildingBuffType =
   | "tower"
   | "core";
 
-export type BuildingTargetSpLanguage = "Go" | "TypeScript" | "Rust" | "Python" | "Java" | "Common";
+export type GuildSpLanguage =
+  | "Go"
+  | "TypeScript"
+  | "Rust"
+  | "Python"
+  | "Java"
+  | "Haskell"
+  | "Zig"
+  | "Common";
+
+export type BuildingTargetSpLanguage = GuildSpLanguage;
 
 export interface BuildingLevelStatus {
   level: number;

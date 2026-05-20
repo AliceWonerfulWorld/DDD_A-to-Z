@@ -7,13 +7,13 @@ import type {
 } from "react";
 import { steppedEase } from "../../lib/animationUtils";
 import { BUILDING_MASTERS } from "./townData";
-import type { BuildingMaster, BuildingTargetSpLanguage, UserInventoryState } from "./types";
+import type { BuildingMaster, GuildSpLanguage, UserInventoryState } from "./types";
 
 type BuildInventoryTab = "shop" | "inventory";
 
 interface BuildInventoryProps {
   currentGuildLevel: number;
-  currentGuildSpLanguage: BuildingTargetSpLanguage;
+  currentGuildLanguage: GuildSpLanguage;
   inventory: UserInventoryState[];
   inventoryRef: RefObject<HTMLDivElement | null>;
   onBuyBuilding: (building: BuildingMaster) => void;
@@ -21,22 +21,24 @@ interface BuildInventoryProps {
   onToggleVisible: () => void;
   stopNestedDrag: (event: ReactPointerEvent<HTMLElement>) => void;
   userCp: number;
-  userSp: number;
+  userGuildSp: number;
   visible: boolean;
 }
 
-const languageStyles: Record<BuildingTargetSpLanguage, { color: string; label: string }> = {
+const languageStyles: Record<GuildSpLanguage, { color: string; label: string }> = {
   Common: { color: "#ffd966", label: "COM" },
   Go: { color: "#00add8", label: "GO" },
+  Haskell: { color: "#8f6bd8", label: "HS" },
   Java: { color: "#f97316", label: "JAVA" },
   Python: { color: "#f7df1e", label: "PY" },
   Rust: { color: "#ff7a1a", label: "RS" },
   TypeScript: { color: "#5cc8ff", label: "TS" },
+  Zig: { color: "#f7a41d", label: "ZG" },
 };
 
 export function BuildInventory({
   currentGuildLevel,
-  currentGuildSpLanguage,
+  currentGuildLanguage,
   inventory,
   inventoryRef,
   onBuyBuilding,
@@ -44,7 +46,7 @@ export function BuildInventory({
   onToggleVisible,
   stopNestedDrag,
   userCp,
-  userSp,
+  userGuildSp,
   visible,
 }: BuildInventoryProps) {
   const [activeTab, setActiveTab] = useState<BuildInventoryTab>("shop");
@@ -57,6 +59,7 @@ export function BuildInventory({
     [inventory],
   );
   const ownedInventoryTotal = inventory.reduce((total, item) => total + item.count, 0);
+  const currentGuildLanguageStyle = languageStyles[currentGuildLanguage];
 
   const stopInventoryWheel = (event: ReactWheelEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -191,6 +194,15 @@ export function BuildInventory({
                   ? `${userCp.toLocaleString()} CP`
                   : `${ownedInventoryTotal.toLocaleString()} ITEMS`}
               </span>
+              <span
+                style={{
+                  color: currentGuildLanguageStyle.color,
+                  gridColumn: "1 / -1",
+                  textAlign: "right",
+                }}
+              >
+                GUILD SP: {userGuildSp.toLocaleString()} {currentGuildLanguage}-SP
+              </span>
             </div>
           </div>
 
@@ -211,18 +223,18 @@ export function BuildInventory({
                   <BuildingInventoryCard
                     key={item.id}
                     currentGuildLevel={currentGuildLevel}
-                    currentGuildSpLanguage={currentGuildSpLanguage}
+                    currentGuildLanguage={currentGuildLanguage}
                     item={item}
                     onBuy={onBuyBuilding}
                     userCp={userCp}
-                    userSp={userSp}
+                    userGuildSp={userGuildSp}
                   />
                 ))
               : BUILDING_MASTERS.map((item) => (
                   <BuildingDeployCard
                     key={item.id}
                     count={inventoryCountByBuildingId[item.id] ?? 0}
-                    currentGuildSpLanguage={currentGuildSpLanguage}
+                    currentGuildLanguage={currentGuildLanguage}
                     item={item}
                     onDeploy={onDeployBuilding}
                   />
@@ -278,26 +290,26 @@ function InventoryTabButton({ active, badge, label, onClick }: InventoryTabButto
 
 interface BuildingInventoryCardProps {
   currentGuildLevel: number;
-  currentGuildSpLanguage: BuildingTargetSpLanguage;
+  currentGuildLanguage: GuildSpLanguage;
   item: BuildingMaster;
   onBuy: (building: BuildingMaster) => void;
   userCp: number;
-  userSp: number;
+  userGuildSp: number;
 }
 
 function BuildingInventoryCard({
   currentGuildLevel,
-  currentGuildSpLanguage,
+  currentGuildLanguage,
   item,
   onBuy,
   userCp,
-  userSp,
+  userGuildSp,
 }: BuildingInventoryCardProps) {
   const firstLevel = item.levels[0];
-  const languageStyle = languageStyles[currentGuildSpLanguage];
+  const languageStyle = languageStyles[currentGuildLanguage];
   const isLocked = currentGuildLevel < item.requiredGuildLevel;
   const isCpShort = userCp < firstLevel.upgradeCostCp;
-  const isSpShort = userSp < firstLevel.upgradeCostSp;
+  const isSpShort = userGuildSp < firstLevel.upgradeCostSp;
   const canBuild = !isLocked && !isCpShort && !isSpShort;
 
   return (
@@ -432,7 +444,7 @@ function BuildingInventoryCard({
           />
           <CostPill
             isShort={isSpShort}
-            label={`${firstLevel.upgradeCostSp.toLocaleString()} ${currentGuildSpLanguage}-SP`}
+            label={`${firstLevel.upgradeCostSp.toLocaleString()} ${currentGuildLanguage}-SP`}
             tone={languageStyle.color}
           />
         </div>
@@ -494,18 +506,18 @@ function BuildingInventoryCard({
 
 interface BuildingDeployCardProps {
   count: number;
-  currentGuildSpLanguage: BuildingTargetSpLanguage;
+  currentGuildLanguage: GuildSpLanguage;
   item: BuildingMaster;
   onDeploy: (building: BuildingMaster) => void;
 }
 
 function BuildingDeployCard({
   count,
-  currentGuildSpLanguage,
+  currentGuildLanguage,
   item,
   onDeploy,
 }: BuildingDeployCardProps) {
-  const languageStyle = languageStyles[currentGuildSpLanguage];
+  const languageStyle = languageStyles[currentGuildLanguage];
   const canDeploy = count > 0;
 
   return (

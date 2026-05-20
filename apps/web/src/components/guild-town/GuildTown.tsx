@@ -1,5 +1,8 @@
 import { useMotionValue, type PanInfo } from "framer-motion";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { fetchMyGuild } from "../../features/guild/api";
+import { findGuildBySlug } from "../../features/guild/guildMaster";
+import { getSelectedGuildSlug } from "../../features/guild/membership";
 import {
   useEffect,
   useRef,
@@ -23,7 +26,7 @@ import {
 import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./townMath";
 import type {
   BuildingMaster,
-  BuildingTargetSpLanguage,
+  GuildSpLanguage,
   InventoryItem,
   PlacedItem,
   UserInventoryState,
@@ -57,8 +60,10 @@ export function GuildTown({
   const [selectedPlacedItemId, setSelectedPlacedItemId] = useState<string | null>(null);
   const [storingPlacedItemIds, setStoringPlacedItemIds] = useState<string[]>([]);
   const [userCp, setUserCp] = useState(1200);
-  const currentGuildSpLanguage: BuildingTargetSpLanguage = "Go";
-  const [userSp, setUserSp] = useState(500);
+  const [currentGuildLanguage, setCurrentGuildLanguage] = useState<GuildSpLanguage>(() =>
+    getCurrentGuildLanguage(),
+  );
+  const [userGuildSp, setUserGuildSp] = useState(500);
   const [userInventory, setUserInventory] = useState<UserInventoryState[]>(
     BUILDING_MASTERS.map((building) => ({ buildingId: building.id, count: 0 })),
   );
@@ -87,6 +92,28 @@ export function GuildTown({
     window.addEventListener("resize", updateViewport);
 
     return () => window.removeEventListener("resize", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchMyGuild()
+      .then((data) => {
+        if (!isMounted || !data?.guild || !isGuildSpLanguage(data.guild.name)) {
+          return;
+        }
+
+        setCurrentGuildLanguage(data.guild.name);
+      })
+      .catch((error) => {
+        if (isMounted) {
+          console.error("failed to fetch current guild for guild town", error);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -219,12 +246,12 @@ export function GuildTown({
     const canBuy =
       currentGuildLevel >= building.requiredGuildLevel &&
       userCp >= firstLevel.upgradeCostCp &&
-      userSp >= firstLevel.upgradeCostSp;
+      userGuildSp >= firstLevel.upgradeCostSp;
 
     if (!canBuy) return;
 
     setUserCp((currentValue) => currentValue - firstLevel.upgradeCostCp);
-    setUserSp((currentValue) => currentValue - firstLevel.upgradeCostSp);
+    setUserGuildSp((currentValue) => currentValue - firstLevel.upgradeCostSp);
     setUserInventory((currentInventory) =>
       currentInventory.map((inventoryItem) =>
         inventoryItem.buildingId === building.id
@@ -314,7 +341,7 @@ export function GuildTown({
       <BackButton onNavigate={onNavigate} />
       <BuildInventory
         currentGuildLevel={currentGuildLevel}
-        currentGuildSpLanguage={currentGuildSpLanguage}
+        currentGuildLanguage={currentGuildLanguage}
         inventory={userInventory}
         inventoryRef={inventoryRef}
         onBuyBuilding={handleBuyBuilding}
@@ -322,7 +349,7 @@ export function GuildTown({
         onToggleVisible={() => setInventoryVisible((currentVisible) => !currentVisible)}
         stopNestedDrag={stopNestedDrag}
         userCp={userCp}
-        userSp={userSp}
+        userGuildSp={userGuildSp}
         visible={inventoryVisible}
       />
       <BuildingInfoPanel item={selectedPlacedItem} onClose={() => setSelectedPlacedItemId(null)} />
@@ -345,6 +372,28 @@ export function GuildTown({
 
 function getBuildingMapWidth(viewportWidth: number) {
   return clampValue(viewportWidth * 0.14, 112, 220);
+}
+
+function getCurrentGuildLanguage(): GuildSpLanguage {
+  const selectedGuild = findGuildBySlug(getSelectedGuildSlug());
+  if (!selectedGuild || !isGuildSpLanguage(selectedGuild.name)) {
+    return "Common";
+  }
+
+  return selectedGuild.name;
+}
+
+function isGuildSpLanguage(language: string): language is GuildSpLanguage {
+  return (
+    language === "Go" ||
+    language === "TypeScript" ||
+    language === "Rust" ||
+    language === "Python" ||
+    language === "Java" ||
+    language === "Haskell" ||
+    language === "Zig" ||
+    language === "Common"
+  );
 }
 
 function createPlacedBuildingItem(
