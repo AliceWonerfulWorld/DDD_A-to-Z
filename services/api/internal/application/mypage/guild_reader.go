@@ -22,7 +22,10 @@ func NewGuildMembershipReader(repo GuildRepository) GuildMembershipReader {
 
 func (r *GuildMembershipAdapter) GetGuildMembership(ctx context.Context, userID user.ID) (*GuildInfo, error) {
 	membership, found, err := r.repo.FindActiveMembershipByUserID(ctx, userID)
-	if err != nil || !found {
+	if err != nil {
+		return nil, err
+	}
+	if !found {
 		return nil, nil
 	}
 
@@ -44,7 +47,7 @@ func (r *GuildMembershipAdapter) GetGuildMembership(ctx context.Context, userID 
 func (r *GuildMembershipAdapter) GetTotalGuilds(ctx context.Context) (int, error) {
 	guilds, err := r.repo.ListGuilds(ctx)
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	return len(guilds), nil
 }
