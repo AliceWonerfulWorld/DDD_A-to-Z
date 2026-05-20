@@ -56,6 +56,9 @@ func TestGuildStoreListGuilds(t *testing.T) {
 	insertPostgresTestMembership(t, ctx, tx, "membership_active_"+string(activeUser.ID), activeUser.ID, goID, now, nil)
 	leftAt := now.Add(time.Hour)
 	insertPostgresTestMembership(t, ctx, tx, "membership_left_"+string(leftUser.ID), leftUser.ID, goID, now, &leftAt)
+	cpStore := NewContributionPointStore(tx)
+	recordEarnedCP(t, ctx, cpStore, activeUser.ID, 349, now)
+	recordEarnedCP(t, ctx, cpStore, leftUser.ID, 999, now)
 
 	guilds, err := store.ListGuilds(ctx)
 	if err != nil {
@@ -74,10 +77,16 @@ func TestGuildStoreListGuilds(t *testing.T) {
 			if guild.MemberCount != 1 {
 				t.Fatalf("Go guild MemberCount = %d, 期待値 1", guild.MemberCount)
 			}
+			if guild.TotalContributedCP != 349 {
+				t.Fatalf("Go guild TotalContributedCP = %d, 期待値 349", guild.TotalContributedCP)
+			}
 		case rustID:
 			rustGuildIndex = i
 			if guild.MemberCount != 0 {
 				t.Fatalf("Rust guild MemberCount = %d, 期待値 0", guild.MemberCount)
+			}
+			if guild.TotalContributedCP != 0 {
+				t.Fatalf("Rust guild TotalContributedCP = %d, 期待値 0", guild.TotalContributedCP)
 			}
 		}
 	}
@@ -370,8 +379,8 @@ func TestGuildStoreCPContributions(t *testing.T) {
 	}
 	for _, guild := range guilds {
 		if string(guild.ID) == guildID {
-			if guild.TotalContributedCP != 40 {
-				t.Fatalf("TotalContributedCP = %d, 期待値 40", guild.TotalContributedCP)
+			if guild.TotalContributedCP != 60 {
+				t.Fatalf("TotalContributedCP = %d, 期待値 60", guild.TotalContributedCP)
 			}
 			return
 		}

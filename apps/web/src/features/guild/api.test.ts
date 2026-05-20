@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchGuildActivityLogs, fetchMyGuild, joinGuild, leaveGuild } from "./api";
+import { fetchGuildActivityLogs, fetchGuilds, fetchMyGuild, joinGuild, leaveGuild } from "./api";
 
 function mockFetch(status: number, body: unknown = null) {
   vi.stubGlobal(
@@ -17,6 +17,32 @@ beforeEach(() => {
 });
 
 describe("guild api", () => {
+  it("fetchGuilds はギルド一覧と集計値を取得する", async () => {
+    mockFetch(200, {
+      guilds: [
+        {
+          id: "guild_go",
+          slug: "go",
+          name: "Go",
+          description: "Go guild",
+          icon: "GO",
+          color: "#00acd7",
+          member_count: 3,
+          total_contributed_cp: 120,
+        },
+      ],
+    });
+
+    const guilds = await fetchGuilds();
+
+    expect(guilds[0]?.member_count).toBe(3);
+    expect(guilds[0]?.total_contributed_cp).toBe(120);
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/guilds",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
   it("fetchMyGuild は現在の所属ギルドを取得する", async () => {
     mockFetch(200, {
       guild: {

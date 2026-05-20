@@ -48,12 +48,15 @@ func (s *GuildStore) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error
 			GROUP BY guild_id
 		) gm ON gm.guild_id = g.id
 		LEFT JOIN (
-			SELECT guild_id, SUM(amount) AS total_contributed_cp
-			FROM guild_cp_contributions
-			GROUP BY guild_id
+			SELECT gm.guild_id, SUM(pa.balance) AS total_contributed_cp
+			FROM guild_memberships gm
+			JOIN point_accounts pa ON pa.user_id = gm.user_id
+				AND pa.point_type = ?
+			WHERE gm.left_at IS NULL
+			GROUP BY gm.guild_id
 		) gc ON gc.guild_id = g.id
 		ORDER BY g.sort_order ASC, g.name ASC
-	`).Scan(&records).Error; err != nil {
+	`, contributionpointdomain.PointTypeCP).Scan(&records).Error; err != nil {
 		return nil, err
 	}
 
@@ -92,12 +95,15 @@ func (s *GuildStore) FindGuildByID(ctx context.Context, guildID guilddomain.ID) 
 			GROUP BY guild_id
 		) gm ON gm.guild_id = g.id
 		LEFT JOIN (
-			SELECT guild_id, SUM(amount) AS total_contributed_cp
-			FROM guild_cp_contributions
-			GROUP BY guild_id
+			SELECT gm.guild_id, SUM(pa.balance) AS total_contributed_cp
+			FROM guild_memberships gm
+			JOIN point_accounts pa ON pa.user_id = gm.user_id
+				AND pa.point_type = ?
+			WHERE gm.left_at IS NULL
+			GROUP BY gm.guild_id
 		) gc ON gc.guild_id = g.id
 		WHERE g.id = ?
-	`, guildID).Scan(&record)
+	`, contributionpointdomain.PointTypeCP, guildID).Scan(&record)
 	if result.Error != nil {
 		return guilddomain.Guild{}, false, result.Error
 	}
@@ -144,13 +150,16 @@ func (s *GuildStore) FindActiveMembershipByUserID(ctx context.Context, userID us
 			GROUP BY guild_id
 		) active_gm ON active_gm.guild_id = g.id
 		LEFT JOIN (
-			SELECT guild_id, SUM(amount) AS total_contributed_cp
-			FROM guild_cp_contributions
-			GROUP BY guild_id
+			SELECT gm_cp.guild_id, SUM(pa.balance) AS total_contributed_cp
+			FROM guild_memberships gm_cp
+			JOIN point_accounts pa ON pa.user_id = gm_cp.user_id
+				AND pa.point_type = ?
+			WHERE gm_cp.left_at IS NULL
+			GROUP BY gm_cp.guild_id
 		) gc ON gc.guild_id = g.id
 		WHERE gm.user_id = ?
 			AND gm.left_at IS NULL
-	`, userID).Scan(&record)
+	`, contributionpointdomain.PointTypeCP, userID).Scan(&record)
 	if result.Error != nil {
 		return guilddomain.MembershipWithGuild{}, false, result.Error
 	}
