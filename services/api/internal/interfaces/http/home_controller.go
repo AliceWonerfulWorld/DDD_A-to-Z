@@ -6,11 +6,13 @@ import (
 	stdhttp "net/http"
 	"time"
 
+	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
 type homeCPProvider interface {
 	GetBalance(ctx context.Context, userID user.ID) (int64, error)
+	GetTotalEarned(ctx context.Context, userID user.ID) (int64, error)
 	GetTodayEarned(ctx context.Context, userID user.ID) (int64, error)
 }
 
@@ -64,9 +66,25 @@ func (c *HomeController) getHome(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		return
 	}
 
+	totalEarned, err := c.cp.GetTotalEarned(r.Context(), appUser.ID)
+	if err != nil {
+		c.logger.Error("failed to get lifetime CP", "error", err)
+		writeAPIError(w, stdhttp.StatusInternalServerError, "internal_error", "Internal Server Error", 0, nil)
+		return
+	}
+
+	playerLevel := contributionpointdomain.PlayerLevelFromTotalEarned(totalEarned)
+	currentLevelTotalEarned := contributionpointdomain.TotalEarnedForPlayerLevel(playerLevel)
+	nextLevel, nextLevelTotalEarned, remaining := contributionpointdomain.NextPlayerLevelProgress(totalEarned)
 	resp := map[string]any{
-		"total_cp": balance,
-		"today_cp": todayEarned,
+		"total_cp":                    balance,
+		"today_cp":                    todayEarned,
+		"player_level":                playerLevel,
+		"player_level_total_cp":       currentLevelTotalEarned,
+		"next_player_level":           nextLevel,
+		"next_player_level_total_cp":  nextLevelTotalEarned,
+		"next_player_level_remaining": remaining,
+		"lifetime_total_earned_cp":    totalEarned,
 	}
 
 	if err := writeJSON(w, stdhttp.StatusOK, resp); err != nil {

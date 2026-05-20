@@ -30,7 +30,6 @@
 }
 
 .backButton,
-.copyButton,
 .leaveButton {
   border: 2px solid rgba(255, 217, 102, 0.78);
   border-bottom-color: rgba(96, 62, 22, 0.95);
@@ -50,7 +49,6 @@
 }
 
 .backButton:disabled,
-.copyButton:disabled,
 .leaveButton:disabled {
   cursor: wait;
   opacity: 0.68;
@@ -175,19 +173,9 @@
 
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
   margin-top: auto;
-}
-
-.copyButton {
-  border-color: rgba(0, 245, 255, 0.78);
-  border-bottom-color: rgba(2, 54, 72, 0.96);
-  border-right-color: rgba(2, 54, 72, 0.96);
-  box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.68),
-    5px 5px 0 rgba(0, 0, 0, 0.38),
-    inset 0 0 16px rgba(0, 245, 255, 0.12);
 }
 
 .leaveButton {
@@ -301,6 +289,15 @@
   font-size: clamp(0.64rem, 1.16vw, 0.86rem);
   line-height: 1.45;
   white-space: nowrap;
+}
+
+.emptyMembers {
+  margin: 18px 0 0;
+  color: rgba(244, 236, 208, 0.62);
+  font-family: "DotGothic16", monospace;
+  font-size: clamp(0.72rem, 1.2vw, 0.88rem);
+  line-height: 1.6;
+  text-align: center;
 }
 
 .scanline {

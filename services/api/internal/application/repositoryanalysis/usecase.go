@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/repositoryanalysis"
@@ -24,6 +25,7 @@ type UseCase struct {
 	tokens    TokenRepository
 	repos     RepositoryClient
 	repoStore RepositoryStore
+	logs      ContributionStore
 	commits   GitHubCommitClient
 	prs       GitHubPRClient
 	languages GitHubLanguageClient
@@ -43,11 +45,27 @@ func NewUseCase(
 	cp CPEarner,
 	cpBalance CPBalanceProvider,
 ) *UseCase {
+	return NewUseCaseWithContributionStore(current, tokens, repos, repoStore, nil, commits, prs, languages, cp, cpBalance)
+}
+
+func NewUseCaseWithContributionStore(
+	current CurrentUserRepository,
+	tokens TokenRepository,
+	repos RepositoryClient,
+	repoStore RepositoryStore,
+	logs ContributionStore,
+	commits GitHubCommitClient,
+	prs GitHubPRClient,
+	languages GitHubLanguageClient,
+	cp CPEarner,
+	cpBalance CPBalanceProvider,
+) *UseCase {
 	return &UseCase{
 		current:   current,
 		tokens:    tokens,
 		repos:     repos,
 		repoStore: repoStore,
+		logs:      logs,
 		commits:   commits,
 		prs:       prs,
 		languages: languages,
@@ -201,22 +219,24 @@ func (u *UseCase) AnalyzeForUser(ctx context.Context, appUser user.User, session
 
 		for _, c := range commits {
 			contributions = append(contributions, repositoryanalysis.Contribution{
-				Repo:      repo.FullName,
-				Type:      "commit",
-				Message:   c.Message,
-				Language:  primaryLang,
-				CP:        1,
-				Timestamp: c.Committed,
+				Repo:       repo.FullName,
+				Type:       "commit",
+				ExternalID: c.SHA,
+				Message:    c.Message,
+				Language:   primaryLang,
+				CP:         1,
+				Timestamp:  c.Committed,
 			})
 		}
 		for _, pr := range prs {
 			contributions = append(contributions, repositoryanalysis.Contribution{
-				Repo:      repo.FullName,
-				Type:      "pull_request",
-				Message:   pr.Title,
-				Language:  primaryLang,
-				CP:        prCP,
-				Timestamp: pr.CreatedAt,
+				Repo:       repo.FullName,
+				Type:       "pull_request",
+				ExternalID: prExternalID(pr.Number),
+				Message:    pr.Title,
+				Language:   primaryLang,
+				CP:         prCP,
+				Timestamp:  pr.CreatedAt,
 			})
 		}
 	}
@@ -235,6 +255,11 @@ func (u *UseCase) AnalyzeForUser(ctx context.Context, appUser user.User, session
 	})
 
 	if !apiErr {
+		if u.logs != nil && len(contributions) > 0 {
+			if err := u.logs.UpsertAnalysisContributions(ctx, appUser.ID, contributions, now); err != nil {
+				return AnalysisResult{}, err
+			}
+		}
 		if totalCP > 0 {
 			if err := u.cp.Earn(ctx, appUser.ID, totalCP, "contribution analysis reward", "analysis", "initial"); err != nil {
 				return AnalysisResult{}, err
@@ -265,4 +290,8 @@ func (u *UseCase) AnalyzeForUser(ctx context.Context, appUser user.User, session
 		LanguageBreakdown: breakdown,
 		Contributions:     contributions,
 	}, nil
+}
+
+func prExternalID(number int) string {
+	return "PR#" + strconv.Itoa(number)
 }

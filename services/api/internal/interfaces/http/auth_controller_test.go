@@ -61,8 +61,8 @@ func TestAuthControllerBeginGitHubLogin(t *testing.T) {
 		}
 		if cookie := findCookie(response.Result().Cookies(), oauthStateCookieName); cookie == nil {
 			t.Fatal("OAuth state Cookie が設定されている必要があります")
-		} else if cookie.Path != "/api/auth/github" {
-			t.Fatalf("OAuth state Cookie Path = %q, 期待値 /api/auth/github", cookie.Path)
+		} else if cookie.Path != "/" {
+			t.Fatalf("OAuth state Cookie Path = %q, 期待値 /", cookie.Path)
 		}
 	})
 }
@@ -107,8 +107,8 @@ func TestAuthControllerCompleteGitHubLogin(t *testing.T) {
 		if stateCookie == nil {
 			t.Fatal("OAuth state Cookie を削除する Set-Cookie が必要です")
 		}
-		if stateCookie.Path != "/api/auth/github" {
-			t.Fatalf("OAuth state Cookie 削除 Path = %q, 期待値 /api/auth/github", stateCookie.Path)
+		if stateCookie.Path != "/" {
+			t.Fatalf("OAuth state Cookie 削除 Path = %q, 期待値 /", stateCookie.Path)
 		}
 		if stateCookie.MaxAge != -1 {
 			t.Fatalf("OAuth state Cookie MaxAge = %d, 期待値 -1", stateCookie.MaxAge)

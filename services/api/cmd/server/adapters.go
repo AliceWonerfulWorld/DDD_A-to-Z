@@ -82,8 +82,9 @@ type homeCPDataProvider struct {
 	balance interface {
 		GetBalance(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType) (int64, error)
 	}
-	todayEarned interface {
+	totals interface {
 		GetTodayEarned(ctx context.Context, userID user.ID) (int64, error)
+		GetTotalEarned(ctx context.Context, userID user.ID) (int64, error)
 	}
 }
 
@@ -91,13 +92,14 @@ func newHomeCPDataProvider(
 	balance interface {
 		GetBalance(ctx context.Context, userID user.ID, pointType contributionpointdomain.PointType) (int64, error)
 	},
-	todayEarned interface {
+	totals interface {
 		GetTodayEarned(ctx context.Context, userID user.ID) (int64, error)
+		GetTotalEarned(ctx context.Context, userID user.ID) (int64, error)
 	},
 ) *homeCPDataProvider {
 	return &homeCPDataProvider{
-		balance:     balance,
-		todayEarned: todayEarned,
+		balance: balance,
+		totals:  totals,
 	}
 }
 
@@ -106,5 +108,9 @@ func (p *homeCPDataProvider) GetBalance(ctx context.Context, userID user.ID) (in
 }
 
 func (p *homeCPDataProvider) GetTodayEarned(ctx context.Context, userID user.ID) (int64, error) {
-	return p.todayEarned.GetTodayEarned(ctx, userID)
+	return p.totals.GetTodayEarned(ctx, userID)
+}
+
+func (p *homeCPDataProvider) GetTotalEarned(ctx context.Context, userID user.ID) (int64, error) {
+	return p.totals.GetTotalEarned(ctx, userID)
 }

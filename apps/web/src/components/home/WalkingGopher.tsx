@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { steppedEase } from "../../lib/animationUtils";
 import { GopherSprite } from "../shared/GopherSprite";
 
@@ -11,15 +11,51 @@ const gopherTalkLines = [
   "CP、ためてこ！",
 ] as const;
 
+const GOPHER_HITBOX_WIDTH = 132;
+const AUDIO_PANEL_SAFE_SPACE = 124;
+const DEFAULT_STAGE_WIDTH = 960;
+
+function createWalkPath(stageWidth: number) {
+  const safeStageWidth = Math.max(stageWidth, 320);
+  const minX = Math.min(AUDIO_PANEL_SAFE_SPACE, Math.max(16, safeStageWidth - GOPHER_HITBOX_WIDTH));
+  const maxX = Math.max(minX, safeStageWidth - GOPHER_HITBOX_WIDTH - 16);
+  const span = maxX - minX;
+
+  return [0, 0.32, 0.2, 0.62, 0.78, 0.56, 0.28, 0].map((ratio) => Math.round(minX + span * ratio));
+}
+
 export function WalkingGopher({ onTalk }: { onTalk: () => void }) {
+  const gopherButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastXRef = useRef<number | null>(null);
   const talkTimeoutRef = useRef<number | null>(null);
+  const [stageWidth, setStageWidth] = useState(DEFAULT_STAGE_WIDTH);
   const [direction, setDirection] = useState<"right" | "left">("right");
   const [talkLine, setTalkLine] = useState<(typeof gopherTalkLines)[number] | null>(null);
   const [reactionCount, setReactionCount] = useState(0);
+  const walkPathX = useMemo(() => createWalkPath(stageWidth), [stageWidth]);
   const walkRow = direction === "right" ? 1 : 2;
   const speechBubbleSide =
     direction === "right" ? { left: "104px", right: "auto" } : { left: "auto", right: "96px" };
+
+  useEffect(() => {
+    const stageElement = gopherButtonRef.current?.parentElement;
+    if (!stageElement) {
+      return;
+    }
+
+    const updateStageWidth = () => {
+      setStageWidth(stageElement.getBoundingClientRect().width);
+    };
+
+    updateStageWidth();
+
+    const resizeObserver = new ResizeObserver(updateStageWidth);
+    resizeObserver.observe(stageElement);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -48,11 +84,12 @@ export function WalkingGopher({ onTalk }: { onTalk: () => void }) {
 
   return (
     <motion.button
+      ref={gopherButtonRef}
       type="button"
       aria-label="Gopher君に話しかける"
       initial={false}
       animate={{
-        x: ["16vw", "30vw", "24vw", "50vw", "62vw", "46vw", "28vw", "16vw"],
+        x: walkPathX,
         y: ["0px", "-10px", "6px", "-14px", "2px", "16px", "8px", "0px"],
         scale: [0.92, 0.88, 0.94, 0.86, 0.9, 0.96, 0.94, 0.92],
       }}

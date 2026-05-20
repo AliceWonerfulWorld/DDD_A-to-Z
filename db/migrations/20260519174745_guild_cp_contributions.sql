@@ -1,0 +1,6 @@
+-- Create "guild_cp_contributions" table
+CREATE TABLE "guild_cp_contributions" ("id" text NOT NULL, "guild_id" text NOT NULL, "user_id" text NOT NULL, "point_ledger_id" text NOT NULL, "amount" bigint NOT NULL, "created_at" timestamptz NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "guild_cp_contributions_point_ledger_id_key" UNIQUE ("point_ledger_id"), CONSTRAINT "guild_cp_contributions_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT "guild_cp_contributions_point_ledger_id_fkey" FOREIGN KEY ("point_ledger_id") REFERENCES "point_ledger" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT "guild_cp_contributions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT "guild_cp_contributions_amount_check" CHECK (amount > 0));
+-- Create index "guild_cp_contributions_guild_id_created_at_idx" to table: "guild_cp_contributions"
+CREATE INDEX "guild_cp_contributions_guild_id_created_at_idx" ON "guild_cp_contributions" ("guild_id", "created_at" DESC);
+-- Create index "guild_cp_contributions_user_id_created_at_idx" to table: "guild_cp_contributions"
+CREATE INDEX "guild_cp_contributions_user_id_created_at_idx" ON "guild_cp_contributions" ("user_id", "created_at" DESC);

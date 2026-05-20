@@ -12,16 +12,17 @@ import (
 type ID string
 
 type Guild struct {
-	ID          ID
-	Slug        string
-	Name        string
-	Description string
-	Icon        string
-	Color       string
-	SortOrder   int
-	MemberCount int64
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                 ID
+	Slug               string
+	Name               string
+	Description        string
+	Icon               string
+	Color              string
+	SortOrder          int
+	MemberCount        int64
+	TotalContributedCP int64
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 type MembershipID string
@@ -39,6 +40,41 @@ type Membership struct {
 type MembershipWithGuild struct {
 	Membership Membership
 	Guild      Guild
+}
+
+type MemberContribution struct {
+	UserID        user.ID
+	Name          string
+	TotalEarnedCP int64
+	JoinedAt      time.Time
+}
+
+type ActivityLog struct {
+	ID         string
+	UserID     user.ID
+	Player     string
+	Type       string
+	Repo       string
+	Message    string
+	Language   string
+	CP         int64
+	OccurredAt time.Time
+}
+
+const (
+	ActivityTypeCommit      = "commit"
+	ActivityTypePullRequest = "pull_request"
+)
+
+type CPContributionID string
+
+type CPContribution struct {
+	ID            CPContributionID
+	GuildID       ID
+	UserID        user.ID
+	PointLedgerID string
+	Amount        int64
+	CreatedAt     time.Time
 }
 
 func NewGuild(guild Guild) (Guild, error) {
@@ -66,6 +102,9 @@ func NewGuild(guild Guild) (Guild, error) {
 	if guild.MemberCount < 0 {
 		return Guild{}, errors.New("guild member count cannot be negative")
 	}
+	if guild.TotalContributedCP < 0 {
+		return Guild{}, errors.New("guild total contributed cp cannot be negative")
+	}
 	if guild.CreatedAt.IsZero() {
 		return Guild{}, errors.New("guild created at is required")
 	}
@@ -74,6 +113,76 @@ func NewGuild(guild Guild) (Guild, error) {
 	}
 
 	return guild, nil
+}
+
+func NewCPContribution(contribution CPContribution) (CPContribution, error) {
+	if contribution.ID == "" {
+		return CPContribution{}, errors.New("guild cp contribution id is required")
+	}
+	if contribution.GuildID == "" {
+		return CPContribution{}, errors.New("guild cp contribution guild id is required")
+	}
+	if contribution.UserID == "" {
+		return CPContribution{}, errors.New("guild cp contribution user id is required")
+	}
+	if strings.TrimSpace(contribution.PointLedgerID) == "" {
+		return CPContribution{}, errors.New("guild cp contribution point ledger id is required")
+	}
+	if contribution.Amount <= 0 {
+		return CPContribution{}, errors.New("guild cp contribution amount must be positive")
+	}
+	if contribution.CreatedAt.IsZero() {
+		return CPContribution{}, errors.New("guild cp contribution created at is required")
+	}
+
+	return contribution, nil
+}
+
+func NewMemberContribution(member MemberContribution) (MemberContribution, error) {
+	if member.UserID == "" {
+		return MemberContribution{}, errors.New("guild member user id is required")
+	}
+	if strings.TrimSpace(member.Name) == "" {
+		return MemberContribution{}, errors.New("guild member name is required")
+	}
+	if member.TotalEarnedCP < 0 {
+		return MemberContribution{}, errors.New("guild member total earned cp cannot be negative")
+	}
+	if member.JoinedAt.IsZero() {
+		return MemberContribution{}, errors.New("guild member joined at is required")
+	}
+
+	return member, nil
+}
+
+func NewActivityLog(log ActivityLog) (ActivityLog, error) {
+	if strings.TrimSpace(log.ID) == "" {
+		return ActivityLog{}, errors.New("guild activity log id is required")
+	}
+	if log.UserID == "" {
+		return ActivityLog{}, errors.New("guild activity log user id is required")
+	}
+	if strings.TrimSpace(log.Player) == "" {
+		return ActivityLog{}, errors.New("guild activity log player is required")
+	}
+	logType := strings.TrimSpace(log.Type)
+	if logType != ActivityTypeCommit && logType != ActivityTypePullRequest {
+		return ActivityLog{}, errors.New("invalid guild activity log type: must be 'commit' or 'pull_request'")
+	}
+	if strings.TrimSpace(log.Repo) == "" {
+		return ActivityLog{}, errors.New("guild activity log repo is required")
+	}
+	if strings.TrimSpace(log.Message) == "" {
+		return ActivityLog{}, errors.New("guild activity log message is required")
+	}
+	if log.CP <= 0 {
+		return ActivityLog{}, errors.New("guild activity log cp must be positive")
+	}
+	if log.OccurredAt.IsZero() {
+		return ActivityLog{}, errors.New("guild activity log occurred at is required")
+	}
+
+	return log, nil
 }
 
 func NewMembership(membership Membership) (Membership, error) {

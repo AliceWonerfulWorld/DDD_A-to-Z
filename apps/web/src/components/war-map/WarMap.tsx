@@ -7,13 +7,13 @@ import {
 } from "react";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { useAudioSettings } from "../../features/audio/useAudioSettings";
-import { fetchMyGuild } from "../../features/guild/api";
+import { fetchGuilds, fetchMyGuild } from "../../features/guild/api";
 import { PATHS } from "../../constants/paths";
 import { BackButton } from "../guild-town/BackButton";
 import { GuildBgm } from "../shared/GuildBgm";
 import { RankingPanel } from "./RankingPanel";
 import { ScoutPanel } from "./ScoutPanel";
-import { findWarGuildByID, WAR_GUILDS, type WarGuild } from "./WarMapData";
+import { createWarGuilds, findWarGuildByID, type WarGuild } from "./WarMapData";
 import { WarMapHex } from "./WarMapHex";
 
 interface WarMapProps {
@@ -24,6 +24,8 @@ export function WarMap({ onNavigate }: WarMapProps) {
   const { isSeEnabled } = useAudioSettings();
   const [currentGuildID, setCurrentGuildID] = useState<string | null>(null);
   const [isCurrentGuildLoaded, setIsCurrentGuildLoaded] = useState(false);
+  const [isGuildsLoaded, setIsGuildsLoaded] = useState(false);
+  const [warGuilds, setWarGuilds] = useState<WarGuild[]>([]);
   const [isRankingOpen, setIsRankingOpen] = useState(false);
   const [selectedGuild, setSelectedGuild] = useState<WarGuild | null>(null);
   const guildScoutSeRef = useRef<HTMLAudioElement | null>(null);
@@ -33,6 +35,28 @@ export function WarMap({ onNavigate }: WarMapProps) {
   useEffect(() => {
     let isMounted = true;
 
+    fetchGuilds()
+      .then((guilds) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setWarGuilds(createWarGuilds(guilds));
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error("failed to fetch guilds for war map", error);
+        setWarGuilds([]);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsGuildsLoaded(true);
+        }
+      });
+
     fetchMyGuild()
       .then((data) => {
         if (!isMounted) {
@@ -41,7 +65,6 @@ export function WarMap({ onNavigate }: WarMapProps) {
 
         const nextGuildID = data?.guild?.slug ?? null;
         setCurrentGuildID(nextGuildID);
-        setSelectedGuild((current) => current ?? findWarGuildByID(nextGuildID));
       })
       .catch((error) => {
         if (!isMounted) {
@@ -62,7 +85,17 @@ export function WarMap({ onNavigate }: WarMapProps) {
     };
   }, []);
 
-  const currentGuild = findWarGuildByID(currentGuildID);
+  useEffect(() => {
+    setSelectedGuild((current) => {
+      if (current) {
+        return findWarGuildByID(warGuilds, current.id);
+      }
+
+      return findWarGuildByID(warGuilds, currentGuildID);
+    });
+  }, [currentGuildID, warGuilds]);
+
+  const currentGuild = findWarGuildByID(warGuilds, currentGuildID);
 
   const playSe = useCallback(
     (audio: HTMLAudioElement | null) => {
@@ -201,7 +234,7 @@ export function WarMap({ onNavigate }: WarMapProps) {
           }}
         />
 
-        {WAR_GUILDS.map((guild) => (
+        {warGuilds.map((guild) => (
           <WarMapHex
             key={guild.id}
             guild={guild}
@@ -214,7 +247,9 @@ export function WarMap({ onNavigate }: WarMapProps) {
 
       <RankingPanel
         currentGuildID={currentGuildID}
+        guilds={warGuilds}
         isOpen={isRankingOpen}
+        isLoaded={isGuildsLoaded}
         onToggle={toggleRankingWithSe}
       />
       <ScoutPanel

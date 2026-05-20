@@ -1,16 +1,26 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { steppedEase } from "../../lib/animationUtils";
-import { RANKED_WAR_GUILDS } from "./WarMapData";
+import { rankWarGuilds, type WarGuild } from "./WarMapData";
 
 interface RankingPanelProps {
   currentGuildID: string | null;
+  guilds: WarGuild[];
   isOpen: boolean;
+  isLoaded: boolean;
   onToggle: () => void;
 }
 
 const rankColors = ["#ffd966", "#c8f2ff", "#ffad66"];
 
-export function RankingPanel({ currentGuildID, isOpen, onToggle }: RankingPanelProps) {
+export function RankingPanel({
+  currentGuildID,
+  guilds,
+  isOpen,
+  isLoaded,
+  onToggle,
+}: RankingPanelProps) {
+  const rankedGuilds = rankWarGuilds(guilds);
+
   return (
     <div
       style={{
@@ -88,8 +98,20 @@ export function RankingPanel({ currentGuildID, isOpen, onToggle }: RankingPanelP
             >
               GUILD RANKING
             </h2>
+            {rankedGuilds.length === 0 && (
+              <p
+                style={{
+                  margin: 0,
+                  color: "rgba(255,248,215,0.72)",
+                  fontSize: "0.56rem",
+                  lineHeight: 1.7,
+                }}
+              >
+                {isLoaded ? "NO GUILD DATA" : "SYNCING GUILD DATA..."}
+              </p>
+            )}
             <ol style={{ display: "grid", gap: "8px", listStyle: "none", margin: 0, padding: 0 }}>
-              {RANKED_WAR_GUILDS.map((guild, index) => {
+              {rankedGuilds.map((guild, index) => {
                 const rankColor = rankColors[index] ?? "rgba(255, 248, 215, 0.64)";
                 const isCurrentGuild = guild.id === currentGuildID;
 

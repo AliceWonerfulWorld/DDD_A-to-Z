@@ -164,3 +164,62 @@ func TestNewLedgerEntryValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestPlayerLevelFromTotalEarned(t *testing.T) {
+	tests := []struct {
+		name        string
+		totalEarned int64
+		want        int
+	}{
+		{name: "獲得 CP が 0 なら LV1", totalEarned: 0, want: 1},
+		{name: "獲得 CP が負でも LV1", totalEarned: -100, want: 1},
+		{name: "100 CP で LV2", totalEarned: 100, want: 2},
+		{name: "400 CP で LV3", totalEarned: 400, want: 3},
+		{name: "2500 CP で LV6", totalEarned: 2500, want: 6},
+		{name: "10000 CP で LV11", totalEarned: 10000, want: 11},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := PlayerLevelFromTotalEarned(tt.totalEarned); got != tt.want {
+				t.Fatalf("PlayerLevelFromTotalEarned(%d) = %d, 期待値 %d", tt.totalEarned, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTotalEarnedForPlayerLevel(t *testing.T) {
+	tests := []struct {
+		name  string
+		level int
+		want  int64
+	}{
+		{name: "LV1 は 0 CP", level: 1, want: 0},
+		{name: "LV0 も 0 CP", level: 0, want: 0},
+		{name: "LV2 は 100 CP", level: 2, want: 100},
+		{name: "LV6 は 2500 CP", level: 6, want: 2500},
+		{name: "LV11 は 10000 CP", level: 11, want: 10000},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := TotalEarnedForPlayerLevel(tt.level); got != tt.want {
+				t.Fatalf("TotalEarnedForPlayerLevel(%d) = %d, 期待値 %d", tt.level, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNextPlayerLevelProgress(t *testing.T) {
+	nextLevel, nextLevelTotalEarned, remaining := NextPlayerLevelProgress(2400)
+
+	if nextLevel != 6 {
+		t.Fatalf("nextLevel = %d, 期待値 6", nextLevel)
+	}
+	if nextLevelTotalEarned != 2500 {
+		t.Fatalf("nextLevelTotalEarned = %d, 期待値 2500", nextLevelTotalEarned)
+	}
+	if remaining != 100 {
+		t.Fatalf("remaining = %d, 期待値 100", remaining)
+	}
+}

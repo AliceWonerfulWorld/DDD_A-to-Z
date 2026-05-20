@@ -1,0 +1,271 @@
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE github_accounts (
+  github_id BIGINT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
+  username TEXT NOT NULL,
+  avatar_url TEXT NOT NULL,
+  access_token_ciphertext TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE sessions (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX sessions_user_id_idx ON sessions(user_id);
+CREATE INDEX sessions_expires_at_idx ON sessions(expires_at);
+
+CREATE TABLE point_types (
+  code  TEXT PRIMARY KEY,
+  label TEXT NOT NULL
+);
+
+INSERT INTO point_types (code, label) VALUES
+  ('CP',        'Contribution Point'),
+  ('Golang_SP', 'Golang Skill Point'),
+  ('TypeScript_SP',     'TypeScript Skill Point');
+
+CREATE TABLE point_accounts (
+  user_id         TEXT NOT NULL REFERENCES users(id),
+  point_type      TEXT NOT NULL REFERENCES point_types(code),
+  balance         BIGINT NOT NULL DEFAULT 0 CHECK (balance >= 0),
+  last_analyzed_at TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ NOT NULL,
+  updated_at      TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (user_id, point_type)
+);
+
+CREATE TABLE point_ledger (
+  id           TEXT PRIMARY KEY,
+  user_id      TEXT NOT NULL REFERENCES users(id),
+  point_type   TEXT NOT NULL REFERENCES point_types(code),
+  amount       BIGINT NOT NULL CHECK (amount <> 0),
+  type         TEXT NOT NULL CHECK (type IN ('earn', 'spend', 'adjust')),
+  reason       TEXT NOT NULL CHECK (length(reason) > 0),
+  source_type  TEXT NOT NULL CHECK (length(source_type) > 0),
+  source_id    TEXT NOT NULL CHECK (length(source_id) > 0),
+  balance_after BIGINT NOT NULL CHECK (balance_after >= 0),
+  created_at   TIMESTAMPTZ NOT NULL,
+  CHECK (
+    (type = 'earn' AND amount > 0)
+    OR (type = 'spend' AND amount < 0)
+    OR type = 'adjust'
+  )
+);
+
+CREATE INDEX point_ledger_user_id_created_at_idx ON point_ledger(user_id, point_type, created_at DESC);
+CREATE INDEX point_ledger_source_idx ON point_ledger(source_type, source_id);
+
+CREATE FUNCTION reject_nonzero_point_account_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.balance <> 0 THEN
+    RAISE EXCEPTION 'point account must start with zero balance'
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER point_accounts_reject_nonzero_insert
+BEFORE INSERT ON point_accounts
+FOR EACH ROW
+EXECUTE FUNCTION reject_nonzero_point_account_insert();
+
+CREATE FUNCTION reject_direct_point_account_balance_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD.balance IS DISTINCT FROM NEW.balance
+    AND pg_trigger_depth() < 2 THEN
+    RAISE EXCEPTION 'point account balance can only be updated from point_ledger'
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER point_accounts_reject_direct_balance_update
+BEFORE UPDATE OF balance ON point_accounts
+FOR EACH ROW
+EXECUTE FUNCTION reject_direct_point_account_balance_update();
+
+CREATE FUNCTION apply_point_ledger_entry()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  next_balance BIGINT;
+BEGIN
+  SELECT balance + NEW.amount
+  INTO next_balance
+  FROM point_accounts
+  WHERE user_id = NEW.user_id AND point_type = NEW.point_type
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'point account not found for user_id % point_type %', NEW.user_id, NEW.point_type
+      USING ERRCODE = '23503';
+  END IF;
+
+  IF next_balance < 0 THEN
+    RAISE EXCEPTION 'point balance cannot be negative for user_id % point_type %', NEW.user_id, NEW.point_type
+      USING ERRCODE = '23514';
+  END IF;
+
+  UPDATE point_accounts
+  SET balance    = next_balance,
+      updated_at = NEW.created_at
+  WHERE user_id = NEW.user_id AND point_type = NEW.point_type;
+
+  NEW.balance_after = next_balance;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER point_ledger_apply_before_insert
+BEFORE INSERT ON point_ledger
+FOR EACH ROW
+EXECUTE FUNCTION apply_point_ledger_entry();
+
+CREATE FUNCTION reject_point_ledger_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION 'point_ledger is append-only'
+    USING ERRCODE = '23514';
+END;
+$$;
+
+CREATE TRIGGER point_ledger_reject_update
+BEFORE UPDATE ON point_ledger
+FOR EACH ROW
+EXECUTE FUNCTION reject_point_ledger_mutation();
+
+CREATE TRIGGER point_ledger_reject_delete
+BEFORE DELETE ON point_ledger
+FOR EACH ROW
+EXECUTE FUNCTION reject_point_ledger_mutation();
+
+CREATE TABLE guilds (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE CHECK (length(slug) > 0),
+  name TEXT NOT NULL CHECK (length(name) > 0),
+  description TEXT NOT NULL CHECK (length(description) > 0),
+  icon TEXT NOT NULL CHECK (length(icon) > 0),
+  color TEXT NOT NULL CHECK (color ~ '^#[0-9A-Fa-f]{6}$'),
+  sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX guilds_sort_order_name_idx ON guilds(sort_order, name);
+
+CREATE TABLE guild_memberships (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  guild_id TEXT NOT NULL REFERENCES guilds(id),
+  joined_at TIMESTAMPTZ NOT NULL,
+  left_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  CONSTRAINT guild_memberships_left_at_check CHECK (left_at IS NULL OR left_at >= joined_at)
+);
+
+CREATE UNIQUE INDEX guild_memberships_active_user_id_idx ON guild_memberships(user_id) WHERE left_at IS NULL;
+CREATE INDEX guild_memberships_guild_id_active_idx ON guild_memberships(guild_id) WHERE left_at IS NULL;
+
+CREATE TABLE guild_cp_contributions (
+  id TEXT PRIMARY KEY,
+  guild_id TEXT NOT NULL REFERENCES guilds(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  point_ledger_id TEXT NOT NULL UNIQUE REFERENCES point_ledger(id),
+  amount BIGINT NOT NULL CHECK (amount > 0),
+  created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX guild_cp_contributions_guild_id_created_at_idx ON guild_cp_contributions(guild_id, created_at DESC);
+CREATE INDEX guild_cp_contributions_user_id_created_at_idx ON guild_cp_contributions(user_id, created_at DESC);
+
+CREATE TABLE github_repositories (
+  github_id BIGINT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  owner TEXT NOT NULL CHECK (length(owner) > 0),
+  name TEXT NOT NULL CHECK (length(name) > 0),
+  full_name TEXT NOT NULL CHECK (length(full_name) > 0),
+  private BOOLEAN NOT NULL,
+  fork BOOLEAN NOT NULL,
+  archived BOOLEAN NOT NULL,
+  default_branch TEXT NOT NULL CHECK (length(default_branch) > 0),
+  language TEXT NOT NULL DEFAULT '',
+  html_url TEXT NOT NULL CHECK (length(html_url) > 0),
+  pushed_at TIMESTAMPTZ,
+  github_updated_at TIMESTAMPTZ NOT NULL,
+  synced_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (github_id, user_id)
+);
+
+CREATE INDEX github_repositories_user_id_pushed_at_idx ON github_repositories(user_id, pushed_at DESC);
+CREATE INDEX github_repositories_user_id_full_name_idx ON github_repositories(user_id, full_name);
+
+CREATE TABLE repository_analysis_contributions (
+  user_id TEXT NOT NULL REFERENCES users(id),
+  repository_full_name TEXT NOT NULL CHECK (length(repository_full_name) > 0),
+  contribution_type TEXT NOT NULL CHECK (contribution_type IN ('commit', 'pull_request')),
+  external_id TEXT NOT NULL CHECK (length(external_id) > 0),
+  message TEXT NOT NULL CHECK (length(message) > 0),
+  language TEXT NOT NULL DEFAULT '',
+  cp BIGINT NOT NULL CHECK (cp > 0),
+  occurred_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (user_id, contribution_type, repository_full_name, external_id)
+);
+
+CREATE INDEX repository_analysis_contributions_occurred_at_idx ON repository_analysis_contributions(occurred_at DESC);
+CREATE INDEX repository_analysis_contributions_user_id_occurred_at_idx ON repository_analysis_contributions(user_id, occurred_at DESC);
+
+CREATE TABLE user_profiles (
+  user_id TEXT PRIMARY KEY REFERENCES users(id),
+  display_name TEXT NOT NULL CHECK (length(display_name) > 0 AND length(display_name) <= 50),
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE guild_town_inventories (
+  guild_id TEXT NOT NULL REFERENCES guilds(id),
+  building_type TEXT NOT NULL CHECK (building_type IN ('tent', 'bonfire')),
+  quantity INTEGER NOT NULL CHECK (quantity >= 0),
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (guild_id, building_type)
+);
+
+CREATE TABLE guild_town_placements (
+  id TEXT PRIMARY KEY,
+  guild_id TEXT NOT NULL REFERENCES guilds(id),
+  building_type TEXT NOT NULL CHECK (building_type IN ('tent', 'bonfire')),
+  x DOUBLE PRECISION NOT NULL CHECK (x >= 0),
+  y DOUBLE PRECISION NOT NULL CHECK (y >= 0),
+  width DOUBLE PRECISION NOT NULL CHECK (width > 0),
+  z_index INTEGER NOT NULL CHECK (z_index >= 0),
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX guild_town_placements_guild_id_z_index_idx ON guild_town_placements(guild_id, z_index);

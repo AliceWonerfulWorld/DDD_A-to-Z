@@ -8,16 +8,38 @@ export interface Guild {
   icon: string;
   color: string;
   member_count: number;
+  total_contributed_cp: number;
 }
 
 export interface GuildMembership {
   id: string;
+  user_id?: string;
   joined_at: string;
+}
+
+export interface GuildMemberContribution {
+  user_id: string;
+  name: string;
+  total_earned_cp: number;
+  joined_at: string;
+}
+
+export interface GuildActivityLog {
+  id: string;
+  user_id: string;
+  player: string;
+  type: "commit" | "pull_request";
+  repo: string;
+  message: string;
+  language: string;
+  cp: number;
+  occurred_at: string;
 }
 
 export interface GuildMembershipResponse {
   guild: Guild | null;
   membership?: GuildMembership;
+  members?: GuildMemberContribution[];
 }
 
 export async function fetchGuilds(): Promise<Guild[]> {
@@ -42,4 +64,16 @@ export async function joinGuild(guildID: string): Promise<GuildMembershipRespons
 
 export async function leaveGuild(): Promise<void> {
   await apiFetch<void>("/me/guild", { method: "DELETE" });
+}
+
+export async function fetchGuildActivityLogs(
+  guildID: string,
+  limit = 20,
+): Promise<GuildActivityLog[]> {
+  const encodedGuildID = encodeURIComponent(guildID);
+  const params = new URLSearchParams({ limit: String(limit) });
+  const data = await apiFetch<{ logs: GuildActivityLog[] }>(
+    `/guilds/${encodedGuildID}/activity-logs?${params.toString()}`,
+  );
+  return data.logs;
 }

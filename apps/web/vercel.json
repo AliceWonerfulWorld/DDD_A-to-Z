@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://lang-war-api-885177952038.asia-northeast1.run.app/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ]
 }

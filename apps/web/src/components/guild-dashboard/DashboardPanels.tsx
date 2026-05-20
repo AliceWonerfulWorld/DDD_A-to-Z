@@ -62,6 +62,24 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
         }}
       >
         <AnimatePresence initial={false}>
+          {logs.length === 0 ? (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.62 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.22, ease: steppedEase(4) }}
+              style={{
+                minHeight: "30px",
+                color: "rgba(214, 255, 228, 0.72)",
+                fontFamily: '"DotGothic16", monospace',
+                fontSize: "clamp(0.66rem, 1.22vw, 0.94rem)",
+                lineHeight: 1.35,
+              }}
+            >
+              &gt; WAITING FOR GUILD SIGNAL_
+            </motion.div>
+          ) : null}
           {logs.map((log) => (
             <motion.div
               key={log.id}

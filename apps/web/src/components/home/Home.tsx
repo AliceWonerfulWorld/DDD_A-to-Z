@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { HomeHud } from "./HomeHud";
 import type { GuildSummary } from "./HomeHud";
+import { HomeFirstVisitGuide } from "./HomeFirstVisitGuide";
 import { HomeNav } from "./HomeNav";
 import { ReturnTitleDialog } from "./ReturnTitleDialog";
 import { AudioTogglePanel } from "../shared/AudioTogglePanel";
@@ -20,19 +21,43 @@ interface HomeProps {
 const defaultPlayer = {
   name: "DevSamurai",
   title: "Consistency Master",
-  level: 18,
+  level: 1,
+  levelTotalCp: 0,
   totalCp: 0,
   todayCp: 0,
+  nextLevel: 2,
+  nextLevelTotalCp: 100,
+  nextLevelRemainingCp: 100,
+  lifetimeTotalEarnedCp: 0,
 };
 
+function playerLevelFromTotalEarned(totalEarned: number) {
+  if (totalEarned <= 0) {
+    return 1;
+  }
+
+  return Math.floor(Math.sqrt(totalEarned / 100)) + 1;
+}
+
+function totalEarnedForPlayerLevel(level: number) {
+  if (level <= 1) {
+    return 0;
+  }
+
+  return (level - 1) ** 2 * 100;
+}
+
 const navItems = [
+  { label: "REPO ANALYSIS", caption: "GITHUB SCAN", path: PATHS.ANALYSIS, accent: "#7cff6b" },
   { label: "WAR MAP", caption: "BATTLE FRONT", path: PATHS.WAR, accent: "#ff5f56" },
   { label: "GUILD BASE", caption: "COMMUNITY HQ", path: PATHS.GUILD, accent: "#00f5ff" },
   { label: "MY STATUS", caption: "PLAYER DATA", path: PATHS.MY_PAGE, accent: "#ffd700" },
 ];
+const homeFirstVisitGuideKey = "lang-war.home.first-visit-guide-seen";
 
 export function Home({ onNavigate }: HomeProps) {
   const [isReturnTitleDialogOpen, setIsReturnTitleDialogOpen] = useState(false);
+  const [isFirstVisitGuideOpen, setIsFirstVisitGuideOpen] = useState(false);
   const [guild, setGuild] = useState<GuildSummary | null | undefined>(undefined);
   const navigateFromHome = (path: string) => {
     if (path === PATHS.GUILD && guild === undefined) {
@@ -58,6 +83,24 @@ export function Home({ onNavigate }: HomeProps) {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [cpData, setCpData] = useState<HomeCPData | null>(null);
+  const lifetimeTotalEarnedCp = cpData?.lifetime_total_earned_cp ?? cpData?.total_cp ?? 0;
+  const playerLevel = cpData?.player_level ?? playerLevelFromTotalEarned(lifetimeTotalEarnedCp);
+  const playerLevelTotalCp =
+    cpData?.player_level_total_cp ?? totalEarnedForPlayerLevel(playerLevel);
+  const nextPlayerLevel = cpData?.next_player_level ?? playerLevel + 1;
+  const nextPlayerLevelTotalCp =
+    cpData?.next_player_level_total_cp ?? totalEarnedForPlayerLevel(nextPlayerLevel);
+  const nextPlayerLevelRemainingCp =
+    cpData?.next_player_level_remaining ??
+    Math.max(0, nextPlayerLevelTotalCp - lifetimeTotalEarnedCp);
+
+  useEffect(() => {
+    try {
+      setIsFirstVisitGuideOpen(window.localStorage.getItem(homeFirstVisitGuideKey) !== "true");
+    } catch {
+      setIsFirstVisitGuideOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     fetchProfile().then(setProfile).catch(console.error);
@@ -97,6 +140,15 @@ export function Home({ onNavigate }: HomeProps) {
   const openReturnTitleDialog = () => {
     playModalOpen();
     setIsReturnTitleDialogOpen(true);
+  };
+
+  const dismissFirstVisitGuide = () => {
+    try {
+      window.localStorage.setItem(homeFirstVisitGuideKey, "true");
+    } catch {
+      // The guide can still close even if localStorage is unavailable.
+    }
+    setIsFirstVisitGuideOpen(false);
   };
 
   return (
@@ -183,9 +235,9 @@ export function Home({ onNavigate }: HomeProps) {
           zIndex: 3,
           minHeight: "100svh",
           display: "grid",
-          gridTemplateRows: "auto 1fr auto",
-          padding: "clamp(16px, 3vw, 32px)",
-          gap: "20px",
+          gridTemplateRows: "auto minmax(96px, 1fr) auto",
+          padding: "clamp(12px, 2.6vmin, 32px)",
+          gap: "clamp(12px, 2svh, 20px)",
         }}
       >
         <HomeHud
@@ -193,8 +245,14 @@ export function Home({ onNavigate }: HomeProps) {
           player={{
             ...defaultPlayer,
             name: profile?.display_name || defaultPlayer.name,
+            level: playerLevel,
+            levelTotalCp: playerLevelTotalCp,
             totalCp: cpData?.total_cp ?? defaultPlayer.totalCp,
             todayCp: cpData?.today_cp ?? defaultPlayer.todayCp,
+            nextLevel: nextPlayerLevel,
+            nextLevelTotalCp: nextPlayerLevelTotalCp,
+            nextLevelRemainingCp: nextPlayerLevelRemainingCp,
+            lifetimeTotalEarnedCp: lifetimeTotalEarnedCp,
           }}
           onReturnTitle={openReturnTitleDialog}
         />
@@ -203,7 +261,7 @@ export function Home({ onNavigate }: HomeProps) {
           aria-label="Character placement area"
           style={{
             position: "relative",
-            minHeight: "clamp(220px, 42vh, 520px)",
+            minHeight: "clamp(96px, 20svh, 360px)",
             overflow: "visible",
           }}
         >
@@ -216,6 +274,8 @@ export function Home({ onNavigate }: HomeProps) {
       {isReturnTitleDialogOpen && (
         <ReturnTitleDialog onCancel={cancelReturnTitle} onConfirm={playReturnTitle} />
       )}
+
+      {isFirstVisitGuideOpen && <HomeFirstVisitGuide onDismiss={dismissFirstVisitGuide} />}
 
       {audioError && (
         <div

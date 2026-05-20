@@ -6,8 +6,13 @@ interface PlayerSummary {
   name: string;
   title: string;
   level: number;
+  levelTotalCp: number;
   totalCp: number;
   todayCp: number;
+  nextLevel: number;
+  nextLevelTotalCp: number;
+  nextLevelRemainingCp: number;
+  lifetimeTotalEarnedCp: number;
 }
 
 export interface GuildSummary {
@@ -80,6 +85,57 @@ function LabelValue({ label, value }: { label: string; value: string | number })
       >
         {value}
       </span>
+    </div>
+  );
+}
+
+function ExpBar({ player }: { player: PlayerSummary }) {
+  const levelRange = Math.max(1, player.nextLevelTotalCp - player.levelTotalCp);
+  const earnedInLevel = Math.max(0, player.lifetimeTotalEarnedCp - player.levelTotalCp);
+  const pct = Math.min(100, Math.max(0, (earnedInLevel / levelRange) * 100));
+
+  return (
+    <div style={{ display: "grid", gap: "6px", marginTop: "2px" }}>
+      <div
+        aria-label={`EXP ${earnedInLevel.toLocaleString()} / ${levelRange.toLocaleString()} CP`}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={levelRange}
+        aria-valuenow={earnedInLevel}
+        style={{
+          height: "12px",
+          border: "2px solid rgba(255, 215, 0, 0.5)",
+          borderBottomColor: "rgba(111, 79, 28, 0.95)",
+          borderRightColor: "rgba(111, 79, 28, 0.95)",
+          background: "rgba(0,0,0,0.45)",
+          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
+          overflow: "hidden",
+        }}
+      >
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.45, ease: steppedEase(8) }}
+          style={{
+            height: "100%",
+            background: "linear-gradient(90deg, #00f5ff, #ffd700)",
+            boxShadow: "0 0 10px rgba(0, 245, 255, 0.75)",
+          }}
+        />
+      </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: "8px",
+          color: "rgba(255, 248, 215, 0.72)",
+          fontSize: "0.54rem",
+          lineHeight: 1.5,
+        }}
+      >
+        <span>{earnedInLevel.toLocaleString()} CP</span>
+        <span>{levelRange.toLocaleString()} CP</span>
+      </div>
     </div>
   );
 }
@@ -239,6 +295,11 @@ export function HomeHud({
             <LabelValue label="NAME" value={player.name} />
             <LabelValue label="TITLE" value={player.title} />
             <LabelValue label="LEVEL" value={`LV.${player.level}`} />
+            <LabelValue
+              label="NEXT"
+              value={`${player.nextLevelRemainingCp.toLocaleString()} CP → LV.${player.nextLevel}`}
+            />
+            <ExpBar player={player} />
           </div>
         </HudPanel>
 
@@ -261,6 +322,10 @@ export function HomeHud({
         <div style={{ display: "grid", gap: "6px" }}>
           <LabelValue label="TOTAL CP" value={player.totalCp.toLocaleString()} />
           <LabelValue label="TODAY CP" value={`+${player.todayCp.toLocaleString()}`} />
+          <LabelValue
+            label="EXP"
+            value={`${player.lifetimeTotalEarnedCp.toLocaleString()} / ${player.nextLevelTotalCp.toLocaleString()}`}
+          />
         </div>
       </HudPanel>
     </header>

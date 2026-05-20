@@ -15,7 +15,6 @@ on:
       - "db/**"
       - "go.work"
       - "go.work.sum"
-  pull_request:
 
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
