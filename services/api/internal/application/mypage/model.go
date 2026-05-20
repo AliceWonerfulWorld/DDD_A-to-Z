@@ -12,8 +12,8 @@ type MyPageData struct {
 	User         user.User
 	CP           CPSummary
 	Repositories RepositorySummary
-	// Guild is nil when the user has not joined any guild.
-	Guild *GuildInfo
+	GitHubStats  *GitHubStats
+	Guild        *GuildInfo
 }
 
 // CPSummary holds the current balance and lifetime earn/spend totals.
@@ -39,9 +39,28 @@ type RecentRepository struct {
 	PushedAt *string
 }
 
-// GuildInfo is a placeholder for future guild data.
-// When guilds are implemented, this will contain guild name, icon, role, etc.
+// GuildInfo holds the user's guild membership details.
 type GuildInfo struct {
-	ID   string
-	Name string
+	ID          string
+	Name        string
+	Slug        string
+	Icon        string
+	Color       string
+	Description string
+	MemberCount int64
+	Rank        int
+	TotalGuilds int
+	CP          int64
+}
+
+// GitHubStats represents the engineer status fetched from GitHub.
+type GitHubStats struct {
+	TotalStars          int
+	TotalPRs            int
+	TotalIssues         int
+	ContributedTo       int
+	PublicRepos         int
+	GitHubCreatedAt     string
+	YearlyCommits       int
+	YearlyContributions int
 }

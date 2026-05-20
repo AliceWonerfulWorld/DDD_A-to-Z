@@ -7,6 +7,11 @@ import (
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
+// GitHubTokenRepository provides the user's GitHub access token.
+type GitHubTokenRepository interface {
+	GitHubAccessToken(ctx context.Context, userID user.ID) (string, bool, error)
+}
+
 // CurrentUserRepository resolves a session token to a User.
 // The existing AuthStore already satisfies this interface.
 type CurrentUserRepository interface {
@@ -26,4 +31,15 @@ type ContributionPointReader interface {
 // RepositorySummaryReader provides a summarized view of repositories.
 type RepositorySummaryReader interface {
 	GetRepositorySummary(ctx context.Context, userID user.ID, recentLimit int) (RepositorySummary, error)
+}
+
+// GitHubStatsReader fetches aggregate GitHub user statistics.
+type GitHubStatsReader interface {
+	FetchStats(ctx context.Context, accessToken, username string) (*GitHubStats, error)
+}
+
+// GuildMembershipReader provides the user's guild membership info.
+type GuildMembershipReader interface {
+	GetGuildMembership(ctx context.Context, userID user.ID) (*GuildInfo, error)
+	GetTotalGuilds(ctx context.Context) (int, error)
 }
