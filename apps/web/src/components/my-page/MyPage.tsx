@@ -769,17 +769,22 @@ function formatDate(iso: string): string {
   return `${y}/${m}`;
 }
 
+const currentYear = new Date().getFullYear();
+
 function GitHubStatsPanel({ stats }: { stats: GitHubStats }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
       <MiniStat label="Total Stars" value={stats.total_stars.toLocaleString()} />
-      <MiniStat label="Yearly Commits" value={stats.yearly_commits.toLocaleString()} />
+      <MiniStat label={`${currentYear} Commits`} value={stats.yearly_commits.toLocaleString()} />
       <MiniStat label="Total PRs" value={stats.total_prs.toLocaleString()} />
       <MiniStat label="Total Issues" value={stats.total_issues.toLocaleString()} />
       <MiniStat label="Contributed To" value={stats.contributed_to.toLocaleString()} />
       <MiniStat label="Public Repos" value={stats.public_repos.toLocaleString()} />
       <MiniStat label="GitHub Started" value={formatDate(stats.github_created_at)} />
-      <MiniStat label="Yearly Contributions" value={stats.yearly_contributions.toLocaleString()} />
+      <MiniStat
+        label={`${currentYear} Contributions`}
+        value={stats.yearly_contributions.toLocaleString()}
+      />
     </div>
   );
 }
