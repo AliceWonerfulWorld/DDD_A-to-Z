@@ -1,32 +1,49 @@
-import { motion, type PanInfo } from "framer-motion";
-import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
+import { motion } from "framer-motion";
+import type {
+  PointerEvent as ReactPointerEvent,
+  RefObject,
+  WheelEvent as ReactWheelEvent,
+} from "react";
 import { steppedEase } from "../../lib/animationUtils";
-import type { InventoryItem } from "./types";
+import { BUILDING_MASTERS } from "./townData";
+import type { BuildingMaster, BuildingTargetSpLanguage } from "./types";
 
 interface BuildInventoryProps {
-  inventory: InventoryItem[];
+  currentGuildLevel: number;
   inventoryRef: RefObject<HTMLDivElement | null>;
-  onDragEnd: (
-    item: InventoryItem,
-    event: MouseEvent | TouchEvent | PointerEvent,
-    info: PanInfo,
-  ) => void;
   onToggleVisible: () => void;
   stopNestedDrag: (event: ReactPointerEvent<HTMLElement>) => void;
+  userCp: number;
+  userSpMap: Record<BuildingTargetSpLanguage, number>;
   visible: boolean;
 }
 
+const languageStyles: Record<BuildingTargetSpLanguage, { color: string; label: string }> = {
+  Common: { color: "#ffd966", label: "COM" },
+  Go: { color: "#00add8", label: "GO" },
+  Java: { color: "#f97316", label: "JAVA" },
+  Python: { color: "#f7df1e", label: "PY" },
+  Rust: { color: "#ff7a1a", label: "RS" },
+  TypeScript: { color: "#5cc8ff", label: "TS" },
+};
+
 export function BuildInventory({
-  inventory,
+  currentGuildLevel,
   inventoryRef,
-  onDragEnd,
   onToggleVisible,
   stopNestedDrag,
+  userCp,
+  userSpMap,
   visible,
 }: BuildInventoryProps) {
+  const stopInventoryWheel = (event: ReactWheelEvent<HTMLElement>) => {
+    event.stopPropagation();
+  };
+
   return (
     <motion.aside
       ref={inventoryRef}
+      onWheel={stopInventoryWheel}
       initial={{ opacity: 0, x: -18 }}
       animate={{
         opacity: 1,
@@ -40,7 +57,7 @@ export function BuildInventory({
         top: "calc(env(safe-area-inset-top, 0px) + 94px)",
         zIndex: 8,
         display: "flex",
-        width: "148px",
+        width: "clamp(340px, 28vw, 420px)",
         maxHeight:
           "calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 118px)",
         alignItems: "stretch",
@@ -50,7 +67,7 @@ export function BuildInventory({
         border: visible ? "3px solid rgba(255, 248, 215, 0.8)" : "3px solid transparent",
         borderBottomColor: visible ? "rgba(55, 44, 35, 0.98)" : "transparent",
         borderRightColor: visible ? "rgba(55, 44, 35, 0.98)" : "transparent",
-        background: visible ? "rgba(3, 7, 14, 0.88)" : "transparent",
+        background: visible ? "rgba(3, 7, 14, 0.9)" : "transparent",
         boxShadow: visible
           ? "0 0 0 2px rgba(0,0,0,0.72), 6px 6px 0 rgba(0,0,0,0.4), inset 0 0 18px rgba(255,248,215,0.08)"
           : "none",
@@ -89,91 +106,313 @@ export function BuildInventory({
         {visible ? "<<" : ">>"}
       </motion.button>
 
-      {visible &&
-        inventory.map((item) => {
-          const isAvailable = item.count > 0;
-
-          return (
-            <motion.div
-              key={item.type}
-              role="button"
-              aria-label={`${item.name} inventory item. ${item.count} remaining.`}
-              aria-disabled={!isAvailable}
-              tabIndex={isAvailable ? 0 : -1}
-              drag={isAvailable}
-              dragSnapToOrigin
-              dragElastic={0}
-              dragMomentum={false}
-              onPointerDown={stopNestedDrag}
-              onDragEnd={(event, info) => onDragEnd(item, event, info)}
-              whileHover={
-                isAvailable ? { y: -2, backgroundColor: "rgba(255, 217, 102, 0.12)" } : undefined
-              }
-              whileTap={isAvailable ? { y: 2, scale: 0.98 } : undefined}
-              whileDrag={{ scale: 1.06, zIndex: 20 }}
+      {visible && (
+        <>
+          <div
+            style={{
+              border: "2px solid rgba(116, 247, 161, 0.58)",
+              borderBottomColor: "rgba(24, 83, 45, 0.95)",
+              borderRightColor: "rgba(24, 83, 45, 0.95)",
+              background: "rgba(1, 12, 24, 0.72)",
+              boxShadow: "inset 0 0 12px rgba(0,0,0,0.62)",
+              color: "#fff8d7",
+              padding: "9px 10px",
+              textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+            }}
+          >
+            <p
               style={{
-                position: "relative",
-                display: "grid",
-                gridTemplateRows: "58px auto",
-                width: "100%",
-                minHeight: "116px",
-                alignItems: "center",
-                justifyItems: "center",
-                gap: "6px",
-                border: "2px solid rgba(116, 247, 161, 0.62)",
-                borderBottomColor: "rgba(24, 83, 45, 0.95)",
-                borderRightColor: "rgba(24, 83, 45, 0.95)",
-                background: isAvailable ? "rgba(1, 12, 24, 0.78)" : "rgba(18, 18, 18, 0.68)",
-                boxShadow: "inset 0 0 12px rgba(0,0,0,0.62)",
-                color: isAvailable ? "#fff8d7" : "rgba(255, 248, 215, 0.42)",
-                cursor: isAvailable ? "grab" : "not-allowed",
-                fontFamily: "inherit",
+                margin: "0 0 7px",
+                color: "#74f7a1",
                 fontSize: "0.52rem",
-                lineHeight: 1.35,
-                padding: "8px 7px",
-                textAlign: "center",
-                textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-                touchAction: "none",
+                lineHeight: 1.4,
               }}
             >
-              <img
-                className="pixelated"
-                src={item.src}
-                alt=""
-                aria-hidden="true"
-                draggable={false}
-                style={{
-                  display: "block",
-                  maxWidth: "74px",
-                  maxHeight: "58px",
-                  opacity: isAvailable ? 1 : 0.38,
-                  pointerEvents: "none",
-                  filter: "drop-shadow(4px 5px 0 rgba(0,0,0,0.34))",
-                  mixBlendMode: "screen",
-                }}
-              />
-              <span>{item.name}</span>
-              <span
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  right: "6px",
-                  top: "6px",
-                  minWidth: "24px",
-                  border: "2px solid rgba(255, 217, 102, 0.78)",
-                  background: isAvailable ? "rgba(62, 26, 8, 0.92)" : "rgba(8, 8, 8, 0.92)",
-                  color: isAvailable ? "#ffd966" : "rgba(255, 248, 215, 0.46)",
-                  fontSize: "0.52rem",
-                  lineHeight: 1,
-                  padding: "4px 5px",
-                  boxShadow: "0 0 0 1px rgba(0,0,0,0.72)",
-                }}
-              >
-                x{item.count}
+              BUILD SHOP
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "6px",
+                fontFamily: '"DotGothic16", monospace',
+                fontSize: "0.78rem",
+                lineHeight: 1.25,
+              }}
+            >
+              <span>GUILD LV.{currentGuildLevel}</span>
+              <span style={{ color: "#ffd966", textAlign: "right" }}>
+                {userCp.toLocaleString()} CP
               </span>
-            </motion.div>
-          );
-        })}
+            </div>
+          </div>
+
+          <div
+            onPointerDown={stopNestedDrag}
+            style={{
+              display: "flex",
+              minHeight: 0,
+              flexDirection: "column",
+              gap: "10px",
+              overflowX: "hidden",
+              overflowY: "auto",
+              paddingRight: "10px",
+            }}
+          >
+            {BUILDING_MASTERS.map((item) => (
+              <BuildingInventoryCard
+                key={item.id}
+                currentGuildLevel={currentGuildLevel}
+                item={item}
+                userCp={userCp}
+                userSp={userSpMap[item.targetSpLanguage] ?? 0}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </motion.aside>
+  );
+}
+
+interface BuildingInventoryCardProps {
+  currentGuildLevel: number;
+  item: BuildingMaster;
+  userCp: number;
+  userSp: number;
+}
+
+function BuildingInventoryCard({
+  currentGuildLevel,
+  item,
+  userCp,
+  userSp,
+}: BuildingInventoryCardProps) {
+  const firstLevel = item.levels[0];
+  const languageStyle = languageStyles[item.targetSpLanguage];
+  const isLocked = currentGuildLevel < item.requiredGuildLevel;
+  const isCpShort = userCp < firstLevel.upgradeCostCp;
+  const isSpShort = userSp < firstLevel.upgradeCostSp;
+  const canBuild = !isLocked && !isCpShort && !isSpShort;
+
+  return (
+    <motion.article
+      aria-label={`${item.name}. Requires guild level ${item.requiredGuildLevel}.`}
+      aria-disabled={!canBuild}
+      whileHover={!isLocked ? { y: -2, backgroundColor: "rgba(255, 217, 102, 0.12)" } : undefined}
+      whileTap={canBuild ? { y: 2, scale: 0.98 } : undefined}
+      style={{
+        position: "relative",
+        display: "grid",
+        gridTemplateRows: "auto 1fr auto",
+        minHeight: "196px",
+        gap: "9px",
+        overflow: "hidden",
+        border: `2px solid ${isLocked ? "rgba(255, 77, 109, 0.48)" : "rgba(116, 247, 161, 0.62)"}`,
+        borderBottomColor: isLocked ? "rgba(118, 31, 49, 0.95)" : "rgba(24, 83, 45, 0.95)",
+        borderRightColor: isLocked ? "rgba(118, 31, 49, 0.95)" : "rgba(24, 83, 45, 0.95)",
+        background: canBuild ? "rgba(1, 12, 24, 0.78)" : "rgba(18, 18, 18, 0.72)",
+        boxShadow: "inset 0 0 12px rgba(0,0,0,0.62)",
+        color: isLocked ? "rgba(255, 248, 215, 0.48)" : "#fff8d7",
+        fontFamily: "inherit",
+        fontSize: "0.52rem",
+        lineHeight: 1.45,
+        padding: "10px",
+        textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+        touchAction: "none",
+        pointerEvents: isLocked ? "none" : "auto",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "64px minmax(0, 1fr)",
+          alignItems: "center",
+          gap: "9px",
+          minWidth: 0,
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            display: "grid",
+            width: "64px",
+            height: "64px",
+            placeItems: "center",
+            border: `2px solid ${languageStyle.color}`,
+            background: item.previewSrc
+              ? "rgba(1, 8, 22, 0.78)"
+              : "radial-gradient(circle at 50% 40%, rgba(255,255,255,0.16), rgba(0,0,0,0.18) 42%, rgba(0,0,0,0.62))",
+            boxShadow: `0 0 14px ${languageStyle.color}55, inset 0 0 12px rgba(0,0,0,0.7)`,
+            color: languageStyle.color,
+            fontSize: "0.58rem",
+            overflow: "hidden",
+          }}
+        >
+          {item.previewSrc ? (
+            <img
+              className="pixelated"
+              src={item.previewSrc}
+              alt=""
+              draggable={false}
+              style={{
+                display: "block",
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                pointerEvents: "none",
+              }}
+            />
+          ) : (
+            languageStyle.label
+          )}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <p
+            style={{
+              margin: "0 0 5px",
+              color: languageStyle.color,
+              fontSize: "0.48rem",
+              lineHeight: 1.35,
+            }}
+          >
+            LV.{item.requiredGuildLevel} / {item.buffType.toUpperCase()}
+          </p>
+          <h2
+            style={{
+              margin: 0,
+              color: isLocked ? "rgba(255, 248, 215, 0.5)" : "#ffd966",
+              fontSize: "0.56rem",
+              lineHeight: 1.45,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {item.name}
+          </h2>
+        </div>
+      </div>
+
+      <p
+        style={{
+          margin: 0,
+          color: isLocked ? "rgba(244, 236, 208, 0.48)" : "#f4ecd0",
+          fontFamily: '"DotGothic16", monospace',
+          fontSize: "0.8rem",
+          lineHeight: 1.35,
+        }}
+      >
+        {item.description}
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gap: "8px",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+            gap: "6px",
+            fontFamily: '"DotGothic16", monospace',
+            fontSize: "0.68rem",
+            lineHeight: 1.2,
+          }}
+        >
+          <CostPill
+            isShort={isCpShort}
+            label={`${firstLevel.upgradeCostCp.toLocaleString()} CP`}
+            tone="#ffd966"
+          />
+          <CostPill
+            isShort={isSpShort}
+            label={`${firstLevel.upgradeCostSp.toLocaleString()} ${item.targetSpLanguage}-SP`}
+            tone={languageStyle.color}
+          />
+        </div>
+
+        <button
+          type="button"
+          disabled={!canBuild}
+          style={{
+            width: "100%",
+            border: `2px solid ${canBuild ? "rgba(116, 247, 161, 0.74)" : "rgba(92, 92, 92, 0.78)"}`,
+            borderBottomColor: canBuild ? "rgba(24, 83, 45, 0.95)" : "rgba(32, 32, 32, 0.95)",
+            borderRightColor: canBuild ? "rgba(24, 83, 45, 0.95)" : "rgba(32, 32, 32, 0.95)",
+            background: canBuild ? "rgba(4, 67, 37, 0.9)" : "rgba(37, 37, 37, 0.92)",
+            boxShadow: canBuild
+              ? "0 0 12px rgba(116,247,161,0.2), inset 0 0 10px rgba(116,247,161,0.1)"
+              : "inset 0 0 10px rgba(0,0,0,0.52)",
+            color: canBuild ? "#74f7a1" : "rgba(255, 248, 215, 0.38)",
+            cursor: canBuild ? "pointer" : "not-allowed",
+            fontFamily: "inherit",
+            fontSize: "0.56rem",
+            lineHeight: 1,
+            padding: "9px 8px",
+            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+          }}
+        >
+          BUY
+        </button>
+      </div>
+
+      {isLocked && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80"
+          style={{
+            gap: "8px",
+            padding: "14px",
+            pointerEvents: "none",
+            textAlign: "center",
+          }}
+        >
+          <span
+            style={{
+              color: "#ff4d6d",
+              fontSize: "0.72rem",
+              lineHeight: 1.6,
+              textShadow: "0 0 10px rgba(255,77,109,0.82), 2px 2px 0 rgba(0,0,0,0.8)",
+            }}
+          >
+            REQUIRES
+            <br />
+            GUILD LV.{item.requiredGuildLevel}
+          </span>
+        </div>
+      )}
+    </motion.article>
+  );
+}
+
+interface CostPillProps {
+  isShort: boolean;
+  label: string;
+  tone: string;
+}
+
+function CostPill({ isShort, label, tone }: CostPillProps) {
+  return (
+    <span
+      className={isShort ? "text-red-500" : undefined}
+      style={{
+        border: `2px solid ${isShort ? "#ef4444" : tone}`,
+        background: "rgba(1, 8, 22, 0.76)",
+        boxShadow: `inset 0 0 10px rgba(0,0,0,0.58), 0 0 10px ${isShort ? "#ef444455" : `${tone}44`}`,
+        color: isShort ? "#ef4444" : tone,
+        display: "grid",
+        lineHeight: 1.25,
+        minWidth: 0,
+        overflow: "hidden",
+        padding: "6px 5px",
+        placeItems: "center",
+        textAlign: "center",
+        overflowWrap: "anywhere",
+      }}
+      title={label}
+    >
+      {label}
+    </span>
   );
 }
