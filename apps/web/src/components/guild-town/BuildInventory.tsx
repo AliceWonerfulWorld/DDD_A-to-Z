@@ -1,5 +1,9 @@
 import { motion } from "framer-motion";
-import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
+import type {
+  PointerEvent as ReactPointerEvent,
+  RefObject,
+  WheelEvent as ReactWheelEvent,
+} from "react";
 import { steppedEase } from "../../lib/animationUtils";
 import { BUILDING_MASTERS } from "./townData";
 import type { BuildingMaster, BuildingTargetSpLanguage } from "./types";
@@ -32,9 +36,14 @@ export function BuildInventory({
   userSpMap,
   visible,
 }: BuildInventoryProps) {
+  const stopInventoryWheel = (event: ReactWheelEvent<HTMLElement>) => {
+    event.stopPropagation();
+  };
+
   return (
     <motion.aside
       ref={inventoryRef}
+      onWheel={stopInventoryWheel}
       initial={{ opacity: 0, x: -18 }}
       animate={{
         opacity: 1,
@@ -325,7 +334,7 @@ function BuildingInventoryCard({
             textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
           }}
         >
-          BUILD
+          BUY
         </button>
       </div>
 
