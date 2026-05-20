@@ -69,6 +69,20 @@ func (s *stubGitHubTokenRepo) GitHubAccessToken(_ context.Context, _ user.ID) (s
 	return s.token, s.found, s.err
 }
 
+type stubGuildMembershipReader struct {
+	guild *mypage.GuildInfo
+	total int
+	err   error
+}
+
+func (s *stubGuildMembershipReader) GetGuildMembership(_ context.Context, _ user.ID) (*mypage.GuildInfo, error) {
+	return s.guild, s.err
+}
+
+func (s *stubGuildMembershipReader) GetTotalGuilds(_ context.Context) (int, error) {
+	return s.total, s.err
+}
+
 // --- tests ---
 
 func TestGetMyPage_EmptyToken(t *testing.T) {
@@ -78,6 +92,7 @@ func TestGetMyPage_EmptyToken(t *testing.T) {
 		&stubRepoReader{},
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
+		&stubGuildMembershipReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "")
@@ -93,6 +108,7 @@ func TestGetMyPage_SessionNotFound(t *testing.T) {
 		&stubRepoReader{},
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
+		&stubGuildMembershipReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "invalid-token")
@@ -123,6 +139,7 @@ func TestGetMyPage_Success(t *testing.T) {
 		}},
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
+		&stubGuildMembershipReader{},
 	)
 
 	result, err := uc.GetMyPage(context.Background(), "valid-token")
@@ -160,6 +177,7 @@ func TestGetMyPage_CPError(t *testing.T) {
 		&stubRepoReader{},
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
+		&stubGuildMembershipReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "valid-token")
@@ -178,6 +196,7 @@ func TestGetMyPage_RepoError(t *testing.T) {
 		&stubRepoReader{err: repoErr},
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
+		&stubGuildMembershipReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "valid-token")
