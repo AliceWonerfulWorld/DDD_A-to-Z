@@ -13,7 +13,7 @@ import (
 
 const (
 	oauthStateCookieName = "lang_war_oauth_state"
-	oauthStateCookiePath = "/auth/github"
+	oauthStateCookiePath = "/api/auth/github"
 	sessionCookieName    = "lang_war_session"
 )
 
