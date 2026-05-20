@@ -52,14 +52,17 @@ const MOCK = {
     remaining: 52,
   },
   guild: {
+    id: "",
     name: "TypeScript",
+    slug: "typescript",
     icon: "📘",
     color: "#3178c6",
-    fullName: "TypeScript GUILD",
-    desc: "型の力で安全で堅牢なコードを書く、\nエレガントな戦士たちの集い。",
+    description: "型の力で安全で堅牢なコードを書く、\nエレガントな戦士たちの集い。",
+    member_count: 0,
     rank: 42,
-    total: 156,
+    total_guilds: 156,
     cp: 24680,
+    fullName: "TypeScript GUILD",
   },
   title: {
     name: "Consistency Master",
@@ -164,8 +167,8 @@ export function MyPage({ onNavigate }: MyPageProps) {
       .slice(0, 6);
   }, [mypageData]);
 
-  const guild = MOCK.guild;
-  const gColor = guild.color;
+  const guild = mypageData?.guild ?? MOCK.guild;
+  const gColor = guild.color ?? "#3178c6";
 
   return (
     <div
@@ -420,7 +423,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   position: "relative",
                 }}
               >
-                <span style={{ fontSize: "3.6rem" }}>📖</span>
+                <span style={{ fontSize: "3.6rem" }}>{guild.icon ?? "📖"}</span>
                 <div
                   style={{
                     fontSize: "0.6rem",
@@ -454,7 +457,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   lineHeight: 1.4,
                 }}
               >
-                {MOCK.guild.fullName}
+                {guild.name}
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -489,7 +492,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   fontFamily: '"Press Start 2P", monospace',
                 }}
               >
-                {MOCK.guild.desc}
+                {guild.description}
               </div>
             </div>
 
@@ -525,7 +528,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                       fontFamily: '"Press Start 2P", monospace',
                     }}
                   >
-                    #{MOCK.guild.rank}
+                    #{guild.rank ?? "-"}
                   </span>
                   <span
                     style={{
@@ -535,7 +538,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                       marginLeft: "8px",
                     }}
                   >
-                    / {MOCK.guild.total} GUILDS
+                    / {guild.total_guilds ?? "-"} GUILDS
                   </span>
                 </div>
               </div>
@@ -559,7 +562,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                       fontFamily: '"Press Start 2P", monospace',
                     }}
                   >
-                    {MOCK.guild.cp.toLocaleString()}
+                    {(guild.cp ?? 0).toLocaleString()}
                   </span>
                   <div
                     style={{
