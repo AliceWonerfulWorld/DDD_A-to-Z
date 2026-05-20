@@ -73,6 +73,19 @@ func (s *stubMypageGitHubTokenRepo) GitHubAccessToken(_ context.Context, _ user.
 	return s.token, s.found, s.err
 }
 
+type stubMypageGuildMembershipReader struct {
+	guild *mypage.GuildInfo
+	total int
+}
+
+func (s *stubMypageGuildMembershipReader) GetGuildMembership(_ context.Context, _ user.ID) (*mypage.GuildInfo, error) {
+	return s.guild, nil
+}
+
+func (s *stubMypageGuildMembershipReader) GetTotalGuilds(_ context.Context) (int, error) {
+	return s.total, nil
+}
+
 // --- tests ---
 
 func TestMypageController_NoCookie(t *testing.T) {
@@ -82,6 +95,7 @@ func TestMypageController_NoCookie(t *testing.T) {
 		&stubMypageRepoReader{},
 		&stubMypageGitHubStatsReader{},
 		&stubMypageGitHubTokenRepo{},
+		&stubMypageGuildMembershipReader{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)
@@ -121,6 +135,7 @@ func TestMypageController_Success(t *testing.T) {
 		}},
 		&stubMypageGitHubStatsReader{},
 		&stubMypageGitHubTokenRepo{},
+		&stubMypageGuildMembershipReader{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)
