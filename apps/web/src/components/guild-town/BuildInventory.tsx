@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import type {
+  KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
   RefObject,
   WheelEvent as ReactWheelEvent,
@@ -254,12 +255,46 @@ interface InventoryTabButtonProps {
 }
 
 function InventoryTabButton({ active, badge, label, onClick }: InventoryTabButtonProps) {
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick();
+      return;
+    }
+
+    const tabButtons = Array.from(
+      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+        'button[role="tab"]',
+      ) ?? [],
+    );
+    const currentIndex = tabButtons.indexOf(event.currentTarget);
+    if (currentIndex === -1) return;
+
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowLeft") {
+      nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+    } else if (event.key === "ArrowRight") {
+      nextIndex = (currentIndex + 1) % tabButtons.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = tabButtons.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    tabButtons[nextIndex]?.focus();
+  };
+
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={active ? 0 : -1}
       style={{
         minHeight: "38px",
         border: `2px solid ${active ? "rgba(116, 247, 161, 0.86)" : "rgba(84, 96, 112, 0.72)"}`,
