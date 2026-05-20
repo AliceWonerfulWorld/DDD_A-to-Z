@@ -88,8 +88,15 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 	var guildInfo *GuildInfo
 	var totalGuilds int
 	if u.guild != nil {
-		guildInfo, _ = u.guild.GetGuildMembership(ctx, appUser.ID)
-		totalGuilds, _ = u.guild.GetTotalGuilds(ctx)
+		var guildErr error
+		guildInfo, guildErr = u.guild.GetGuildMembership(ctx, appUser.ID)
+		if guildErr != nil {
+			slog.WarnContext(ctx, "failed to get guild membership", "error", guildErr, "user_id", appUser.ID)
+		}
+		totalGuilds, guildErr = u.guild.GetTotalGuilds(ctx)
+		if guildErr != nil {
+			slog.WarnContext(ctx, "failed to get total guilds", "error", guildErr, "user_id", appUser.ID)
+		}
 	}
 	if guildInfo != nil {
 		guildInfo.TotalGuilds = totalGuilds
