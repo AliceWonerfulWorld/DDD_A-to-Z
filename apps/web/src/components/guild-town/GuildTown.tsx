@@ -57,14 +57,8 @@ export function GuildTown({
   const [selectedPlacedItemId, setSelectedPlacedItemId] = useState<string | null>(null);
   const [storingPlacedItemIds, setStoringPlacedItemIds] = useState<string[]>([]);
   const [userCp, setUserCp] = useState(1200);
-  const [userSpMap, setUserSpMap] = useState<Record<BuildingTargetSpLanguage, number>>({
-    Common: 0,
-    Go: 500,
-    Java: 0,
-    Python: 0,
-    Rust: 0,
-    TypeScript: 100,
-  });
+  const currentGuildSpLanguage: BuildingTargetSpLanguage = "Go";
+  const [userSp, setUserSp] = useState(500);
   const [userInventory, setUserInventory] = useState<UserInventoryState[]>(
     BUILDING_MASTERS.map((building) => ({ buildingId: building.id, count: 0 })),
   );
@@ -222,19 +216,15 @@ export function GuildTown({
 
   const handleBuyBuilding = (building: BuildingMaster) => {
     const firstLevel = building.levels[0];
-    const currentSp = userSpMap[building.targetSpLanguage] ?? 0;
     const canBuy =
       currentGuildLevel >= building.requiredGuildLevel &&
       userCp >= firstLevel.upgradeCostCp &&
-      currentSp >= firstLevel.upgradeCostSp;
+      userSp >= firstLevel.upgradeCostSp;
 
     if (!canBuy) return;
 
     setUserCp((currentValue) => currentValue - firstLevel.upgradeCostCp);
-    setUserSpMap((currentMap) => ({
-      ...currentMap,
-      [building.targetSpLanguage]: currentSp - firstLevel.upgradeCostSp,
-    }));
+    setUserSp((currentValue) => currentValue - firstLevel.upgradeCostSp);
     setUserInventory((currentInventory) =>
       currentInventory.map((inventoryItem) =>
         inventoryItem.buildingId === building.id
@@ -324,6 +314,7 @@ export function GuildTown({
       <BackButton onNavigate={onNavigate} />
       <BuildInventory
         currentGuildLevel={currentGuildLevel}
+        currentGuildSpLanguage={currentGuildSpLanguage}
         inventory={userInventory}
         inventoryRef={inventoryRef}
         onBuyBuilding={handleBuyBuilding}
@@ -331,7 +322,7 @@ export function GuildTown({
         onToggleVisible={() => setInventoryVisible((currentVisible) => !currentVisible)}
         stopNestedDrag={stopNestedDrag}
         userCp={userCp}
-        userSpMap={userSpMap}
+        userSp={userSp}
         visible={inventoryVisible}
       />
       <BuildingInfoPanel item={selectedPlacedItem} onClose={() => setSelectedPlacedItemId(null)} />

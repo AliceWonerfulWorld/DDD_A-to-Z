@@ -13,6 +13,7 @@ type BuildInventoryTab = "shop" | "inventory";
 
 interface BuildInventoryProps {
   currentGuildLevel: number;
+  currentGuildSpLanguage: BuildingTargetSpLanguage;
   inventory: UserInventoryState[];
   inventoryRef: RefObject<HTMLDivElement | null>;
   onBuyBuilding: (building: BuildingMaster) => void;
@@ -20,7 +21,7 @@ interface BuildInventoryProps {
   onToggleVisible: () => void;
   stopNestedDrag: (event: ReactPointerEvent<HTMLElement>) => void;
   userCp: number;
-  userSpMap: Record<BuildingTargetSpLanguage, number>;
+  userSp: number;
   visible: boolean;
 }
 
@@ -35,6 +36,7 @@ const languageStyles: Record<BuildingTargetSpLanguage, { color: string; label: s
 
 export function BuildInventory({
   currentGuildLevel,
+  currentGuildSpLanguage,
   inventory,
   inventoryRef,
   onBuyBuilding,
@@ -42,7 +44,7 @@ export function BuildInventory({
   onToggleVisible,
   stopNestedDrag,
   userCp,
-  userSpMap,
+  userSp,
   visible,
 }: BuildInventoryProps) {
   const [activeTab, setActiveTab] = useState<BuildInventoryTab>("shop");
@@ -209,16 +211,18 @@ export function BuildInventory({
                   <BuildingInventoryCard
                     key={item.id}
                     currentGuildLevel={currentGuildLevel}
+                    currentGuildSpLanguage={currentGuildSpLanguage}
                     item={item}
                     onBuy={onBuyBuilding}
                     userCp={userCp}
-                    userSp={userSpMap[item.targetSpLanguage] ?? 0}
+                    userSp={userSp}
                   />
                 ))
               : BUILDING_MASTERS.map((item) => (
                   <BuildingDeployCard
                     key={item.id}
                     count={inventoryCountByBuildingId[item.id] ?? 0}
+                    currentGuildSpLanguage={currentGuildSpLanguage}
                     item={item}
                     onDeploy={onDeployBuilding}
                   />
@@ -274,6 +278,7 @@ function InventoryTabButton({ active, badge, label, onClick }: InventoryTabButto
 
 interface BuildingInventoryCardProps {
   currentGuildLevel: number;
+  currentGuildSpLanguage: BuildingTargetSpLanguage;
   item: BuildingMaster;
   onBuy: (building: BuildingMaster) => void;
   userCp: number;
@@ -282,13 +287,14 @@ interface BuildingInventoryCardProps {
 
 function BuildingInventoryCard({
   currentGuildLevel,
+  currentGuildSpLanguage,
   item,
   onBuy,
   userCp,
   userSp,
 }: BuildingInventoryCardProps) {
   const firstLevel = item.levels[0];
-  const languageStyle = languageStyles[item.targetSpLanguage];
+  const languageStyle = languageStyles[currentGuildSpLanguage];
   const isLocked = currentGuildLevel < item.requiredGuildLevel;
   const isCpShort = userCp < firstLevel.upgradeCostCp;
   const isSpShort = userSp < firstLevel.upgradeCostSp;
@@ -426,7 +432,7 @@ function BuildingInventoryCard({
           />
           <CostPill
             isShort={isSpShort}
-            label={`${firstLevel.upgradeCostSp.toLocaleString()} ${item.targetSpLanguage}-SP`}
+            label={`${firstLevel.upgradeCostSp.toLocaleString()} ${currentGuildSpLanguage}-SP`}
             tone={languageStyle.color}
           />
         </div>
@@ -488,12 +494,18 @@ function BuildingInventoryCard({
 
 interface BuildingDeployCardProps {
   count: number;
+  currentGuildSpLanguage: BuildingTargetSpLanguage;
   item: BuildingMaster;
   onDeploy: (building: BuildingMaster) => void;
 }
 
-function BuildingDeployCard({ count, item, onDeploy }: BuildingDeployCardProps) {
-  const languageStyle = languageStyles[item.targetSpLanguage];
+function BuildingDeployCard({
+  count,
+  currentGuildSpLanguage,
+  item,
+  onDeploy,
+}: BuildingDeployCardProps) {
+  const languageStyle = languageStyles[currentGuildSpLanguage];
   const canDeploy = count > 0;
 
   return (
@@ -573,7 +585,7 @@ function BuildingDeployCard({ count, item, onDeploy }: BuildingDeployCardProps) 
               lineHeight: 1.35,
             }}
           >
-            {item.buffType.toUpperCase()} / {item.targetSpLanguage}
+            {item.buffType.toUpperCase()}
           </p>
           <h2
             style={{
