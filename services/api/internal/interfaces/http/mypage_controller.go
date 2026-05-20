@@ -96,7 +96,6 @@ func (c *MypageController) toResponse(data mypageapp.MyPageData) map[string]any 
 			"language_summary": langSummary,
 			"recent":           recent,
 		},
-		"guild": nil,
 	}
 
 	if data.GitHubStats != nil {
@@ -114,8 +113,16 @@ func (c *MypageController) toResponse(data mypageapp.MyPageData) map[string]any 
 
 	if data.Guild != nil {
 		resp["guild"] = map[string]any{
-			"id":   data.Guild.ID,
-			"name": data.Guild.Name,
+			"id":           data.Guild.ID,
+			"name":         data.Guild.Name,
+			"slug":         data.Guild.Slug,
+			"icon":         data.Guild.Icon,
+			"color":        data.Guild.Color,
+			"description":  data.Guild.Description,
+			"member_count": data.Guild.MemberCount,
+			"rank":         data.Guild.Rank,
+			"total_guilds": data.Guild.TotalGuilds,
+			"cp":           data.Guild.CP,
 		}
 	}
 
