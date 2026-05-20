@@ -17,15 +17,21 @@ const (
 	EntryTypeAdjust EntryType = "adjust"
 )
 
-// PointType はポイントの種別を表す。有効値は point_types マスターテーブルで管理し、
+// PointType はポイントの種別を表す。
+// CPは Language が空文字、SPは Language に GitHub の言語名が入る。
+// 有効な組み合わせは point_types マスターテーブルで管理し、
 // 新しいSP種別の追加は INSERT のみで完結する。
-type PointType string
+type PointType struct {
+	Code     string // "CP" or "SP"
+	Language string // "" for CP, GitHub言語名 for SP
+}
 
-const (
-	PointTypeCP       PointType = "CP"
-	PointTypeGolangSP PointType = "Golang_SP"
-	PointTypeTSSP     PointType = "TypeScript_SP"
-)
+var PointTypeCP = PointType{Code: "CP", Language: ""}
+
+// SPType は GitHub の言語名からSPのPointTypeを生成する。
+func SPType(language string) PointType {
+	return PointType{Code: "SP", Language: language}
+}
 
 type LedgerEntry struct {
 	ID           string
@@ -60,8 +66,8 @@ func NewLedgerEntry(
 	); err != nil {
 		return LedgerEntry{}, err
 	}
-	if string(pointType) == "" {
-		return LedgerEntry{}, fmt.Errorf("point type is required")
+	if pointType.Code == "" {
+		return LedgerEntry{}, fmt.Errorf("point type code is required")
 	}
 	if amount == 0 {
 		return LedgerEntry{}, errors.New("contribution point amount must not be zero")

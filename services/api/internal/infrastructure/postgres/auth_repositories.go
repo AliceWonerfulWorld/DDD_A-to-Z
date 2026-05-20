@@ -63,9 +63,9 @@ func (s *AuthStore) FindOrCreateByGitHub(ctx context.Context, login authapp.GitH
 		}
 
 		if err := tx.Exec(`
-			INSERT INTO point_accounts (user_id, point_type, balance, created_at, updated_at)
-			VALUES (?, 'CP', 0, ?, ?)
-			ON CONFLICT (user_id, point_type) DO NOTHING
+			INSERT INTO point_accounts (user_id, point_type_code, language, balance, created_at, updated_at)
+			VALUES (?, 'CP', '', 0, ?, ?)
+			ON CONFLICT (user_id, point_type_code, language) DO NOTHING
 		`, userID, now, now).Error; err != nil {
 			return err
 		}

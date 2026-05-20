@@ -29,6 +29,18 @@ func (m *cpManager) Earn(ctx context.Context, userID user.ID, amount int64, reas
 	return err
 }
 
+func (m *cpManager) EarnSP(ctx context.Context, userID user.ID, language string, amount int64, reason, sourceType, sourceID string) error {
+	_, err := m.inner.Earn(ctx, contributionpointapp.EarnCommand{
+		UserID:     userID,
+		PointType:  contributionpointdomain.SPType(language),
+		Amount:     amount,
+		Reason:     reason,
+		SourceType: sourceType,
+		SourceID:   sourceID,
+	})
+	return err
+}
+
 func (m *cpManager) GetBalance(ctx context.Context, userID user.ID) (int64, error) {
 	return m.inner.GetBalance(ctx, userID, contributionpointdomain.PointTypeCP)
 }

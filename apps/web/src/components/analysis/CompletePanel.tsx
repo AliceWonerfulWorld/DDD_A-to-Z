@@ -12,6 +12,7 @@ interface ContributionItem {
 interface LanguageBreakdown {
   name: string;
   cp: number;
+  sp: number;
   color?: string;
   icon?: string;
 }
@@ -256,17 +257,36 @@ export function CompletePanel({ isDeparting = false, result, onContinue }: Compl
                       }}
                     />
                   </div>
-                  <span
+                  <div
                     style={{
-                      fontFamily: "var(--font-press)",
-                      fontSize: "0.65rem",
-                      color: "var(--color-pixel-white)",
-                      minWidth: "36px",
-                      textAlign: "right",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-end",
+                      minWidth: "60px",
+                      gap: "2px",
                     }}
                   >
-                    +{lang.cp}
-                  </span>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-press)",
+                        fontSize: "0.65rem",
+                        color: "var(--color-pixel-white)",
+                      }}
+                    >
+                      +{lang.cp}
+                    </span>
+                    {lang.sp > 0 && (
+                      <span
+                        style={{
+                          fontFamily: "var(--font-press)",
+                          fontSize: "0.5rem",
+                          color: "var(--color-neon-green)",
+                        }}
+                      >
+                        SP+{lang.sp}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             );

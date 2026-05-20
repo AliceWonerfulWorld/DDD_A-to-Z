@@ -240,23 +240,24 @@ func TestUseCaseEarn(t *testing.T) {
 		}
 	})
 
-	t.Run("Golang_SP の獲得は CP とは独立して記録される", func(t *testing.T) {
+	t.Run("Go SP の獲得は CP とは独立して記録される", func(t *testing.T) {
 		ledger := &fakeLedgerRepository{}
-		usecase := NewUseCase(ledger, fakeIDGenerator{id: "point_ledger_golang_sp_1"})
+		usecase := NewUseCase(ledger, fakeIDGenerator{id: "point_ledger_go_sp_1"})
+		goSP := contributionpointdomain.SPType("Go")
 
 		entry, err := usecase.Earn(context.Background(), EarnCommand{
 			UserID:     user.ID("user_1"),
-			PointType:  contributionpointdomain.PointTypeGolangSP,
+			PointType:  goSP,
 			Amount:     50,
-			Reason:     "golang commit reward",
+			Reason:     "go commit reward",
 			SourceType: "commit",
 			SourceID:   "commit_1",
 		})
 		if err != nil {
 			t.Fatalf("Earn() がエラーを返しました: %v", err)
 		}
-		if entry.PointType != contributionpointdomain.PointTypeGolangSP {
-			t.Fatalf("entry.PointType = %q, 期待値 %q", entry.PointType, contributionpointdomain.PointTypeGolangSP)
+		if entry.PointType != goSP {
+			t.Fatalf("entry.PointType = %v, 期待値 %v", entry.PointType, goSP)
 		}
 		if entry.BalanceAfter != 50 {
 			t.Fatalf("entry.BalanceAfter = %d, 期待値 50", entry.BalanceAfter)

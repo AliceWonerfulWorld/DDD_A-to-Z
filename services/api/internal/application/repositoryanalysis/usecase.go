@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/repositoryanalysis"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
@@ -30,6 +31,7 @@ type UseCase struct {
 	prs       GitHubPRClient
 	languages GitHubLanguageClient
 	cp        CPEarner
+	sp        SPEarner
 	cpBalance CPBalanceProvider
 	now       func() time.Time
 }
@@ -43,9 +45,10 @@ func NewUseCase(
 	prs GitHubPRClient,
 	languages GitHubLanguageClient,
 	cp CPEarner,
+	sp SPEarner,
 	cpBalance CPBalanceProvider,
 ) *UseCase {
-	return NewUseCaseWithContributionStore(current, tokens, repos, repoStore, nil, commits, prs, languages, cp, cpBalance)
+	return NewUseCaseWithContributionStore(current, tokens, repos, repoStore, nil, commits, prs, languages, cp, sp, cpBalance)
 }
 
 func NewUseCaseWithContributionStore(
@@ -58,6 +61,7 @@ func NewUseCaseWithContributionStore(
 	prs GitHubPRClient,
 	languages GitHubLanguageClient,
 	cp CPEarner,
+	sp SPEarner,
 	cpBalance CPBalanceProvider,
 ) *UseCase {
 	return &UseCase{
@@ -70,6 +74,7 @@ func NewUseCaseWithContributionStore(
 		prs:       prs,
 		languages: languages,
 		cp:        cp,
+		sp:        sp,
 		cpBalance: cpBalance,
 		now:       time.Now,
 	}
@@ -246,13 +251,7 @@ func (u *UseCase) AnalyzeForUser(ctx context.Context, appUser user.User, session
 		totalCP += cp
 	}
 
-	breakdown := make([]repositoryanalysis.LanguageContribution, 0, len(langCP))
-	for name, cp := range langCP {
-		breakdown = append(breakdown, repositoryanalysis.LanguageContribution{Name: name, CP: cp})
-	}
-	sort.Slice(breakdown, func(i, j int) bool {
-		return breakdown[i].CP > breakdown[j].CP
-	})
+	langSP := make(map[string]int64, len(langCP))
 
 	if !apiErr {
 		if u.logs != nil && len(contributions) > 0 {
@@ -265,10 +264,27 @@ func (u *UseCase) AnalyzeForUser(ctx context.Context, appUser user.User, session
 				return AnalysisResult{}, err
 			}
 		}
+		for lang, cp := range langCP {
+			if err := u.sp.EarnSP(ctx, appUser.ID, lang, cp, "skill point from contribution analysis", "analysis", "initial"); err != nil {
+				if errors.Is(err, contributionpointapp.ErrUnsupportedPointType) {
+					continue
+				}
+				return AnalysisResult{}, err
+			}
+			langSP[lang] = cp
+		}
 		if err := u.cpBalance.UpdateLastAnalyzedAt(ctx, appUser.ID, now); err != nil {
 			return AnalysisResult{}, err
 		}
 	}
+
+	breakdown := make([]repositoryanalysis.LanguageContribution, 0, len(langCP))
+	for name, cp := range langCP {
+		breakdown = append(breakdown, repositoryanalysis.LanguageContribution{Name: name, CP: cp, SP: langSP[name]})
+	}
+	sort.Slice(breakdown, func(i, j int) bool {
+		return breakdown[i].CP > breakdown[j].CP
+	})
 
 	balance, err := u.cpBalance.GetBalance(ctx, appUser.ID)
 	if err != nil {
