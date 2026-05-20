@@ -33,6 +33,11 @@ export interface BuildingMaster {
   levels: BuildingLevelStatus[];
 }
 
+export interface UserInventoryState {
+  buildingId: string;
+  count: number;
+}
+
 export interface InventoryItem {
   type: InventoryItemType;
   name: string;
@@ -47,7 +52,8 @@ export interface InventoryItem {
 
 export interface PlacedItem {
   id: string;
-  type: InventoryItemType;
+  type: string;
+  buildingId?: string;
   name: string;
   title: string;
   description: string;

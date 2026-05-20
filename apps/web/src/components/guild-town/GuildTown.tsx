@@ -13,9 +13,22 @@ import { BuildInventory } from "./BuildInventory";
 import { BuildingInfoPanel } from "./BuildingInfoPanel";
 import { TownMap } from "./TownMap";
 import { TownStatusHeader } from "./TownStatusHeader";
-import { MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS, INITIAL_INVENTORY } from "./townData";
+import {
+  BUILDING_MASTERS,
+  MAX_SCALE,
+  MIN_SCALE,
+  STORE_ANIMATION_MS,
+  INITIAL_INVENTORY,
+} from "./townData";
 import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./townMath";
-import type { BuildingTargetSpLanguage, InventoryItem, PlacedItem, ViewportSize } from "./types";
+import type {
+  BuildingMaster,
+  BuildingTargetSpLanguage,
+  InventoryItem,
+  PlacedItem,
+  UserInventoryState,
+  ViewportSize,
+} from "./types";
 import { ZoomControls } from "./ZoomControls";
 
 interface GuildTownProps {
@@ -43,6 +56,18 @@ export function GuildTown({
   const [inventoryVisible, setInventoryVisible] = useState(true);
   const [selectedPlacedItemId, setSelectedPlacedItemId] = useState<string | null>(null);
   const [storingPlacedItemIds, setStoringPlacedItemIds] = useState<string[]>([]);
+  const [userCp, setUserCp] = useState(1200);
+  const [userSpMap, setUserSpMap] = useState<Record<BuildingTargetSpLanguage, number>>({
+    Common: 0,
+    Go: 500,
+    Java: 0,
+    Python: 0,
+    Rust: 0,
+    TypeScript: 100,
+  });
+  const [userInventory, setUserInventory] = useState<UserInventoryState[]>(
+    BUILDING_MASTERS.map((building) => ({ buildingId: building.id, count: 0 })),
+  );
   const mapRef = useRef<HTMLDivElement>(null);
   const inventoryRef = useRef<HTMLDivElement>(null);
   const seededInitialBuildingsRef = useRef(false);
@@ -50,15 +75,6 @@ export function GuildTown({
   const mapY = useMotionValue(0);
   const progress = Math.min(100, Math.max(0, (currentCp / nextLevelCp) * 100));
   const currentGuildLevel = 3;
-  const userCp = 1200;
-  const userSpMap: Record<BuildingTargetSpLanguage, number> = {
-    Common: 0,
-    Go: 500,
-    Java: 0,
-    Python: 0,
-    Rust: 0,
-    TypeScript: 100,
-  };
   const selectedPlacedItem =
     placedItems.find((placedItem) => placedItem.id === selectedPlacedItemId) ?? null;
   const dragConstraints = {
@@ -192,7 +208,83 @@ export function GuildTown({
       setStoringPlacedItemIds((currentIds) =>
         currentIds.filter((storingItemId) => storingItemId !== item.id),
       );
+      if (item.buildingId) {
+        setUserInventory((currentInventory) =>
+          currentInventory.map((inventoryItem) =>
+            inventoryItem.buildingId === item.buildingId
+              ? { ...inventoryItem, count: inventoryItem.count + 1 }
+              : inventoryItem,
+          ),
+        );
+      }
     }, STORE_ANIMATION_MS);
+  };
+
+  const handleBuyBuilding = (building: BuildingMaster) => {
+    const firstLevel = building.levels[0];
+    const currentSp = userSpMap[building.targetSpLanguage] ?? 0;
+    const canBuy =
+      currentGuildLevel >= building.requiredGuildLevel &&
+      userCp >= firstLevel.upgradeCostCp &&
+      currentSp >= firstLevel.upgradeCostSp;
+
+    if (!canBuy) return;
+
+    setUserCp((currentValue) => currentValue - firstLevel.upgradeCostCp);
+    setUserSpMap((currentMap) => ({
+      ...currentMap,
+      [building.targetSpLanguage]: currentSp - firstLevel.upgradeCostSp,
+    }));
+    setUserInventory((currentInventory) =>
+      currentInventory.map((inventoryItem) =>
+        inventoryItem.buildingId === building.id
+          ? { ...inventoryItem, count: inventoryItem.count + 1 }
+          : inventoryItem,
+      ),
+    );
+  };
+
+  const handleDeployBuilding = (building: BuildingMaster) => {
+    const inventoryItem = userInventory.find((item) => item.buildingId === building.id);
+    if (
+      !inventoryItem ||
+      inventoryItem.count <= 0 ||
+      viewport.width === 0 ||
+      viewport.height === 0
+    ) {
+      return;
+    }
+
+    const width = getBuildingMapWidth(viewport.width);
+    const mapWidth = viewport.width * 2;
+    const mapHeight = viewport.height * 2;
+    const x = clampValue(
+      (-mapX.get() + viewport.width / 2) / scale - width / 2,
+      0,
+      mapWidth - width,
+    );
+    const y = clampValue(
+      (-mapY.get() + viewport.height / 2) / scale - width / 2,
+      0,
+      mapHeight - width,
+    );
+    const placedItemId = `${building.id}-${Date.now()}`;
+
+    setUserInventory((currentInventory) =>
+      currentInventory.map((item) =>
+        item.buildingId === building.id ? { ...item, count: Math.max(0, item.count - 1) } : item,
+      ),
+    );
+    setPlacedItems((currentItems) => [
+      ...currentItems,
+      createPlacedBuildingItem(building, {
+        id: placedItemId,
+        width,
+        x,
+        y,
+      }),
+    ]);
+    setSelectedPlacedItemId(placedItemId);
   };
 
   return (
@@ -232,7 +324,10 @@ export function GuildTown({
       <BackButton onNavigate={onNavigate} />
       <BuildInventory
         currentGuildLevel={currentGuildLevel}
+        inventory={userInventory}
         inventoryRef={inventoryRef}
+        onBuyBuilding={handleBuyBuilding}
+        onDeployBuilding={handleDeployBuilding}
         onToggleVisible={() => setInventoryVisible((currentVisible) => !currentVisible)}
         stopNestedDrag={stopNestedDrag}
         userCp={userCp}
@@ -255,6 +350,28 @@ export function GuildTown({
       />
     </main>
   );
+}
+
+function getBuildingMapWidth(viewportWidth: number) {
+  return clampValue(viewportWidth * 0.14, 112, 220);
+}
+
+function createPlacedBuildingItem(
+  building: BuildingMaster,
+  placement: { id: string; width: number; x: number; y: number },
+): PlacedItem {
+  return {
+    id: placement.id,
+    type: building.id,
+    buildingId: building.id,
+    name: building.name,
+    title: building.name,
+    description: building.description,
+    src: building.previewSrc ?? "/build-items/plasma-capacitor.jpeg",
+    x: placement.x,
+    y: placement.y,
+    width: placement.width,
+  };
 }
 
 function createPlacedItem(

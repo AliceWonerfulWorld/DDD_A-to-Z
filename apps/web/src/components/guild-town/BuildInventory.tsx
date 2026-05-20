@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useMemo, useState } from "react";
 import type {
   PointerEvent as ReactPointerEvent,
   RefObject,
@@ -6,11 +7,16 @@ import type {
 } from "react";
 import { steppedEase } from "../../lib/animationUtils";
 import { BUILDING_MASTERS } from "./townData";
-import type { BuildingMaster, BuildingTargetSpLanguage } from "./types";
+import type { BuildingMaster, BuildingTargetSpLanguage, UserInventoryState } from "./types";
+
+type BuildInventoryTab = "shop" | "inventory";
 
 interface BuildInventoryProps {
   currentGuildLevel: number;
+  inventory: UserInventoryState[];
   inventoryRef: RefObject<HTMLDivElement | null>;
+  onBuyBuilding: (building: BuildingMaster) => void;
+  onDeployBuilding: (building: BuildingMaster) => void;
   onToggleVisible: () => void;
   stopNestedDrag: (event: ReactPointerEvent<HTMLElement>) => void;
   userCp: number;
@@ -29,13 +35,27 @@ const languageStyles: Record<BuildingTargetSpLanguage, { color: string; label: s
 
 export function BuildInventory({
   currentGuildLevel,
+  inventory,
   inventoryRef,
+  onBuyBuilding,
+  onDeployBuilding,
   onToggleVisible,
   stopNestedDrag,
   userCp,
   userSpMap,
   visible,
 }: BuildInventoryProps) {
+  const [activeTab, setActiveTab] = useState<BuildInventoryTab>("shop");
+  const inventoryCountByBuildingId = useMemo(
+    () =>
+      inventory.reduce<Record<string, number>>((countMap, item) => {
+        countMap[item.buildingId] = item.count;
+        return countMap;
+      }, {}),
+    [inventory],
+  );
+  const ownedInventoryTotal = inventory.reduce((total, item) => total + item.count, 0);
+
   const stopInventoryWheel = (event: ReactWheelEvent<HTMLElement>) => {
     event.stopPropagation();
   };
@@ -109,6 +129,29 @@ export function BuildInventory({
       {visible && (
         <>
           <div
+            role="tablist"
+            aria-label="Build inventory tabs"
+            onPointerDown={stopNestedDrag}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "7px",
+            }}
+          >
+            <InventoryTabButton
+              active={activeTab === "shop"}
+              label="SHOP"
+              onClick={() => setActiveTab("shop")}
+            />
+            <InventoryTabButton
+              active={activeTab === "inventory"}
+              badge={ownedInventoryTotal}
+              label="INVENTORY"
+              onClick={() => setActiveTab("inventory")}
+            />
+          </div>
+
+          <div
             style={{
               border: "2px solid rgba(116, 247, 161, 0.58)",
               borderBottomColor: "rgba(24, 83, 45, 0.95)",
@@ -128,7 +171,7 @@ export function BuildInventory({
                 lineHeight: 1.4,
               }}
             >
-              BUILD SHOP
+              {activeTab === "shop" ? "BUILD SHOP" : "BUILD INVENTORY"}
             </p>
             <div
               style={{
@@ -142,7 +185,9 @@ export function BuildInventory({
             >
               <span>GUILD LV.{currentGuildLevel}</span>
               <span style={{ color: "#ffd966", textAlign: "right" }}>
-                {userCp.toLocaleString()} CP
+                {activeTab === "shop"
+                  ? `${userCp.toLocaleString()} CP`
+                  : `${ownedInventoryTotal.toLocaleString()} ITEMS`}
               </span>
             </div>
           </div>
@@ -159,15 +204,25 @@ export function BuildInventory({
               paddingRight: "10px",
             }}
           >
-            {BUILDING_MASTERS.map((item) => (
-              <BuildingInventoryCard
-                key={item.id}
-                currentGuildLevel={currentGuildLevel}
-                item={item}
-                userCp={userCp}
-                userSp={userSpMap[item.targetSpLanguage] ?? 0}
-              />
-            ))}
+            {activeTab === "shop"
+              ? BUILDING_MASTERS.map((item) => (
+                  <BuildingInventoryCard
+                    key={item.id}
+                    currentGuildLevel={currentGuildLevel}
+                    item={item}
+                    onBuy={onBuyBuilding}
+                    userCp={userCp}
+                    userSp={userSpMap[item.targetSpLanguage] ?? 0}
+                  />
+                ))
+              : BUILDING_MASTERS.map((item) => (
+                  <BuildingDeployCard
+                    key={item.id}
+                    count={inventoryCountByBuildingId[item.id] ?? 0}
+                    item={item}
+                    onDeploy={onDeployBuilding}
+                  />
+                ))}
           </div>
         </>
       )}
@@ -175,9 +230,52 @@ export function BuildInventory({
   );
 }
 
+interface InventoryTabButtonProps {
+  active: boolean;
+  badge?: number;
+  label: string;
+  onClick: () => void;
+}
+
+function InventoryTabButton({ active, badge, label, onClick }: InventoryTabButtonProps) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      style={{
+        minHeight: "38px",
+        border: `2px solid ${active ? "rgba(116, 247, 161, 0.86)" : "rgba(84, 96, 112, 0.72)"}`,
+        borderBottomColor: active ? "rgba(24, 83, 45, 0.95)" : "rgba(24, 31, 42, 0.95)",
+        borderRightColor: active ? "rgba(24, 83, 45, 0.95)" : "rgba(24, 31, 42, 0.95)",
+        background: active ? "rgba(4, 67, 37, 0.9)" : "rgba(10, 16, 28, 0.82)",
+        boxShadow: active
+          ? "0 0 14px rgba(116,247,161,0.28), inset 0 0 10px rgba(116,247,161,0.12)"
+          : "inset 0 0 10px rgba(0,0,0,0.54)",
+        color: active ? "#74f7a1" : "rgba(244, 236, 208, 0.58)",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        fontSize: "0.52rem",
+        lineHeight: 1,
+        padding: "8px 6px",
+        textShadow: active
+          ? "0 0 8px rgba(116,247,161,0.72), 2px 2px 0 rgba(0,0,0,0.72)"
+          : "2px 2px 0 rgba(0,0,0,0.72)",
+      }}
+    >
+      {label}
+      {badge !== undefined && badge > 0 ? (
+        <span style={{ marginLeft: "6px", color: "#ffd966" }}>x{badge}</span>
+      ) : null}
+    </button>
+  );
+}
+
 interface BuildingInventoryCardProps {
   currentGuildLevel: number;
   item: BuildingMaster;
+  onBuy: (building: BuildingMaster) => void;
   userCp: number;
   userSp: number;
 }
@@ -185,6 +283,7 @@ interface BuildingInventoryCardProps {
 function BuildingInventoryCard({
   currentGuildLevel,
   item,
+  onBuy,
   userCp,
   userSp,
 }: BuildingInventoryCardProps) {
@@ -335,6 +434,7 @@ function BuildingInventoryCard({
         <button
           type="button"
           disabled={!canBuild}
+          onClick={() => onBuy(item)}
           style={{
             width: "100%",
             border: `2px solid ${canBuild ? "rgba(116, 247, 161, 0.74)" : "rgba(92, 92, 92, 0.78)"}`,
@@ -382,6 +482,163 @@ function BuildingInventoryCard({
           </span>
         </div>
       )}
+    </motion.article>
+  );
+}
+
+interface BuildingDeployCardProps {
+  count: number;
+  item: BuildingMaster;
+  onDeploy: (building: BuildingMaster) => void;
+}
+
+function BuildingDeployCard({ count, item, onDeploy }: BuildingDeployCardProps) {
+  const languageStyle = languageStyles[item.targetSpLanguage];
+  const canDeploy = count > 0;
+
+  return (
+    <motion.article
+      aria-label={`${item.name}. Inventory count ${count}.`}
+      aria-disabled={!canDeploy}
+      whileHover={canDeploy ? { y: -2, backgroundColor: "rgba(116, 247, 161, 0.1)" } : undefined}
+      whileTap={canDeploy ? { y: 2, scale: 0.98 } : undefined}
+      style={{
+        display: "grid",
+        gridTemplateRows: "auto 1fr auto",
+        minHeight: "178px",
+        gap: "9px",
+        opacity: canDeploy ? 1 : 0.46,
+        overflow: "hidden",
+        border: `2px solid ${canDeploy ? "rgba(116, 247, 161, 0.62)" : "rgba(84, 96, 112, 0.62)"}`,
+        borderBottomColor: canDeploy ? "rgba(24, 83, 45, 0.95)" : "rgba(24, 31, 42, 0.95)",
+        borderRightColor: canDeploy ? "rgba(24, 83, 45, 0.95)" : "rgba(24, 31, 42, 0.95)",
+        background: canDeploy ? "rgba(1, 12, 24, 0.78)" : "rgba(18, 18, 18, 0.72)",
+        boxShadow: "inset 0 0 12px rgba(0,0,0,0.62)",
+        color: "#fff8d7",
+        fontFamily: "inherit",
+        fontSize: "0.52rem",
+        lineHeight: 1.45,
+        padding: "10px",
+        textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "64px minmax(0, 1fr) auto",
+          alignItems: "center",
+          gap: "9px",
+          minWidth: 0,
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            display: "grid",
+            width: "64px",
+            height: "64px",
+            placeItems: "center",
+            border: `2px solid ${languageStyle.color}`,
+            background: "rgba(1, 8, 22, 0.78)",
+            boxShadow: `0 0 14px ${languageStyle.color}55, inset 0 0 12px rgba(0,0,0,0.7)`,
+            color: languageStyle.color,
+            fontSize: "0.58rem",
+            overflow: "hidden",
+          }}
+        >
+          {item.previewSrc ? (
+            <img
+              className="pixelated"
+              src={item.previewSrc}
+              alt=""
+              draggable={false}
+              style={{
+                display: "block",
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                pointerEvents: "none",
+              }}
+            />
+          ) : (
+            languageStyle.label
+          )}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <p
+            style={{
+              margin: "0 0 5px",
+              color: languageStyle.color,
+              fontSize: "0.48rem",
+              lineHeight: 1.35,
+            }}
+          >
+            {item.buffType.toUpperCase()} / {item.targetSpLanguage}
+          </p>
+          <h2
+            style={{
+              margin: 0,
+              color: "#ffd966",
+              fontSize: "0.56rem",
+              lineHeight: 1.45,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {item.name}
+          </h2>
+        </div>
+        <span
+          aria-label={`Owned count ${count}`}
+          style={{
+            minWidth: "42px",
+            border: "2px solid rgba(255, 217, 102, 0.78)",
+            background: "rgba(1, 8, 22, 0.76)",
+            boxShadow: "0 0 10px rgba(255,217,102,0.22), inset 0 0 10px rgba(0,0,0,0.58)",
+            color: "#ffd966",
+            padding: "6px 5px",
+            textAlign: "center",
+          }}
+        >
+          x{count}
+        </span>
+      </div>
+
+      <p
+        style={{
+          margin: 0,
+          color: "#f4ecd0",
+          fontFamily: '"DotGothic16", monospace',
+          fontSize: "0.8rem",
+          lineHeight: 1.35,
+        }}
+      >
+        {item.description}
+      </p>
+
+      <button
+        type="button"
+        disabled={!canDeploy}
+        onClick={() => onDeploy(item)}
+        style={{
+          width: "100%",
+          border: `2px solid ${canDeploy ? "rgba(116, 247, 161, 0.74)" : "rgba(92, 92, 92, 0.78)"}`,
+          borderBottomColor: canDeploy ? "rgba(24, 83, 45, 0.95)" : "rgba(32, 32, 32, 0.95)",
+          borderRightColor: canDeploy ? "rgba(24, 83, 45, 0.95)" : "rgba(32, 32, 32, 0.95)",
+          background: canDeploy ? "rgba(4, 67, 37, 0.9)" : "rgba(37, 37, 37, 0.92)",
+          boxShadow: canDeploy
+            ? "0 0 12px rgba(116,247,161,0.2), inset 0 0 10px rgba(116,247,161,0.1)"
+            : "inset 0 0 10px rgba(0,0,0,0.52)",
+          color: canDeploy ? "#74f7a1" : "rgba(255, 248, 215, 0.38)",
+          cursor: canDeploy ? "pointer" : "not-allowed",
+          fontFamily: "inherit",
+          fontSize: "0.56rem",
+          lineHeight: 1,
+          padding: "9px 8px",
+          textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+        }}
+      >
+        SET
+      </button>
     </motion.article>
   );
 }
