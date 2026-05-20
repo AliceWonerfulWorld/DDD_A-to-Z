@@ -172,7 +172,7 @@ type yearlyStats struct {
 }
 
 func (c *RepositoryClient) fetchYearlyContributions(ctx context.Context, accessToken, username string) (*yearlyStats, error) {
-	year := time.Now().Year() - 1
+	year := time.Now().Year()
 	query := fmt.Sprintf(`{
 		user(login: "%s") {
 			contributionsCollection(from: "%d-01-01T00:00:00Z", to: "%d-12-31T23:59:59Z") {
