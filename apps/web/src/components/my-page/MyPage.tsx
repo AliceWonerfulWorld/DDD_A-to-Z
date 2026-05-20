@@ -623,7 +623,19 @@ export function MyPage({ onNavigate }: MyPageProps) {
           {/* Right: Engineer Status */}
           <Panel borderColor="rgba(0,229,255,0.2)">
             <SectionTitle text="ENGINEER STATUS" color="#00e5ff" />
-            {mypageData?.github_stats ? (
+            {mypageData === undefined ? (
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "rgba(232,232,208,0.3)",
+                  fontFamily: '"Press Start 2P", monospace',
+                  textAlign: "center",
+                  padding: "20px 0",
+                }}
+              >
+                Loading...
+              </div>
+            ) : mypageData?.github_stats ? (
               <GitHubStatsPanel stats={mypageData.github_stats} />
             ) : (
               <div
@@ -635,7 +647,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   padding: "20px 0",
                 }}
               >
-                {apiError ? "Failed to load" : "Loading..."}
+                {apiError ? "Failed to load" : "No data"}
               </div>
             )}
           </Panel>
@@ -655,7 +667,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
           <Panel borderColor="rgba(191,0,255,0.3)">
             <SectionTitle text="LANGUAGES" color="#bf00ff" />
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {langEntries.length === 0 ? (
+              {mypageData === undefined ? (
                 <div
                   style={{
                     fontSize: "0.7rem",
@@ -665,7 +677,19 @@ export function MyPage({ onNavigate }: MyPageProps) {
                     padding: "20px 0",
                   }}
                 >
-                  {apiError ? "Failed to load" : "Loading..."}
+                  Loading...
+                </div>
+              ) : langEntries.length === 0 ? (
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "rgba(232,232,208,0.3)",
+                    fontFamily: '"Press Start 2P", monospace',
+                    textAlign: "center",
+                    padding: "20px 0",
+                  }}
+                >
+                  {apiError ? "Failed to load" : "No data"}
                 </div>
               ) : (
                 langEntries.map((lang, i) => {
