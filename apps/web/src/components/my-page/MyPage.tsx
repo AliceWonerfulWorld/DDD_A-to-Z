@@ -741,17 +741,17 @@ export function MyPage({ onNavigate }: MyPageProps) {
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function MiniStat({ label, value, icon }: { label: string; value: string; icon?: string }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <span
         style={{
           fontSize: "0.7rem",
-          color: "rgba(232,232,208,0.3)",
+          color: "rgba(232,232,208,0.8)",
           fontFamily: '"Press Start 2P", monospace',
         }}
       >
-        {label}
+        {icon ? `${icon} ${label}` : label}
       </span>
       <span
         style={{ fontSize: "0.9rem", color: "#00e5ff", fontFamily: '"Press Start 2P", monospace' }}
@@ -774,13 +774,18 @@ const currentYear = new Date().getFullYear();
 function GitHubStatsPanel({ stats }: { stats: GitHubStats }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-      <MiniStat label="Total Stars" value={stats.total_stars.toLocaleString()} />
-      <MiniStat label={`${currentYear} Commits`} value={stats.yearly_commits.toLocaleString()} />
-      <MiniStat label="Total PRs" value={stats.total_prs.toLocaleString()} />
-      <MiniStat label="Total Issues" value={stats.total_issues.toLocaleString()} />
-      <MiniStat label="Public Repos" value={stats.public_repos.toLocaleString()} />
-      <MiniStat label="GitHub Started" value={formatDate(stats.github_created_at)} />
+      <MiniStat icon="⭐" label="Total Stars" value={stats.total_stars.toLocaleString()} />
       <MiniStat
+        icon="📝"
+        label={`${currentYear} Commits`}
+        value={stats.yearly_commits.toLocaleString()}
+      />
+      <MiniStat icon="🔀" label="Total PRs" value={stats.total_prs.toLocaleString()} />
+      <MiniStat icon="🐛" label="Total Issues" value={stats.total_issues.toLocaleString()} />
+      <MiniStat icon="📦" label="Public Repos" value={stats.public_repos.toLocaleString()} />
+      <MiniStat icon="📅" label="GitHub Started" value={formatDate(stats.github_created_at)} />
+      <MiniStat
+        icon="🎯"
         label={`${currentYear} Contributions`}
         value={stats.yearly_contributions.toLocaleString()}
       />
