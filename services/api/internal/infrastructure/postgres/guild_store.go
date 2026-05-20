@@ -200,6 +200,48 @@ func (s *GuildStore) ListActiveMembersByGuild(ctx context.Context, guildID guild
 	return members, nil
 }
 
+func (s *GuildStore) ListActivityLogsByGuild(ctx context.Context, guildID guilddomain.ID, limit int) ([]guilddomain.ActivityLog, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+
+	var records []guildActivityLogRecord
+	if err := s.db.WithContext(ctx).Raw(`
+		SELECT
+			concat(rac.user_id, ':', rac.contribution_type, ':', rac.repository_full_name, ':', rac.external_id) AS id,
+			rac.user_id,
+			COALESCE(up.display_name, ga.username) AS player,
+			rac.contribution_type,
+			rac.repository_full_name,
+			rac.message,
+			rac.language,
+			rac.cp,
+			rac.occurred_at
+		FROM repository_analysis_contributions rac
+		JOIN guild_memberships gm ON gm.user_id = rac.user_id
+			AND gm.guild_id = ?
+			AND gm.left_at IS NULL
+			AND rac.occurred_at >= gm.joined_at
+		JOIN github_accounts ga ON ga.user_id = rac.user_id
+		LEFT JOIN user_profiles up ON up.user_id = rac.user_id
+		ORDER BY rac.occurred_at DESC, rac.created_at DESC, rac.external_id DESC
+		LIMIT ?
+	`, guildID, limit).Scan(&records).Error; err != nil {
+		return nil, err
+	}
+
+	logs := make([]guilddomain.ActivityLog, 0, len(records))
+	for _, record := range records {
+		log, err := record.toDomain()
+		if err != nil {
+			return nil, err
+		}
+		logs = append(logs, log)
+	}
+
+	return logs, nil
+}
+
 func (s *GuildStore) CreateMembership(ctx context.Context, membership guilddomain.Membership) error {
 	err := s.db.WithContext(ctx).Exec(`
 		INSERT INTO guild_memberships (id, user_id, guild_id, joined_at, left_at, created_at, updated_at)
@@ -418,6 +460,32 @@ func (r guildMemberContributionRecord) toDomain() (guilddomain.MemberContributio
 		Name:          r.Name,
 		TotalEarnedCP: r.TotalEarnedCP,
 		JoinedAt:      r.JoinedAt,
+	})
+}
+
+type guildActivityLogRecord struct {
+	ID                 string    `gorm:"column:id"`
+	UserID             user.ID   `gorm:"column:user_id"`
+	Player             string    `gorm:"column:player"`
+	ContributionType   string    `gorm:"column:contribution_type"`
+	RepositoryFullName string    `gorm:"column:repository_full_name"`
+	Message            string    `gorm:"column:message"`
+	Language           string    `gorm:"column:language"`
+	CP                 int64     `gorm:"column:cp"`
+	OccurredAt         time.Time `gorm:"column:occurred_at"`
+}
+
+func (r guildActivityLogRecord) toDomain() (guilddomain.ActivityLog, error) {
+	return guilddomain.NewActivityLog(guilddomain.ActivityLog{
+		ID:         r.ID,
+		UserID:     r.UserID,
+		Player:     r.Player,
+		Type:       r.ContributionType,
+		Repo:       r.RepositoryFullName,
+		Message:    r.Message,
+		Language:   r.Language,
+		CP:         r.CP,
+		OccurredAt: r.OccurredAt,
 	})
 }
 

@@ -20,6 +20,7 @@ type testRepository struct {
 	updated          *guilddomain.Membership
 	contribution     *guilddomain.CPContribution
 	contributions    []guilddomain.CPContribution
+	activityLogs     []guilddomain.ActivityLog
 	membersByGuild   map[guilddomain.ID][]guilddomain.MemberContribution
 }
 
@@ -50,6 +51,14 @@ func (r testRepository) FindActiveMembershipByUserID(ctx context.Context, userID
 
 func (r testRepository) ListActiveMembersByGuild(ctx context.Context, guildID guilddomain.ID) ([]guilddomain.MemberContribution, error) {
 	return r.membersByGuild[guildID], nil
+}
+
+func (r testRepository) ListActivityLogsByGuild(ctx context.Context, guildID guilddomain.ID, limit int) ([]guilddomain.ActivityLog, error) {
+	if limit > 0 && len(r.activityLogs) > limit {
+		return r.activityLogs[:limit], nil
+	}
+
+	return r.activityLogs, nil
 }
 
 func (r *testRepository) CreateMembership(ctx context.Context, membership guilddomain.Membership) error {
@@ -406,6 +415,95 @@ func TestUseCaseGetGuildDashboardRejectsUserWithoutGuild(t *testing.T) {
 	_, err := usecase.GetGuildDashboard(context.Background(), "session-token", "guild_go")
 	if !errors.Is(err, ErrActiveMembershipNotFound) {
 		t.Fatalf("GetGuildDashboard() error = %v, 期待値 ErrActiveMembershipNotFound", err)
+	}
+}
+
+func TestUseCaseListGuildActivityLogs(t *testing.T) {
+	now := time.Date(2026, 5, 20, 10, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "Go guild",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	usecase := NewUseCase(&testRepository{
+		activeMembership: &activeMembership,
+		activityLogs: []guilddomain.ActivityLog{{
+			ID:         "user_1:commit:repo:sha",
+			UserID:     "user_1",
+			Player:     "Alice",
+			Type:       "commit",
+			Repo:       "jyogi-web/DDD_A-to-Z",
+			Message:    "Add activity log",
+			Language:   "Go",
+			CP:         1,
+			OccurredAt: now,
+		}},
+	}, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "membership_unused"})
+
+	logs, err := usecase.ListGuildActivityLogs(context.Background(), "session-token", "guild_go", 20)
+	if err != nil {
+		t.Fatalf("ListGuildActivityLogs() がエラーを返しました: %v", err)
+	}
+	if len(logs) != 1 {
+		t.Fatalf("logs length = %d, 期待値 1", len(logs))
+	}
+	if logs[0].Message != "Add activity log" {
+		t.Fatalf("message = %q, 期待値 Add activity log", logs[0].Message)
+	}
+}
+
+func TestUseCaseListGuildActivityLogsRejectsOtherGuild(t *testing.T) {
+	now := time.Date(2026, 5, 20, 10, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "Go guild",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	usecase := NewUseCase(&testRepository{
+		activeMembership: &activeMembership,
+	}, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "membership_unused"})
+
+	_, err := usecase.ListGuildActivityLogs(context.Background(), "session-token", "guild_python", 20)
+	if !errors.Is(err, ErrGuildAccessDenied) {
+		t.Fatalf("ListGuildActivityLogs() error = %v, 期待値 ErrGuildAccessDenied", err)
 	}
 }
 

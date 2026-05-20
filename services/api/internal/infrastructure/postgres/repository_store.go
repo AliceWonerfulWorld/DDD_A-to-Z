@@ -116,6 +116,56 @@ func (s *RepositoryStore) ListRepositories(ctx context.Context, userID user.ID) 
 	return repositories, nil
 }
 
+func (s *RepositoryStore) UpsertAnalysisContributions(ctx context.Context, userID user.ID, contributions []repositoryanalysis.Contribution, recordedAt time.Time) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, contribution := range contributions {
+			if contribution.ExternalID == "" {
+				continue
+			}
+			if contribution.CP <= 0 {
+				continue
+			}
+
+			if err := tx.Exec(`
+				INSERT INTO repository_analysis_contributions (
+					user_id,
+					repository_full_name,
+					contribution_type,
+					external_id,
+					message,
+					language,
+					cp,
+					occurred_at,
+					created_at,
+					updated_at
+				)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				ON CONFLICT (user_id, contribution_type, repository_full_name, external_id) DO UPDATE
+				SET message = EXCLUDED.message,
+					language = EXCLUDED.language,
+					cp = EXCLUDED.cp,
+					occurred_at = EXCLUDED.occurred_at,
+					updated_at = EXCLUDED.updated_at
+			`,
+				userID,
+				contribution.Repo,
+				contribution.Type,
+				contribution.ExternalID,
+				contribution.Message,
+				contribution.Language,
+				contribution.CP,
+				contribution.Timestamp,
+				recordedAt,
+				recordedAt,
+			).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
 type repositoryRecord struct {
 	GitHubID        int64      `gorm:"column:github_id"`
 	UserID          user.ID    `gorm:"column:user_id"`

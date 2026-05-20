@@ -23,6 +23,7 @@ type guildTestRepository struct {
 	activeMembership *guilddomain.MembershipWithGuild
 	updated          *guilddomain.Membership
 	contributions    []guilddomain.CPContribution
+	activityLogs     []guilddomain.ActivityLog
 	members          []guilddomain.MemberContribution
 	expectedGuildID  guilddomain.ID
 }
@@ -55,6 +56,17 @@ func (r guildTestRepository) ListActiveMembersByGuild(ctx context.Context, guild
 	}
 
 	return r.members, nil
+}
+
+func (r guildTestRepository) ListActivityLogsByGuild(ctx context.Context, guildID guilddomain.ID, limit int) ([]guilddomain.ActivityLog, error) {
+	if r.expectedGuildID != "" && guildID != r.expectedGuildID {
+		return []guilddomain.ActivityLog{}, nil
+	}
+	if limit > 0 && len(r.activityLogs) > limit {
+		return r.activityLogs[:limit], nil
+	}
+
+	return r.activityLogs, nil
 }
 
 func (r guildTestRepository) CreateMembership(ctx context.Context, membership guilddomain.Membership) error {
@@ -493,6 +505,84 @@ func TestGuildControllerGetGuildDashboardUnauthenticated(t *testing.T) {
 
 	if response.Code != stdhttp.StatusUnauthorized {
 		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusUnauthorized)
+	}
+}
+
+func TestGuildControllerListGuildActivityLogs(t *testing.T) {
+	now := time.Date(2026, 5, 20, 10, 0, 0, 0, time.UTC)
+	activeMembership := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "Go guild",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
+		activeMembership: &activeMembership,
+		expectedGuildID:  "guild_go",
+		activityLogs: []guilddomain.ActivityLog{{
+			ID:         "user_1:pull_request:repo:PR#12",
+			UserID:     "user_1",
+			Player:     "Alice",
+			Type:       "pull_request",
+			Repo:       "jyogi-web/DDD_A-to-Z",
+			Message:    "Add guild activity logs",
+			Language:   "Go",
+			CP:         5,
+			OccurredAt: now,
+		}},
+	}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodGet, "/guilds/guild_go/activity-logs?limit=20", nil)
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusOK {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusOK)
+	}
+
+	var body struct {
+		Logs []struct {
+			ID         string `json:"id"`
+			Player     string `json:"player"`
+			Type       string `json:"type"`
+			Repo       string `json:"repo"`
+			Message    string `json:"message"`
+			CP         int64  `json:"cp"`
+			OccurredAt string `json:"occurred_at"`
+		} `json:"logs"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
+	}
+	if len(body.Logs) != 1 {
+		t.Fatalf("logs length = %d, 期待値 1", len(body.Logs))
+	}
+	if body.Logs[0].Message != "Add guild activity logs" {
+		t.Fatalf("message = %q, 期待値 Add guild activity logs", body.Logs[0].Message)
+	}
+	if body.Logs[0].CP != 5 {
+		t.Fatalf("cp = %d, 期待値 5", body.Logs[0].CP)
 	}
 }
 

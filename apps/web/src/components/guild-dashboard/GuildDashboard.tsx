@@ -2,7 +2,11 @@ import { motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { useAudioSettings } from "../../features/audio/useAudioSettings";
-import { fetchMyGuild } from "../../features/guild/api";
+import {
+  fetchGuildActivityLogs,
+  fetchMyGuild,
+  type GuildActivityLog,
+} from "../../features/guild/api";
 import { toDisplayGuild, type DisplayGuild } from "../../features/guild/presentation";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { steppedEase } from "../../lib/animationUtils";
@@ -11,10 +15,10 @@ import { GUILD_CHAT_MESSAGES } from "./chatData";
 import { GuildChatExpandedModal } from "./GuildChatExpandedModal";
 import { GuildChatOverlay } from "./GuildChatOverlay";
 import { DashboardMonitor } from "./DashboardMonitor";
-import { createLog, GUILD_TABS, INITIAL_LOGS } from "./data";
+import { GUILD_TABS } from "./data";
 import { GuildBadge } from "./GuildBadge";
 import { GuildNavigation } from "./GuildNavigation";
-import type { GuildTab } from "./types";
+import type { ActivityLog, GuildTab } from "./types";
 
 interface GuildDashboardProps {
   onNavigate: (path: string) => void;
@@ -22,11 +26,26 @@ interface GuildDashboardProps {
 
 type ChatView = "closed" | "compact" | "expanded";
 
+const ACTIVITY_LOG_LIMIT = 20;
+const ACTIVITY_LOG_POLLING_MS = 10_000;
+
+function toActivityLog(log: GuildActivityLog): ActivityLog {
+  const prefix = log.type === "pull_request" ? "PR" : "Commit";
+
+  return {
+    id: log.id,
+    player: log.player,
+    action: `${prefix}: ${log.message}`,
+    cp: log.cp,
+    tone: log.type === "pull_request" ? "#74f7a1" : "#ffd966",
+  };
+}
+
 export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
   const { isSeEnabled } = useAudioSettings();
   const [activeTab, setActiveTab] = useState<GuildTab>("activity");
   const [chatView, setChatView] = useState<ChatView>("closed");
-  const [logs, setLogs] = useState(INITIAL_LOGS);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [currentGuild, setCurrentGuild] = useState<DisplayGuild | null>(null);
   const [isCurrentGuildLoaded, setIsCurrentGuildLoaded] = useState(false);
   const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
@@ -57,15 +76,6 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
     },
     [activeTab, playTabSwitchSe],
   );
-
-  useEffect(() => {
-    let nextId = INITIAL_LOGS[0].id + 1;
-    const intervalId = window.setInterval(() => {
-      setLogs((current) => [createLog(nextId++), ...current].slice(0, 8));
-    }, 2800);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -100,6 +110,43 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
       isMounted = false;
     };
   }, [onNavigate]);
+
+  useEffect(() => {
+    if (!currentGuild || activeTab !== "activity") {
+      return;
+    }
+
+    let isMounted = true;
+    let intervalID: number | undefined;
+
+    const loadLogs = () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      fetchGuildActivityLogs(currentGuild.id, ACTIVITY_LOG_LIMIT)
+        .then((activityLogs) => {
+          if (isMounted) {
+            setLogs(activityLogs.map(toActivityLog));
+          }
+        })
+        .catch((error) => {
+          if (isMounted) {
+            console.error("failed to fetch guild activity logs", error);
+          }
+        });
+    };
+
+    loadLogs();
+    intervalID = window.setInterval(loadLogs, ACTIVITY_LOG_POLLING_MS);
+
+    return () => {
+      isMounted = false;
+      if (intervalID !== undefined) {
+        window.clearInterval(intervalID);
+      }
+    };
+  }, [activeTab, currentGuild]);
 
   return (
     <main

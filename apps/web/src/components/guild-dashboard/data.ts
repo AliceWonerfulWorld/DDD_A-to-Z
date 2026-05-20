@@ -22,35 +22,35 @@ const LOG_ACTIONS = [
 
 export const INITIAL_LOGS: ActivityLog[] = [
   {
-    id: 1005,
+    id: "mock-1005",
     player: "TypeSmith",
     action: "merged a pull request",
     cp: 420,
     tone: "#74f7a1",
   },
   {
-    id: 1004,
+    id: "mock-1004",
     player: "PixelNinja",
     action: "fixed a flaky test",
     cp: 260,
     tone: "#ffd966",
   },
   {
-    id: 1003,
+    id: "mock-1003",
     player: "LoopKnight",
     action: "reviewed 3 files",
     cp: 180,
     tone: "#9be7ff",
   },
   {
-    id: 1002,
+    id: "mock-1002",
     player: "NullMage",
     action: "closed a critical issue",
     cp: 540,
     tone: "#ff9b9b",
   },
   {
-    id: 1001,
+    id: "mock-1001",
     player: "AkiByte",
     action: "refactored a use case",
     cp: 310,
@@ -78,7 +78,7 @@ export function createLog(id: number): ActivityLog {
   const log = LOG_ACTIONS[Math.floor(Math.random() * LOG_ACTIONS.length)];
 
   return {
-    id,
+    id: `mock-${id}`,
     player,
     action: log.action,
     cp: log.cp,

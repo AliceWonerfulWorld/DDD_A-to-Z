@@ -22,7 +22,11 @@ var (
 	ErrCPServiceUnavailable        = errors.New("contribution point service is unavailable")
 )
 
-const defaultContributionHistoryLimit = 50
+const (
+	defaultContributionHistoryLimit = 50
+	defaultActivityLogLimit         = 20
+	maxActivityLogLimit             = 50
+)
 
 type MyGuildDetails struct {
 	Membership guilddomain.Membership
@@ -218,6 +222,35 @@ func (u *UseCase) GetGuildDashboard(ctx context.Context, sessionToken string, gu
 		Guild:      membership.Guild,
 		Members:    members,
 	}, nil
+}
+
+func (u *UseCase) ListGuildActivityLogs(ctx context.Context, sessionToken string, guildID guilddomain.ID, limit int) ([]guilddomain.ActivityLog, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(string(guildID)) == "" {
+		return nil, ErrGuildNotFound
+	}
+
+	membership, ok, err := u.GetMyGuild(ctx, sessionToken)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrActiveMembershipNotFound
+	}
+	if membership.Membership.GuildID != guildID {
+		return nil, ErrGuildAccessDenied
+	}
+
+	if limit <= 0 {
+		limit = defaultActivityLogLimit
+	}
+	if limit > maxActivityLogLimit {
+		limit = maxActivityLogLimit
+	}
+
+	return u.repository.ListActivityLogsByGuild(ctx, guildID, limit)
 }
 
 func (u *UseCase) LeaveMyGuild(ctx context.Context, sessionToken string) error {

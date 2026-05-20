@@ -49,6 +49,23 @@ type MemberContribution struct {
 	JoinedAt      time.Time
 }
 
+type ActivityLog struct {
+	ID         string
+	UserID     user.ID
+	Player     string
+	Type       string
+	Repo       string
+	Message    string
+	Language   string
+	CP         int64
+	OccurredAt time.Time
+}
+
+const (
+	ActivityTypeCommit      = "commit"
+	ActivityTypePullRequest = "pull_request"
+)
+
 type CPContributionID string
 
 type CPContribution struct {
@@ -136,6 +153,36 @@ func NewMemberContribution(member MemberContribution) (MemberContribution, error
 	}
 
 	return member, nil
+}
+
+func NewActivityLog(log ActivityLog) (ActivityLog, error) {
+	if strings.TrimSpace(log.ID) == "" {
+		return ActivityLog{}, errors.New("guild activity log id is required")
+	}
+	if log.UserID == "" {
+		return ActivityLog{}, errors.New("guild activity log user id is required")
+	}
+	if strings.TrimSpace(log.Player) == "" {
+		return ActivityLog{}, errors.New("guild activity log player is required")
+	}
+	logType := strings.TrimSpace(log.Type)
+	if logType != ActivityTypeCommit && logType != ActivityTypePullRequest {
+		return ActivityLog{}, errors.New("invalid guild activity log type: must be 'commit' or 'pull_request'")
+	}
+	if strings.TrimSpace(log.Repo) == "" {
+		return ActivityLog{}, errors.New("guild activity log repo is required")
+	}
+	if strings.TrimSpace(log.Message) == "" {
+		return ActivityLog{}, errors.New("guild activity log message is required")
+	}
+	if log.CP <= 0 {
+		return ActivityLog{}, errors.New("guild activity log cp must be positive")
+	}
+	if log.OccurredAt.IsZero() {
+		return ActivityLog{}, errors.New("guild activity log occurred at is required")
+	}
+
+	return log, nil
 }
 
 func NewMembership(membership Membership) (Membership, error) {

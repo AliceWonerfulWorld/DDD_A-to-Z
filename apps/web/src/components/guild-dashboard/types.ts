@@ -1,7 +1,7 @@
 export type GuildTab = "activity" | "rankings";
 
 export interface ActivityLog {
-  id: number;
+  id: string;
   player: string;
   action: string;
   cp: number;

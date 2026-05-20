@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	stdhttp "net/http"
+	"strconv"
 	"time"
 
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
@@ -28,6 +29,7 @@ func (c *GuildController) RegisterRoutes(mux *stdhttp.ServeMux) {
 	mux.HandleFunc("GET /guilds", c.listGuilds)
 	mux.HandleFunc("POST /guilds/{guildID}/join", c.joinGuild)
 	mux.HandleFunc("GET /guilds/{guildID}/dashboard", c.getGuildDashboard)
+	mux.HandleFunc("GET /guilds/{guildID}/activity-logs", c.listGuildActivityLogs)
 	mux.HandleFunc("GET /guilds/{guildID}/cp-contributions", c.listGuildCPContributions)
 	mux.HandleFunc("GET /me/guild", c.getMyGuild)
 	mux.HandleFunc("DELETE /me/guild", c.leaveMyGuild)
@@ -123,6 +125,36 @@ func (c *GuildController) leaveMyGuild(w stdhttp.ResponseWriter, r *stdhttp.Requ
 	}
 
 	w.WriteHeader(stdhttp.StatusNoContent)
+}
+
+func (c *GuildController) listGuildActivityLogs(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		c.writeError(w, guildapp.ErrUnauthenticated)
+		return
+	}
+
+	limit := 0
+	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+		parsedLimit, err := strconv.Atoi(rawLimit)
+		if err != nil {
+			writeAPIError(w, stdhttp.StatusBadRequest, "invalid_limit", "limit must be a number", 0, nil)
+			return
+		}
+		limit = parsedLimit
+	}
+
+	logs, err := c.usecase.ListGuildActivityLogs(r.Context(), cookie.Value, guilddomain.ID(r.PathValue("guildID")), limit)
+	if err != nil {
+		c.writeError(w, err)
+		return
+	}
+
+	if err := writeJSON(w, stdhttp.StatusOK, map[string]any{
+		"logs": activityLogResponses(logs),
+	}); err != nil {
+		c.logger.Error("failed to write guild activity log response", "error", err)
+	}
 }
 
 func (c *GuildController) contributeCP(w stdhttp.ResponseWriter, r *stdhttp.Request) {
@@ -269,6 +301,25 @@ func memberContributionResponses(members []guilddomain.MemberContribution) []map
 			"name":            member.Name,
 			"total_earned_cp": member.TotalEarnedCP,
 			"joined_at":       member.JoinedAt.Format(time.RFC3339),
+		})
+	}
+
+	return responses
+}
+
+func activityLogResponses(logs []guilddomain.ActivityLog) []map[string]any {
+	responses := make([]map[string]any, 0, len(logs))
+	for _, log := range logs {
+		responses = append(responses, map[string]any{
+			"id":          log.ID,
+			"user_id":     log.UserID,
+			"player":      log.Player,
+			"type":        log.Type,
+			"repo":        log.Repo,
+			"message":     log.Message,
+			"language":    log.Language,
+			"cp":          log.CP,
+			"occurred_at": log.OccurredAt.Format(time.RFC3339),
 		})
 	}
 

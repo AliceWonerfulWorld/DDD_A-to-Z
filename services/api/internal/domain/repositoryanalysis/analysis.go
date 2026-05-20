@@ -20,12 +20,13 @@ type LanguageContribution struct {
 }
 
 type Contribution struct {
-	Repo      string
-	Type      string // "commit" or "pull_request"
-	Message   string
-	Language  string
-	CP        int64
-	Timestamp time.Time
+	Repo       string
+	Type       string // "commit" or "pull_request"
+	ExternalID string
+	Message    string
+	Language   string
+	CP         int64
+	Timestamp  time.Time
 }
 
 type AnalysisResult struct {

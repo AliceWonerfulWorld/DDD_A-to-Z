@@ -109,3 +109,24 @@ func TestMembershipLeave(t *testing.T) {
 		t.Fatalf("updated_at = %v, 期待値 %v", leftMembership.UpdatedAt, leftAt)
 	}
 }
+
+func TestNewActivityLogRejectsInvalidType(t *testing.T) {
+	now := time.Date(2026, 5, 20, 10, 0, 0, 0, time.UTC)
+	_, err := NewActivityLog(ActivityLog{
+		ID:         "user_1:issue:repo:1",
+		UserID:     "user_1",
+		Player:     "Alice",
+		Type:       "issue",
+		Repo:       "jyogi-web/DDD_A-to-Z",
+		Message:    "Close issue",
+		Language:   "Go",
+		CP:         1,
+		OccurredAt: now,
+	})
+	if err == nil {
+		t.Fatal("NewActivityLog() error = nil, 期待値 invalid type error")
+	}
+	if err.Error() != "invalid guild activity log type: must be 'commit' or 'pull_request'" {
+		t.Fatalf("error = %v, 期待値 invalid guild activity log type", err)
+	}
+}
