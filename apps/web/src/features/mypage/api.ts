@@ -31,6 +31,14 @@ export interface MyPageRepositories {
 export interface MyPageGuild {
   id: string;
   name: string;
+  slug: string;
+  icon: string;
+  color: string;
+  description: string;
+  member_count: number;
+  rank: number;
+  total_guilds: number;
+  cp: number;
 }
 
 export interface GitHubStats {
