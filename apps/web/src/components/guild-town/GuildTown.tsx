@@ -24,6 +24,7 @@ import {
   INITIAL_INVENTORY,
 } from "./townData";
 import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./townMath";
+import { GUILD_LANGUAGES } from "./types";
 import type {
   BuildingMaster,
   GuildSpLanguage,
@@ -384,16 +385,7 @@ function getCurrentGuildLanguage(): GuildSpLanguage {
 }
 
 function isGuildSpLanguage(language: string): language is GuildSpLanguage {
-  return (
-    language === "Go" ||
-    language === "TypeScript" ||
-    language === "Rust" ||
-    language === "Python" ||
-    language === "Java" ||
-    language === "Haskell" ||
-    language === "Zig" ||
-    language === "Common"
-  );
+  return GUILD_LANGUAGES.includes(language as GuildSpLanguage);
 }
 
 function createPlacedBuildingItem(

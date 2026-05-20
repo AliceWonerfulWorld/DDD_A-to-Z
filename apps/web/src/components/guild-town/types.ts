@@ -13,15 +13,18 @@ export type BuildingBuffType =
   | "tower"
   | "core";
 
-export type GuildSpLanguage =
-  | "Go"
-  | "TypeScript"
-  | "Rust"
-  | "Python"
-  | "Java"
-  | "Haskell"
-  | "Zig"
-  | "Common";
+export const GUILD_LANGUAGES = [
+  "Go",
+  "TypeScript",
+  "Rust",
+  "Python",
+  "Java",
+  "Haskell",
+  "Zig",
+  "Common",
+] as const;
+
+export type GuildSpLanguage = (typeof GUILD_LANGUAGES)[number];
 
 export type BuildingTargetSpLanguage = GuildSpLanguage;
 
