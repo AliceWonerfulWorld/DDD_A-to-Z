@@ -37,3 +37,9 @@ type RepositorySummaryReader interface {
 type GitHubStatsReader interface {
 	FetchStats(ctx context.Context, accessToken, username string) (*GitHubStats, error)
 }
+
+// GuildMembershipReader provides the user's guild membership info.
+type GuildMembershipReader interface {
+	GetGuildMembership(ctx context.Context, userID user.ID) (*GuildInfo, error)
+	GetTotalGuilds(ctx context.Context) (int, error)
+}
