@@ -709,14 +709,17 @@ export function MyPage({ onNavigate }: MyPageProps) {
             {mypageData ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 <MiniStat
+                  icon="💰"
                   label="Balance"
                   value={mypageData.contribution_points.balance.toLocaleString()}
                 />
                 <MiniStat
+                  icon="📈"
                   label="Total Earned"
                   value={mypageData.contribution_points.total_earned.toLocaleString()}
                 />
                 <MiniStat
+                  icon="📉"
                   label="Total Spent"
                   value={mypageData.contribution_points.total_spent.toLocaleString()}
                 />
