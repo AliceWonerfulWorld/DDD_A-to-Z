@@ -106,8 +106,8 @@ func newTestUseCase(repos []repositoryanalysis.Repository, langs map[string]int6
 		repoClient,
 		repoClient,
 		cp,
-		&fakeCPBalanceProvider{},
 		sp,
+		&fakeCPBalanceProvider{},
 	)
 	uc.now = func() time.Time { return time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC) }
 	return uc

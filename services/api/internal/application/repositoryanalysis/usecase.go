@@ -45,10 +45,10 @@ func NewUseCase(
 	prs GitHubPRClient,
 	languages GitHubLanguageClient,
 	cp CPEarner,
-	cpBalance CPBalanceProvider,
 	sp SPEarner,
+	cpBalance CPBalanceProvider,
 ) *UseCase {
-	return NewUseCaseWithContributionStore(current, tokens, repos, repoStore, nil, commits, prs, languages, cp, cpBalance)
+	return NewUseCaseWithContributionStore(current, tokens, repos, repoStore, nil, commits, prs, languages, cp, sp, cpBalance)
 }
 
 func NewUseCaseWithContributionStore(
@@ -61,6 +61,7 @@ func NewUseCaseWithContributionStore(
 	prs GitHubPRClient,
 	languages GitHubLanguageClient,
 	cp CPEarner,
+	sp SPEarner,
 	cpBalance CPBalanceProvider,
 ) *UseCase {
 	return &UseCase{
