@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package langwar.home.v1;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/jyogi-web/ddd-a-to-z/gen/go/langwar/home/v1;homev1";
+
+message GetHomeResponse {
+  int64 total_cp = 1 [(buf.validate.field).int64.gte = 0];
+  int64 today_cp = 2 [(buf.validate.field).int64.gte = 0];
+  int32 player_level = 3 [(buf.validate.field).int32.gte = 1];
+  int64 player_level_total_cp = 4 [(buf.validate.field).int64.gte = 0];
+  int32 next_player_level = 5 [(buf.validate.field).int32.gte = 1];
+  int64 next_player_level_total_cp = 6 [(buf.validate.field).int64.gte = 0];
+  int64 next_player_level_remaining = 7 [(buf.validate.field).int64.gte = 0];
+  int64 lifetime_total_earned_cp = 8 [(buf.validate.field).int64.gte = 0];
+}

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package langwar.home.v1;
+
+import "langwar/home/v1/home.proto";
+
+option go_package = "github.com/jyogi-web/ddd-a-to-z/gen/go/langwar/home/v1;homev1";
+
+service HomeService {
+  rpc GetHome(GetHomeRequest) returns (GetHomeResponse);
+}
+
+message GetHomeRequest {}
