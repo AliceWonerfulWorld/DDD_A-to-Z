@@ -3,6 +3,7 @@ package mypage
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 )
 
@@ -10,36 +11,37 @@ const defaultRecentLimit = 5
 
 var ErrUnauthenticated = errors.New("unauthenticated")
 
-// UseCase orchestrates the my-page data aggregation.
 type UseCase struct {
 	current      CurrentUserRepository
 	cp           ContributionPointReader
 	repositories RepositorySummaryReader
+	stats        GitHubStatsReader
+	tokens       GitHubTokenRepository
 	now          func() time.Time
 }
 
-// NewUseCase creates a new my-page use case.
 func NewUseCase(
 	current CurrentUserRepository,
 	cp ContributionPointReader,
 	repositories RepositorySummaryReader,
+	stats GitHubStatsReader,
+	tokens GitHubTokenRepository,
 ) *UseCase {
 	return &UseCase{
 		current:      current,
 		cp:           cp,
 		repositories: repositories,
+		stats:        stats,
+		tokens:       tokens,
 		now:          time.Now,
 	}
 }
 
-// GetMyPage aggregates user information, CP summary, and repository summary
-// into a single MyPageData for the authenticated user.
 func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageData, error) {
 	if sessionToken == "" {
 		return MyPageData{}, ErrUnauthenticated
 	}
 
-	// 1. Resolve session → user
 	appUser, ok, err := u.current.FindUserBySessionToken(ctx, sessionToken, u.now())
 	if err != nil {
 		return MyPageData{}, err
@@ -48,7 +50,6 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 		return MyPageData{}, ErrUnauthenticated
 	}
 
-	// 2. Fetch CP summary
 	balance, err := u.cp.GetBalance(ctx, appUser.ID)
 	if err != nil {
 		return MyPageData{}, err
@@ -62,13 +63,25 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 		return MyPageData{}, err
 	}
 
-	// 3. Fetch repository summary
 	repoSummary, err := u.repositories.GetRepositorySummary(ctx, appUser.ID, defaultRecentLimit)
 	if err != nil {
 		return MyPageData{}, err
 	}
 
-	// 4. Guild is nil until the guild feature is implemented.
+	var ghStats *GitHubStats
+	accessToken, ok, err := u.tokens.GitHubAccessToken(ctx, appUser.ID)
+	if err != nil {
+		return MyPageData{}, err
+	}
+	if ok {
+		stats, statsErr := u.stats.FetchStats(ctx, accessToken, appUser.GitHubAccount.Username)
+		if statsErr == nil {
+			ghStats = stats
+		} else {
+			slog.WarnContext(ctx, "failed to fetch github stats", "error", statsErr, "username", appUser.GitHubAccount.Username)
+		}
+	}
+
 	return MyPageData{
 		User: appUser,
 		CP: CPSummary{
@@ -77,6 +90,7 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 			TotalSpent:  totalSpent,
 		},
 		Repositories: repoSummary,
+		GitHubStats:  ghStats,
 		Guild:        nil,
 	}, nil
 }
