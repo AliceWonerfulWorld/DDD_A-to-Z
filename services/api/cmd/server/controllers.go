@@ -96,6 +96,8 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 		authStore,
 		newMypageCPReader(contributionPointStore, mypageStore),
 		mypageStore,
+		repositoryClient,
+		authStore,
 	)
 	homeCPProvider := newHomeCPDataProvider(contributionPointStore, mypageStore)
 	profileUseCase := profileapp.NewUseCase(
