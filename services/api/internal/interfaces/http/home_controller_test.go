@@ -9,51 +9,31 @@ import (
 	stdhttp "net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
+	homeapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/home"
 )
 
-type homeControllerTestAuth struct {
-	user  user.User
-	found bool
-	err   error
+type homeUseCaseStub struct {
+	data homeapp.HomeData
+	err  error
 }
 
-func (a homeControllerTestAuth) FindUserBySessionToken(_ context.Context, _ string, _ time.Time) (user.User, bool, error) {
-	return a.user, a.found, a.err
-}
-
-type homeControllerTestCP struct {
-	balance     int64
-	totalEarned int64
-	todayEarned int64
-	err         error
-}
-
-func (p homeControllerTestCP) GetBalance(_ context.Context, _ user.ID) (int64, error) {
-	return p.balance, p.err
-}
-
-func (p homeControllerTestCP) GetTotalEarned(_ context.Context, _ user.ID) (int64, error) {
-	return p.totalEarned, p.err
-}
-
-func (p homeControllerTestCP) GetTodayEarned(_ context.Context, _ user.ID) (int64, error) {
-	return p.todayEarned, p.err
+func (s homeUseCaseStub) GetHome(_ context.Context, _ string) (homeapp.HomeData, error) {
+	return s.data, s.err
 }
 
 func TestHomeControllerGetHome(t *testing.T) {
 	controller := NewHomeController(
-		homeControllerTestAuth{
-			user:  user.User{ID: "user_1"},
-			found: true,
-		},
-		homeControllerTestCP{
-			balance:     1200,
-			totalEarned: 2500,
-			todayEarned: 300,
-		},
+		homeUseCaseStub{data: homeapp.HomeData{
+			TotalCP:                  1200,
+			TodayCP:                  300,
+			PlayerLevel:              6,
+			PlayerLevelTotalCP:       2500,
+			NextPlayerLevel:          7,
+			NextPlayerLevelTotalCP:   3600,
+			NextPlayerLevelRemaining: 1100,
+			LifetimeTotalEarnedCP:    2500,
+		}},
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 	request := httptest.NewRequest(stdhttp.MethodGet, "/home", nil)
@@ -108,8 +88,7 @@ func TestHomeControllerGetHome(t *testing.T) {
 
 func TestHomeControllerGetHomeRejectsUnauthenticated(t *testing.T) {
 	controller := NewHomeController(
-		homeControllerTestAuth{},
-		homeControllerTestCP{},
+		homeUseCaseStub{},
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 	request := httptest.NewRequest(stdhttp.MethodGet, "/home", nil)
@@ -124,11 +103,7 @@ func TestHomeControllerGetHomeRejectsUnauthenticated(t *testing.T) {
 
 func TestHomeControllerGetHomeReturnsCPError(t *testing.T) {
 	controller := NewHomeController(
-		homeControllerTestAuth{
-			user:  user.User{ID: "user_1"},
-			found: true,
-		},
-		homeControllerTestCP{err: errors.New("cp unavailable")},
+		homeUseCaseStub{err: errors.New("cp unavailable")},
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 	request := httptest.NewRequest(stdhttp.MethodGet, "/home", nil)

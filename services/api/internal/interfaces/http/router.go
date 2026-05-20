@@ -12,7 +12,7 @@ type RouteRegistrar interface {
 	RegisterRoutes(mux *stdhttp.ServeMux)
 }
 
-func NewRouter(logger *slog.Logger, registrars ...RouteRegistrar) stdhttp.Handler {
+func NewRouter(logger *slog.Logger, registrars ...RouteRegistrar) *stdhttp.ServeMux {
 	mux := stdhttp.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", func(w stdhttp.ResponseWriter, r *stdhttp.Request) {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/jyogi-web/ddd-a-to-z/gen/go/langwar/home/v1/homev1connect"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/config"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/database"
 	httpapi "github.com/jyogi-web/ddd-a-to-z/services/api/internal/interfaces/http"
@@ -36,12 +37,12 @@ func run(logger *slog.Logger) error {
 		}
 	}()
 
-	controllers, err := buildControllers(logger, db)
+	controllers, connectHandlers, err := buildControllers(logger, db)
 	if err != nil {
 		return fmt.Errorf("build controllers: %w", err)
 	}
 
-	server := newHTTPServer(logger, controllers)
+	server := newHTTPServer(logger, controllers, connectHandlers)
 	logger.Info("api server listening", "addr", server.Addr)
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -51,12 +52,16 @@ func run(logger *slog.Logger) error {
 	return nil
 }
 
-func newHTTPServer(logger *slog.Logger, controllers controllerSet) *http.Server {
+func newHTTPServer(logger *slog.Logger, controllers controllerSet, connectHandlers connectHandlerSet) *http.Server {
 	port := config.EnvOrDefault("PORT", "8080")
+	mux := httpapi.NewRouter(logger, controllers.registrars()...)
+
+	homePath, homeHandler := homev1connect.NewHomeServiceHandler(connectHandlers.home)
+	mux.Handle(homePath, homeHandler)
 
 	return &http.Server{
 		Addr:              ":" + port,
-		Handler:           httpapi.NewRouter(logger, controllers.registrars()...),
+		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       5 * time.Minute,
 		WriteTimeout:      5 * time.Minute,
