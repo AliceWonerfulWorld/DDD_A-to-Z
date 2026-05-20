@@ -1,6 +1,8 @@
 -- point_accounts の外部キーと PK を先に落とす
+-- atlas:nolint CD101
 ALTER TABLE "point_accounts" DROP CONSTRAINT "point_accounts_point_type_fkey", DROP CONSTRAINT "point_accounts_pkey";
 -- point_ledger の外部キーを先に落とす
+-- atlas:nolint CD101
 ALTER TABLE "point_ledger" DROP CONSTRAINT "point_ledger_point_type_fkey";
 -- Modify "point_types" table
 ALTER TABLE "point_types" DROP CONSTRAINT "point_types_pkey", ADD COLUMN "language" text NOT NULL DEFAULT '', ADD PRIMARY KEY ("code", "language");
@@ -49,11 +51,13 @@ INSERT INTO "point_types" ("code", "language", "label") VALUES
   ('SP', 'GDScript',    'GDScript Skill Point'),
   ('SP', 'Cuda',        'Cuda Skill Point');
 -- Modify "point_accounts" table
+-- atlas:nolint DS103
 ALTER TABLE "point_accounts" DROP COLUMN "point_type", ADD COLUMN "point_type_code" text NOT NULL DEFAULT 'CP', ADD COLUMN "language" text NOT NULL DEFAULT '', ADD PRIMARY KEY ("user_id", "point_type_code", "language"), ADD CONSTRAINT "point_accounts_point_type_code_language_fkey" FOREIGN KEY ("point_type_code", "language") REFERENCES "point_types" ("code", "language") ON UPDATE NO ACTION ON DELETE NO ACTION;
 ALTER TABLE "point_accounts" ALTER COLUMN "point_type_code" DROP DEFAULT;
 -- Drop index "point_ledger_user_id_created_at_idx" from table: "point_ledger"
 DROP INDEX "point_ledger_user_id_created_at_idx";
 -- Modify "point_ledger" table
+-- atlas:nolint DS103
 ALTER TABLE "point_ledger" DROP COLUMN "point_type", ADD COLUMN "point_type_code" text NOT NULL DEFAULT 'CP', ADD COLUMN "language" text NOT NULL DEFAULT '', ADD CONSTRAINT "point_ledger_point_type_code_language_fkey" FOREIGN KEY ("point_type_code", "language") REFERENCES "point_types" ("code", "language") ON UPDATE NO ACTION ON DELETE NO ACTION;
 ALTER TABLE "point_ledger" ALTER COLUMN "point_type_code" DROP DEFAULT;
 -- Create index "point_ledger_user_id_created_at_idx" to table: "point_ledger"
