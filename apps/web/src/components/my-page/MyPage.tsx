@@ -576,6 +576,30 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   </div>
                 </div>
               </div>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "rgba(232,232,208,0.4)",
+                    fontFamily: '"Press Start 2P", monospace',
+                  }}
+                >
+                  MEMBERS
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <span
+                    style={{
+                      fontSize: "1.2rem",
+                      color: "#00e5ff",
+                      fontFamily: '"Press Start 2P", monospace',
+                    }}
+                  >
+                    {guild.member_count?.toLocaleString() ?? "-"}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <button
