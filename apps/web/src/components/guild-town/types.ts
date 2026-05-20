@@ -13,7 +13,20 @@ export type BuildingBuffType =
   | "tower"
   | "core";
 
-export type BuildingTargetSpLanguage = "Go" | "TypeScript" | "Rust" | "Python" | "Java" | "Common";
+export const GUILD_LANGUAGES = [
+  "Go",
+  "TypeScript",
+  "Rust",
+  "Python",
+  "Java",
+  "Haskell",
+  "Zig",
+  "Common",
+] as const;
+
+export type GuildSpLanguage = (typeof GUILD_LANGUAGES)[number];
+
+export type BuildingTargetSpLanguage = GuildSpLanguage;
 
 export interface BuildingLevelStatus {
   level: number;
@@ -33,6 +46,11 @@ export interface BuildingMaster {
   levels: BuildingLevelStatus[];
 }
 
+export interface UserInventoryState {
+  buildingId: string;
+  count: number;
+}
+
 export interface InventoryItem {
   type: InventoryItemType;
   name: string;
@@ -47,7 +65,8 @@ export interface InventoryItem {
 
 export interface PlacedItem {
   id: string;
-  type: InventoryItemType;
+  type: string;
+  buildingId?: string;
   name: string;
   title: string;
   description: string;
