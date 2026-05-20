@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { useGuardedNavigation } from "../../hooks/useGuardedNavigation";
-import { fetchMyPage, type MyPageResponse } from "../../features/mypage/api";
+import { fetchMyPage, type MyPageResponse, type GitHubStats } from "../../features/mypage/api";
 
 interface MyPageProps {
   onNavigate: (path: string) => void;
@@ -67,38 +67,6 @@ const MOCK = {
     line: "Consistency is key. Daily efforts build the future.",
   },
 };
-
-function generateContributions() {
-  const weeks = 52;
-  const days = 7;
-  const data: number[][] = [];
-  for (let w = 0; w < weeks; w++) {
-    const row: number[] = [];
-    for (let d = 0; d < days; d++) {
-      const r = Math.random();
-      row.push(
-        r < 0.3
-          ? 0
-          : r < 0.55
-            ? 1
-            : r < 0.75
-              ? 2
-              : r < 0.88
-                ? 3
-                : r < 0.95
-                  ? 4
-                  : Math.floor(Math.random() * 6) + 5,
-      );
-    }
-    data.push(row);
-  }
-  return data;
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DAYS_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
-const CELL = 14;
-const GAP = 3;
 
 /* ─── Sub-components ─── */
 
@@ -172,7 +140,6 @@ function ProgressBarFill({
 /* ─── Main Component ─── */
 
 export function MyPage({ onNavigate }: MyPageProps) {
-  const contribs = useMemo(() => generateContributions(), []);
   const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
   const guardedNavigate = useGuardedNavigation(onNavigate);
   const [mypageData, setMypageData] = useState<MyPageResponse | null>(null);
@@ -196,40 +163,6 @@ export function MyPage({ onNavigate }: MyPageProps) {
       }))
       .sort((a, b) => b.count - a.count);
   }, [mypageData]);
-
-  const [tooltip, setTooltip] = useState<{
-    x: number;
-    y: number;
-    date: string;
-    count: number;
-  } | null>(null);
-
-  const streak = useMemo(() => {
-    let max = 0,
-      cur = 0;
-    for (const row of contribs) {
-      for (const c of row) {
-        if (c > 0) {
-          cur++;
-          max = Math.max(max, cur);
-        } else cur = 0;
-      }
-    }
-    return max;
-  }, [contribs]);
-
-  const monthLabels = useMemo(() => {
-    const labels: { week: number; label: string }[] = [];
-    for (let w = 0; w < 52; w++) {
-      const d = new Date();
-      d.setDate(d.getDate() - (52 - w) * 7);
-      const m = d.getMonth();
-      if (!labels.length || labels[labels.length - 1].label !== MONTHS[m]) {
-        labels.push({ week: w, label: MONTHS[m] });
-      }
-    }
-    return labels;
-  }, []);
 
   const guild = MOCK.guild;
   const gColor = guild.color;
@@ -659,171 +592,28 @@ export function MyPage({ onNavigate }: MyPageProps) {
               VIEW DETAILS ▶
             </button>
           </Panel>
-
-          {/* Right: GitHub Grass */}
-          <Panel borderColor="rgba(76,175,80,0.3)">
-            <SectionTitle text="GITHUB GRASS" color="#4caf50" />
-            <div>
-              {/* Month labels */}
-              <div
-                style={{
-                  display: "flex",
-                  marginLeft: "42px",
-                  marginBottom: "4px",
-                  height: "16px",
-                  position: "relative",
-                }}
-              >
-                {monthLabels.map((m, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      position: "absolute",
-                      left: `${m.week * (CELL + GAP)}px`,
-                      fontSize: "0.7rem",
-                      color: "rgba(232,232,208,0.25)",
-                      fontFamily: '"Press Start 2P", monospace',
-                    }}
-                  >
-                    {m.label}
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "flex", gap: `${GAP}px` }}>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: `${GAP}px`,
-                    paddingTop: "2px",
-                  }}
-                >
-                  {DAYS_LABELS.map((d, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        height: `${CELL}px`,
-                        display: "flex",
-                        alignItems: "center",
-                        fontSize: "0.7rem",
-                        color: "rgba(232,232,208,0.2)",
-                        fontFamily: '"Press Start 2P", monospace',
-                      }}
-                    >
-                      {d}
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: `${GAP}px` }}>
-                  {contribs.map((week, wi) => (
-                    <div
-                      key={wi}
-                      style={{ display: "flex", flexDirection: "column", gap: `${GAP}px` }}
-                    >
-                      {week.map((count, di) => {
-                        const d = new Date();
-                        d.setDate(d.getDate() - (52 - wi) * 7 + di);
-                        const ds = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
-                        return (
-                          <div
-                            key={`${wi}-${di}`}
-                            onMouseEnter={(e) =>
-                              setTooltip({ x: e.clientX, y: e.clientY, date: ds, count })
-                            }
-                            onMouseLeave={() => setTooltip(null)}
-                            style={{
-                              width: `${CELL}px`,
-                              height: `${CELL}px`,
-                              background:
-                                count === 0
-                                  ? "rgba(255,255,255,0.03)"
-                                  : `rgba(76,175,80,${0.08 + count * 0.1})`,
-                              border: "1px solid rgba(255,255,255,0.04)",
-                              cursor: "pointer",
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* Legend + Streak */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginTop: "8px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <span
-                    style={{
-                      fontSize: "0.7rem",
-                      color: "rgba(232,232,208,0.25)",
-                      fontFamily: '"Press Start 2P", monospace',
-                    }}
-                  >
-                    Less
-                  </span>
-                  {[0, 1, 2, 3, 4].map((v) => (
-                    <div
-                      key={v}
-                      style={{
-                        width: "8px",
-                        height: "8px",
-                        background:
-                          v === 0 ? "rgba(255,255,255,0.03)" : `rgba(76,175,80,${0.08 + v * 0.12})`,
-                        border: "1px solid rgba(255,255,255,0.04)",
-                      }}
-                    />
-                  ))}
-                  <span
-                    style={{
-                      fontSize: "0.7rem",
-                      color: "rgba(232,232,208,0.25)",
-                      fontFamily: '"Press Start 2P", monospace',
-                    }}
-                  >
-                    More
-                  </span>
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "#f0c040",
-                    fontFamily: '"Press Start 2P", monospace',
-                  }}
-                >
-                  MAX STREAK: <span style={{ color: "#4caf50" }}>{streak}</span> DAYS
-                </div>
-              </div>
-            </div>
-            {/* Tooltip */}
-            {tooltip && (
-              <div
-                style={{
-                  position: "fixed",
-                  left: tooltip.x + 10,
-                  top: tooltip.y - 28,
-                  background: "rgba(0,0,0,0.92)",
-                  border: "1px solid #f0c040",
-                  padding: "4px 8px",
-                  fontSize: "0.8rem",
-                  color: "#e8e8d0",
-                  pointerEvents: "none",
-                  zIndex: 100,
-                  fontFamily: '"Press Start 2P", monospace',
-                }}
-              >
-                {tooltip.date}: {tooltip.count} commits
-              </div>
-            )}
-          </Panel>
         </div>
 
         {/* ═══ Bottom Row: 3 columns ═══ */}
+        {/* Right: Engineer Status */}
+        <Panel borderColor="rgba(0,229,255,0.2)">
+          <SectionTitle text="ENGINEER STATUS" color="#00e5ff" />
+          {mypageData?.github_stats ? (
+            <GitHubStatsPanel stats={mypageData.github_stats} />
+          ) : (
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "rgba(232,232,208,0.3)",
+                fontFamily: '"Press Start 2P", monospace',
+                textAlign: "center",
+                padding: "20px 0",
+              }}
+            >
+              {apiError ? "Failed to load" : "Loading..."}
+            </div>
+          )}
+        </Panel>
         <div
           style={{
             display: "grid",
@@ -1025,7 +815,6 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   label="Total Spent"
                   value={mypageData.contribution_points.total_spent.toLocaleString()}
                 />
-                <MiniStat label="Streak" value={`${streak} days`} />
               </div>
             ) : (
               <div
@@ -1064,6 +853,28 @@ function MiniStat({ label, value }: { label: string; value: string }) {
       >
         {value}
       </span>
+    </div>
+  );
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}/${m}`;
+}
+
+function GitHubStatsPanel({ stats }: { stats: GitHubStats }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      <MiniStat label="Total Stars" value={stats.total_stars.toLocaleString()} />
+      <MiniStat label="Yearly Commits" value={stats.yearly_commits.toLocaleString()} />
+      <MiniStat label="Total PRs" value={stats.total_prs.toLocaleString()} />
+      <MiniStat label="Total Issues" value={stats.total_issues.toLocaleString()} />
+      <MiniStat label="Contributed To" value={stats.contributed_to.toLocaleString()} />
+      <MiniStat label="Public Repos" value={stats.public_repos.toLocaleString()} />
+      <MiniStat label="GitHub Started" value={formatDate(stats.github_created_at)} />
+      <MiniStat label="Yearly Contributions" value={stats.yearly_contributions.toLocaleString()} />
     </div>
   );
 }
