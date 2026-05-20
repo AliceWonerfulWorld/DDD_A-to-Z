@@ -25,6 +25,11 @@
     "lint": "turbo run lint",
     "format": "turbo run format",
     "format:check": "turbo run format:check",
+    "proto:gen": "nix develop -c ./scripts/buf.sh generate",
+    "proto:lint": "nix develop -c ./scripts/buf.sh lint",
+    "proto:breaking": "nix develop -c ./scripts/buf.sh breaking --against '.git#branch=main'",
+    "proto:format": "nix develop -c ./scripts/buf.sh format -w",
+    "proto:build": "nix develop -c ./scripts/buf.sh build",
     "prepare": "lefthook install"
   },
   "devDependencies": {

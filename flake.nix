@@ -17,6 +17,7 @@
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.atlas
+            pkgs.buf
             pkgs.docker
             pkgs.docker-compose
             pkgs.git

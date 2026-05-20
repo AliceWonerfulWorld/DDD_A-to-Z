@@ -1,0 +1,10 @@
+version: v2
+inputs:
+  - directory: .
+    paths:
+      - langwar
+plugins:
+  - local: protoc-gen-es
+    out: ../gen/ts
+    opt:
+      - target=ts
