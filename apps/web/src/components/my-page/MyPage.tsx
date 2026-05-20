@@ -61,7 +61,6 @@ const MOCK = {
     total: 156,
     cp: 24680,
   },
-  goal: { current: 2150, target: 3300 },
   title: {
     name: "Consistency Master",
     line: "Consistency is key. Daily efforts build the future.",
@@ -161,7 +160,8 @@ export function MyPage({ onNavigate }: MyPageProps) {
         count,
         pct: total > 0 ? Math.round((count / total) * 100) : 0,
       }))
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
   }, [mypageData]);
 
   const guild = MOCK.guild;
@@ -592,32 +592,33 @@ export function MyPage({ onNavigate }: MyPageProps) {
               VIEW DETAILS ▶
             </button>
           </Panel>
+
+          {/* Right: Engineer Status */}
+          <Panel borderColor="rgba(0,229,255,0.2)">
+            <SectionTitle text="ENGINEER STATUS" color="#00e5ff" />
+            {mypageData?.github_stats ? (
+              <GitHubStatsPanel stats={mypageData.github_stats} />
+            ) : (
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "rgba(232,232,208,0.3)",
+                  fontFamily: '"Press Start 2P", monospace',
+                  textAlign: "center",
+                  padding: "20px 0",
+                }}
+              >
+                {apiError ? "Failed to load" : "Loading..."}
+              </div>
+            )}
+          </Panel>
         </div>
 
-        {/* ═══ Bottom Row: 3 columns ═══ */}
-        {/* Right: Engineer Status */}
-        <Panel borderColor="rgba(0,229,255,0.2)">
-          <SectionTitle text="ENGINEER STATUS" color="#00e5ff" />
-          {mypageData?.github_stats ? (
-            <GitHubStatsPanel stats={mypageData.github_stats} />
-          ) : (
-            <div
-              style={{
-                fontSize: "0.7rem",
-                color: "rgba(232,232,208,0.3)",
-                fontFamily: '"Press Start 2P", monospace',
-                textAlign: "center",
-                padding: "20px 0",
-              }}
-            >
-              {apiError ? "Failed to load" : "Loading..."}
-            </div>
-          )}
-        </Panel>
+        {/* ═══ Bottom Row: 2 columns ═══ */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
+            gridTemplateColumns: "1fr 1fr",
             gap: "14px",
             flex: 1,
             minHeight: 0,
@@ -626,7 +627,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
           {/* Left: Language Status */}
           <Panel borderColor="rgba(191,0,255,0.3)">
             <SectionTitle text="LANGUAGES" color="#bf00ff" />
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {langEntries.length === 0 ? (
                 <div
                   style={{
@@ -654,15 +655,14 @@ export function MyPage({ onNavigate }: MyPageProps) {
                           display: "flex",
                           alignItems: "center",
                           gap: "6px",
-                          marginBottom: "3px",
                         }}
                       >
-                        <span>{meta.icon}</span>
+                        <span style={{ fontSize: "0.9rem" }}>{meta.icon}</span>
                         <span
                           style={{
-                            fontSize: "0.8rem",
+                            fontSize: "0.75rem",
                             color: meta.color,
-                            minWidth: "72px",
+                            minWidth: "60px",
                             fontFamily: '"Press Start 2P", monospace',
                           }}
                         >
@@ -671,7 +671,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                         <div
                           style={{
                             flex: 1,
-                            height: "8px",
+                            height: "6px",
                             border: "1px solid rgba(255,255,255,0.06)",
                             background: "rgba(0,0,0,0.4)",
                             position: "relative",
@@ -686,32 +686,14 @@ export function MyPage({ onNavigate }: MyPageProps) {
                         </div>
                         <span
                           style={{
-                            fontSize: "0.7rem",
+                            fontSize: "0.65rem",
                             color: meta.color,
-                            minWidth: "28px",
+                            minWidth: "32px",
                             textAlign: "right",
                             fontFamily: '"Press Start 2P", monospace',
                           }}
                         >
                           {lang.pct}%
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "6px",
-                          marginLeft: "22px",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: "0.6rem",
-                            color: "rgba(232,232,208,0.2)",
-                            fontFamily: '"Press Start 2P", monospace',
-                          }}
-                        >
-                          {lang.count} REPOS
                         </span>
                       </div>
                     </motion.div>
@@ -721,90 +703,13 @@ export function MyPage({ onNavigate }: MyPageProps) {
             </div>
           </Panel>
 
-          {/* Center: Goal + Title */}
-          <Panel borderColor="rgba(240,192,64,0.3)">
-            <SectionTitle text="GOALS" color="#f0c040" />
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <span style={{ fontSize: "2rem" }}>🏁</span>
-              <span
-                style={{
-                  fontSize: "0.8rem",
-                  color: "rgba(232,232,208,0.6)",
-                  fontFamily: '"Press Start 2P", monospace',
-                }}
-              >
-                TARGET: {MOCK.goal.target.toLocaleString()} COMMITS
-              </span>
-            </div>
-            <div
-              style={{
-                height: "16px",
-                border: "2px solid rgba(255,255,255,0.1)",
-                background: "rgba(0,0,0,0.4)",
-                position: "relative",
-                overflow: "hidden",
-                marginBottom: "6px",
-              }}
-            >
-              <ProgressBarFill
-                pct={(MOCK.goal.current / MOCK.goal.target) * 100}
-                color="#4caf50"
-                delay={0.4}
-              />
-            </div>
-            <div
-              style={{
-                fontSize: "0.8rem",
-                color: "#4caf50",
-                textAlign: "right",
-                fontFamily: '"Press Start 2P", monospace',
-              }}
-            >
-              {MOCK.goal.current.toLocaleString()} / {MOCK.goal.target.toLocaleString()}
-            </div>
-
-            <div
-              style={{
-                marginTop: "16px",
-                paddingTop: "12px",
-                borderTop: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <SectionTitle text="TITLE" color="#f0c040" />
-              <div style={{ textAlign: "center", padding: "8px" }}>
-                <span style={{ fontSize: "2.4rem" }}>👑</span>
-                <div
-                  style={{
-                    fontSize: "0.9rem",
-                    color: "#f0c040",
-                    marginTop: "4px",
-                    fontFamily: '"Press Start 2P", monospace',
-                  }}
-                >
-                  {MOCK.title.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "rgba(232,232,208,0.35)",
-                    marginTop: "6px",
-                    lineHeight: 1.6,
-                    fontFamily: '"Press Start 2P", monospace',
-                  }}
-                >
-                  "{MOCK.title.line}"
-                </div>
-              </div>
-            </div>
-          </Panel>
-
-          {/* Right: (empty or mini stats) */}
+          {/* Right: Quick Stats */}
           <Panel borderColor="rgba(0,229,255,0.2)">
-            <SectionTitle text="QUICK STATS" color="#00e5ff" />
+            <SectionTitle text="CONTRIBUTION POINTS" color="#00e5ff" />
             {mypageData ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 <MiniStat
-                  label="CP Balance"
+                  label="Balance"
                   value={mypageData.contribution_points.balance.toLocaleString()}
                 />
                 <MiniStat
