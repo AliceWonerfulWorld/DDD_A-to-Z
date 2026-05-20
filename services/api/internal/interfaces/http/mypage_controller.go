@@ -99,6 +99,19 @@ func (c *MypageController) toResponse(data mypageapp.MyPageData) map[string]any 
 		"guild": nil,
 	}
 
+	if data.GitHubStats != nil {
+		resp["github_stats"] = map[string]any{
+			"total_stars":          data.GitHubStats.TotalStars,
+			"total_prs":            data.GitHubStats.TotalPRs,
+			"total_issues":         data.GitHubStats.TotalIssues,
+			"contributed_to":       data.GitHubStats.ContributedTo,
+			"public_repos":         data.GitHubStats.PublicRepos,
+			"github_created_at":    data.GitHubStats.GitHubCreatedAt,
+			"yearly_commits":       data.GitHubStats.YearlyCommits,
+			"yearly_contributions": data.GitHubStats.YearlyContributions,
+		}
+	}
+
 	if data.Guild != nil {
 		resp["guild"] = map[string]any{
 			"id":   data.Guild.ID,
