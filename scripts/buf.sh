@@ -13,4 +13,14 @@ if [ "${1:-}" = "generate" ]; then
   exit 0
 fi
 
+if [ "${1:-}" = "breaking" ]; then
+  against_ref="${3:-}"
+  if [ "$against_ref" = "../.git#branch=origin/main,subdir=proto" ]; then
+    if ! git -C "$ROOT" ls-tree -r --name-only origin/main -- proto 2>/dev/null | grep -q '\.proto$'; then
+      echo "No proto files on origin/main; skipping breaking check."
+      exit 0
+    fi
+  fi
+fi
+
 exec buf "$@"

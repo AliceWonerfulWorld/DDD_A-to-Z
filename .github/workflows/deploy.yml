@@ -12,6 +12,8 @@ on:
     paths:
       - ".github/workflows/deploy.yml"
       - "services/api/**"
+      - "proto/**"
+      - "gen/go/**"
       - "db/**"
       - "go.work"
       - "go.work.sum"
