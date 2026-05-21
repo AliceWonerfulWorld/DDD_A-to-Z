@@ -4,7 +4,17 @@ import { fetchMyGuild } from "../../features/guild/api";
 import { findGuildBySlug } from "../../features/guild/guildMaster";
 import { getSelectedGuildSlug } from "../../features/guild/membership";
 import {
+  buyBuilding,
+  deployBuilding,
+  fetchGuildTownStatus,
+  guildSpBalance,
+  saveGuildTownPlacements,
+  upgradeBuilding,
+  type GuildTownStatus,
+} from "../../features/guild-town/api";
+import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -16,14 +26,8 @@ import { BuildInventory } from "./BuildInventory";
 import { BuildingInfoPanel } from "./BuildingInfoPanel";
 import { TownMap } from "./TownMap";
 import { TownStatusHeader } from "./TownStatusHeader";
-import {
-  BUILDING_MASTERS,
-  MAX_SCALE,
-  MIN_SCALE,
-  STORE_ANIMATION_MS,
-  INITIAL_INVENTORY,
-} from "./townData";
-import { clampValue, getInventoryMapWidth, isPointInsideRect } from "./townMath";
+import { BUILDING_MASTERS, MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS } from "./townData";
+import { clampValue, isPointInsideRect } from "./townMath";
 import { GUILD_LANGUAGES } from "./types";
 import type {
   BuildingMaster,
@@ -48,36 +52,45 @@ interface GuildTownProps {
 export function GuildTown({
   onNavigate,
   townLevel = 1,
-  currentCp = 2500,
-  nextLevelCp = 10000,
+  currentCp: initialCurrentCp = 2500,
+  nextLevelCp: initialNextLevelCp = 10000,
   baseSrc = "/town/glassfield.png",
-  mainStructureSrc = "/town/tent.png",
-  bonfireSrc = "/town/bonfire.png",
 }: GuildTownProps) {
   const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height: 0 });
   const [scale, setScale] = useState(1);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
+  const [availableItems, setAvailableItems] = useState<InventoryItem[]>([]);
   const [inventoryVisible, setInventoryVisible] = useState(true);
   const [selectedPlacedItemId, setSelectedPlacedItemId] = useState<string | null>(null);
   const [storingPlacedItemIds, setStoringPlacedItemIds] = useState<string[]>([]);
   const [buildFeedbackMessage, setBuildFeedbackMessage] = useState<string | null>(null);
-  const [userCp, setUserCp] = useState(1200);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+  const [isTownLoading, setIsTownLoading] = useState(true);
+  const [userCp, setUserCp] = useState(initialCurrentCp);
+  const [townNextLevelCp, setTownNextLevelCp] = useState(initialNextLevelCp);
+  const [currentGuildLevel, setCurrentGuildLevel] = useState(townLevel);
   const [currentGuildLanguage, setCurrentGuildLanguage] = useState<GuildSpLanguage>(() =>
     getCurrentGuildLanguage(),
   );
-  const [userGuildSp, setUserGuildSp] = useState(500);
+  const [userSpMap, setUserSpMap] = useState<Record<string, number>>({});
   const [userInventory, setUserInventory] = useState<UserInventoryState[]>(
     BUILDING_MASTERS.map((building) => ({ buildingId: building.id, count: 0 })),
   );
   const mapRef = useRef<HTMLDivElement>(null);
   const inventoryRef = useRef<HTMLDivElement>(null);
-  const seededInitialBuildingsRef = useRef(false);
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
-  const progress = Math.min(100, Math.max(0, (currentCp / nextLevelCp) * 100));
-  const currentGuildLevel = 3;
+  const progress = Math.min(100, Math.max(0, (userCp / townNextLevelCp) * 100));
   const selectedPlacedItem =
     placedItems.find((placedItem) => placedItem.id === selectedPlacedItemId) ?? null;
+  const userGuildSp = useMemo(
+    () => guildSpBalance(userSpMap, currentGuildLanguage),
+    [currentGuildLanguage, userSpMap],
+  );
+  const inventoryBuildingCatalog = useMemo(
+    () => availableItems.map(toInventoryBuildingMaster),
+    [availableItems],
+  );
   const dragConstraints = {
     left: Math.min(0, viewport.width - viewport.width * 2 * scale),
     right: 0,
@@ -98,6 +111,23 @@ export function GuildTown({
 
   useEffect(() => {
     let isMounted = true;
+
+    fetchGuildTownStatus()
+      .then((status) => {
+        if (!isMounted) return;
+        applyGuildTownStatus(status);
+        setLoadErrorMessage(null);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        console.error("failed to fetch guild town status", error);
+        setLoadErrorMessage("ギルドタウンの読み込みに失敗しました。");
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsTownLoading(false);
+        }
+      });
 
     fetchMyGuild()
       .then((data) => {
@@ -124,37 +154,6 @@ export function GuildTown({
     mapX.set(-viewport.width * 0.5);
     mapY.set(-viewport.height * 0.5);
   }, [mapX, mapY, viewport.height, viewport.width]);
-
-  useEffect(() => {
-    if (seededInitialBuildingsRef.current || viewport.width === 0 || viewport.height === 0) {
-      return;
-    }
-
-    const tent = INITIAL_INVENTORY.find((item) => item.type === "tent");
-    const bonfire = INITIAL_INVENTORY.find((item) => item.type === "bonfire");
-    if (!tent || !bonfire) return;
-
-    const tentWidth = getInventoryMapWidth(tent, viewport.width);
-    const bonfireWidth = getInventoryMapWidth(bonfire, viewport.width);
-
-    setPlacedItems([
-      createPlacedItem(tent, {
-        id: "initial-tent",
-        src: mainStructureSrc,
-        width: tentWidth,
-        x: viewport.width - tentWidth * 0.64,
-        y: viewport.height - tentWidth * 0.28,
-      }),
-      createPlacedItem(bonfire, {
-        id: "initial-bonfire",
-        src: bonfireSrc,
-        width: bonfireWidth,
-        x: viewport.width + bonfireWidth * 0.42,
-        y: viewport.height + bonfireWidth * 0.62,
-      }),
-    ]);
-    seededInitialBuildingsRef.current = true;
-  }, [bonfireSrc, mainStructureSrc, viewport.height, viewport.width]);
 
   useEffect(() => {
     mapX.set(clampValue(mapX.get(), dragConstraints.left, dragConstraints.right));
@@ -210,12 +209,12 @@ export function GuildTown({
     const dropPoint = getMapDropPoint(info.point, item.width);
     if (!dropPoint) return;
 
-    setPlacedItems((currentItems) =>
-      currentItems.map((placedItem) =>
-        placedItem.id === item.id ? { ...placedItem, x: dropPoint.x, y: dropPoint.y } : placedItem,
-      ),
+    const nextItems = placedItems.map((placedItem) =>
+      placedItem.id === item.id ? { ...placedItem, x: dropPoint.x, y: dropPoint.y } : placedItem,
     );
+    setPlacedItems(nextItems);
     setSelectedPlacedItemId(item.id);
+    persistPlacements(nextItems);
   };
 
   const handleStorePlacedItem = (item: PlacedItem) => {
@@ -225,25 +224,16 @@ export function GuildTown({
     setSelectedPlacedItemId(null);
 
     window.setTimeout(() => {
-      setPlacedItems((currentItems) =>
-        currentItems.filter((placedItem) => placedItem.id !== item.id),
-      );
+      const nextItems = placedItems.filter((placedItem) => placedItem.id !== item.id);
+      setPlacedItems(nextItems);
       setStoringPlacedItemIds((currentIds) =>
         currentIds.filter((storingItemId) => storingItemId !== item.id),
       );
-      if (item.buildingId) {
-        setUserInventory((currentInventory) =>
-          currentInventory.map((inventoryItem) =>
-            inventoryItem.buildingId === item.buildingId
-              ? { ...inventoryItem, count: inventoryItem.count + 1 }
-              : inventoryItem,
-          ),
-        );
-      }
+      persistPlacements(nextItems);
     }, STORE_ANIMATION_MS);
   };
 
-  const handleBuyBuilding = (building: BuildingMaster) => {
+  const handleBuyBuilding = async (building: BuildingMaster) => {
     const firstLevel = building.levels[0];
     const canBuy =
       currentGuildLevel >= building.requiredGuildLevel &&
@@ -274,18 +264,17 @@ export function GuildTown({
       return;
     }
 
-    setUserCp((currentValue) => currentValue - firstLevel.upgradeCostCp);
-    setUserGuildSp((currentValue) => currentValue - firstLevel.upgradeCostSp);
-    setUserInventory((currentInventory) =>
-      currentInventory.map((inventoryItem) =>
-        inventoryItem.buildingId === building.id
-          ? { ...inventoryItem, count: inventoryItem.count + 1 }
-          : inventoryItem,
-      ),
-    );
+    try {
+      await buyBuilding(building.id);
+      await reloadGuildTownStatus();
+      setBuildFeedbackMessage("");
+    } catch (error) {
+      console.error("failed to buy guild town building", error);
+      setBuildFeedbackMessage("購入APIはまだバックエンドに実装されていません。");
+    }
   };
 
-  const handleDeployBuilding = (building: BuildingMaster) => {
+  const handleDeployBuilding = async (building: BuildingMaster) => {
     const inventoryItem = userInventory.find((item) => item.buildingId === building.id);
     if (
       !inventoryItem ||
@@ -309,26 +298,36 @@ export function GuildTown({
       0,
       mapHeight - width,
     );
-    const placedItemId = `${building.id}-${Date.now()}`;
+    const placedItemId = `local-${building.id}-${Date.now()}`;
 
-    setUserInventory((currentInventory) =>
-      currentInventory.map((item) =>
-        item.buildingId === building.id ? { ...item, count: Math.max(0, item.count - 1) } : item,
-      ),
-    );
-    setPlacedItems((currentItems) => [
-      ...currentItems,
+    const nextItems = [
+      ...placedItems,
       createPlacedBuildingItem(building, {
         id: placedItemId,
         width,
         x,
         y,
       }),
-    ]);
+    ];
+    setUserInventory((currentInventory) =>
+      currentInventory.map((item) =>
+        item.buildingId === building.id ? { ...item, count: Math.max(0, item.count - 1) } : item,
+      ),
+    );
+    setPlacedItems(nextItems);
     setSelectedPlacedItemId(placedItemId);
+    try {
+      const status = await deployBuilding({ placements: nextItems });
+      applyGuildTownStatus(status);
+      setBuildFeedbackMessage("");
+    } catch (error) {
+      console.error("failed to deploy guild town building", error);
+      setBuildFeedbackMessage("配置の保存に失敗しました。インベントリ数を確認してください。");
+      await reloadGuildTownStatus();
+    }
   };
 
-  const handleUpgradeBuilding = (placedItemId: string) => {
+  const handleUpgradeBuilding = async (placedItemId: string) => {
     const placedItem = placedItems.find((item) => item.id === placedItemId);
     const building = placedItem?.buildingId
       ? BUILDING_MASTERS.find((buildingMaster) => buildingMaster.id === placedItem.buildingId)
@@ -346,14 +345,38 @@ export function GuildTown({
       return;
     }
 
-    setUserCp((currentValue) => currentValue - nextLevel.upgradeCostCp);
-    setUserGuildSp((currentValue) => currentValue - nextLevel.upgradeCostSp);
-    setPlacedItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === placedItemId ? { ...item, level: nextLevel.level } : item,
-      ),
-    );
-    setBuildFeedbackMessage("");
+    try {
+      await upgradeBuilding(placedItemId);
+      await reloadGuildTownStatus();
+      setBuildFeedbackMessage("");
+    } catch (error) {
+      console.error("failed to upgrade guild town building", error);
+      setBuildFeedbackMessage("強化APIはまだバックエンドに実装されていません。");
+    }
+  };
+
+  const applyGuildTownStatus = (status: GuildTownStatus) => {
+    setAvailableItems(status.availableItems);
+    setCurrentGuildLevel(status.guildLevel);
+    setPlacedItems(status.placedItems);
+    setTownNextLevelCp(status.nextLevelCp);
+    setUserCp(status.currentCp);
+    setUserInventory(status.userInventory);
+    setUserSpMap(status.userSpMap);
+  };
+
+  const reloadGuildTownStatus = async () => {
+    const status = await fetchGuildTownStatus();
+    applyGuildTownStatus(status);
+  };
+
+  const persistPlacements = (nextItems: PlacedItem[]) => {
+    saveGuildTownPlacements({ placements: nextItems })
+      .then(applyGuildTownStatus)
+      .catch((error) => {
+        console.error("failed to save guild town placements", error);
+        setBuildFeedbackMessage("配置の保存に失敗しました。");
+      });
   };
 
   return (
@@ -385,16 +408,17 @@ export function GuildTown({
       />
 
       <TownStatusHeader
-        currentCp={currentCp}
-        nextLevelCp={nextLevelCp}
+        currentCp={userCp}
+        nextLevelCp={townNextLevelCp}
         progress={progress}
-        townLevel={townLevel}
+        townLevel={currentGuildLevel}
       />
       <BackButton onNavigate={onNavigate} />
       <BuildInventory
         currentGuildLevel={currentGuildLevel}
         currentGuildLanguage={currentGuildLanguage}
         inventory={userInventory}
+        inventoryBuildings={inventoryBuildingCatalog}
         inventoryRef={inventoryRef}
         onBuyBuilding={handleBuyBuilding}
         onDeployBuilding={handleDeployBuilding}
@@ -404,34 +428,9 @@ export function GuildTown({
         userGuildSp={userGuildSp}
         visible={inventoryVisible}
       />
-      {buildFeedbackMessage && (
-        <p
-          role="alert"
-          style={{
-            position: "fixed",
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
-            left: "50%",
-            zIndex: 12,
-            margin: 0,
-            maxWidth: "min(720px, calc(100vw - 32px))",
-            transform: "translateX(-50%)",
-            border: "2px solid rgba(255, 77, 109, 0.86)",
-            borderBottomColor: "rgba(118, 31, 49, 0.95)",
-            borderRightColor: "rgba(118, 31, 49, 0.95)",
-            background: "rgba(18, 8, 14, 0.94)",
-            boxShadow: "0 0 0 2px rgba(0,0,0,0.68), 4px 4px 0 rgba(0,0,0,0.34)",
-            color: "#ff9aae",
-            fontFamily: '"DotGothic16", monospace',
-            fontSize: "0.92rem",
-            lineHeight: 1.45,
-            padding: "10px 14px",
-            textAlign: "center",
-            textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-          }}
-        >
-          {buildFeedbackMessage}
-        </p>
-      )}
+      {isTownLoading && <GuildTownLoadingOverlay />}
+      {loadErrorMessage && <GuildTownToast message={loadErrorMessage} />}
+      {buildFeedbackMessage && <GuildTownToast message={buildFeedbackMessage} />}
       <BuildingInfoPanel
         item={selectedPlacedItem}
         onClose={() => setSelectedPlacedItemId(null)}
@@ -522,20 +521,81 @@ function createPlacedBuildingItem(
   };
 }
 
-function createPlacedItem(
-  item: InventoryItem,
-  placement: { id: string; src: string; width: number; x: number; y: number },
-): PlacedItem {
+function toInventoryBuildingMaster(item: InventoryItem): BuildingMaster {
   return {
-    id: placement.id,
-    type: item.type,
-    level: 1,
     name: item.name,
-    title: item.title,
     description: item.description,
-    src: placement.src,
-    x: placement.x,
-    y: placement.y,
-    width: placement.width,
+    id: item.type,
+    previewSrc: item.src,
+    requiredGuildLevel: 1,
+    buffType: "core",
+    targetSpLanguage: "Common",
+    levels: [{ level: 1, upgradeCostCp: 0, upgradeCostSp: 0, buffValue: 0 }],
   };
+}
+
+function GuildTownLoadingOverlay() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 11,
+        display: "grid",
+        placeItems: "center",
+        background: "rgba(3, 7, 14, 0.58)",
+        color: "#74f7a1",
+        fontFamily: '"Press Start 2P", "DotGothic16", monospace',
+        fontSize: "0.72rem",
+        letterSpacing: 0,
+        textShadow: "0 0 12px rgba(116,247,161,0.78), 2px 2px 0 rgba(0,0,0,0.82)",
+      }}
+    >
+      <span
+        style={{
+          border: "2px solid rgba(116, 247, 161, 0.78)",
+          borderBottomColor: "rgba(24, 83, 45, 0.95)",
+          borderRightColor: "rgba(24, 83, 45, 0.95)",
+          background: "rgba(1, 12, 24, 0.9)",
+          boxShadow: "0 0 0 2px rgba(0,0,0,0.68), 4px 4px 0 rgba(0,0,0,0.34)",
+          padding: "14px 18px",
+        }}
+      >
+        SYNCING GUILD TOWN...
+      </span>
+    </div>
+  );
+}
+
+function GuildTownToast({ message }: { message: string }) {
+  return (
+    <p
+      role="alert"
+      style={{
+        position: "fixed",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
+        left: "50%",
+        zIndex: 12,
+        margin: 0,
+        maxWidth: "min(720px, calc(100vw - 32px))",
+        transform: "translateX(-50%)",
+        border: "2px solid rgba(255, 77, 109, 0.86)",
+        borderBottomColor: "rgba(118, 31, 49, 0.95)",
+        borderRightColor: "rgba(118, 31, 49, 0.95)",
+        background: "rgba(18, 8, 14, 0.94)",
+        boxShadow: "0 0 0 2px rgba(0,0,0,0.68), 4px 4px 0 rgba(0,0,0,0.34)",
+        color: "#ff9aae",
+        fontFamily: '"DotGothic16", monospace',
+        fontSize: "0.92rem",
+        lineHeight: 1.45,
+        padding: "10px 14px",
+        textAlign: "center",
+        textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+      }}
+    >
+      {message}
+    </p>
+  );
 }

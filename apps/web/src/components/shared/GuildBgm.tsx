@@ -31,7 +31,7 @@ export function GuildBgm({ src = AUDIO_ASSETS.bgm.guild }: GuildBgmProps) {
       const tick = (now: number) => {
         if (isUnmountedRef.current) return;
 
-        const progress = Math.min(1, (now - startedAt) / GUILD_BGM_FADE_IN_MS);
+        const progress = Math.min(1, Math.max(0, (now - startedAt) / GUILD_BGM_FADE_IN_MS));
         audio.volume = GUILD_BGM_VOLUME * progress;
 
         if (progress < 1) {

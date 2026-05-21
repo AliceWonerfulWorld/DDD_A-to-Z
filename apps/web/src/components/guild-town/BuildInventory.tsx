@@ -16,6 +16,7 @@ interface BuildInventoryProps {
   currentGuildLevel: number;
   currentGuildLanguage: GuildSpLanguage;
   inventory: UserInventoryState[];
+  inventoryBuildings?: BuildingMaster[];
   inventoryRef: RefObject<HTMLDivElement | null>;
   onBuyBuilding: (building: BuildingMaster) => void;
   onDeployBuilding: (building: BuildingMaster) => void;
@@ -41,6 +42,7 @@ export function BuildInventory({
   currentGuildLevel,
   currentGuildLanguage,
   inventory,
+  inventoryBuildings = BUILDING_MASTERS,
   inventoryRef,
   onBuyBuilding,
   onDeployBuilding,
@@ -231,7 +233,7 @@ export function BuildInventory({
                     userGuildSp={userGuildSp}
                   />
                 ))
-              : BUILDING_MASTERS.map((item) => (
+              : inventoryBuildings.map((item) => (
                   <BuildingDeployCard
                     key={item.id}
                     count={inventoryCountByBuildingId[item.id] ?? 0}

@@ -27,7 +27,7 @@ export function HomeBgm() {
       const tick = (now: number) => {
         if (isUnmountedRef.current) return;
 
-        const progress = Math.min(1, (now - startedAt) / HOME_BGM_FADE_IN_MS);
+        const progress = Math.min(1, Math.max(0, (now - startedAt) / HOME_BGM_FADE_IN_MS));
         audio.volume = HOME_BGM_VOLUME * progress;
 
         if (progress < 1) {
