@@ -384,11 +384,17 @@ export function GuildTown({
     const dropPoint = getMapDropPoint(info.point, item.width);
     if (!dropPoint) return;
 
+    if (!isDeploymentDraftUnlocked(dropPoint, item.width)) {
+      setBuildFeedbackMessage(getLockedDeploymentMessage(currentGuildLevel));
+      return;
+    }
+
     const nextItems = placedItems.map((placedItem) =>
       placedItem.id === item.id ? { ...placedItem, x: dropPoint.x, y: dropPoint.y } : placedItem,
     );
     setPlacedItems(nextItems);
     setSelectedPlacedItemId(item.id);
+    setBuildFeedbackMessage(null);
     persistPlacements(nextItems);
   };
 
