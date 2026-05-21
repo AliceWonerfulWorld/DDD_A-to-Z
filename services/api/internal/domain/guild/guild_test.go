@@ -115,6 +115,59 @@ func TestGuildLevelProgressFromExperience(t *testing.T) {
 	}
 }
 
+func TestCalculateUpgradeExp(t *testing.T) {
+	tests := []struct {
+		nextLevel int
+		want      int64
+	}{
+		{nextLevel: 2, want: 100},
+		{nextLevel: 3, want: 150},
+		{nextLevel: 4, want: 200},
+		{nextLevel: 5, want: 500},
+		{nextLevel: 1, want: 0},
+		{nextLevel: 6, want: 0},
+	}
+
+	for _, tt := range tests {
+		if got := CalculateUpgradeExp(tt.nextLevel); got != tt.want {
+			t.Fatalf("CalculateUpgradeExp(%d) = %d, 期待値 %d", tt.nextLevel, got, tt.want)
+		}
+	}
+}
+
+func TestGuildAddExperienceLevelsUpPersistently(t *testing.T) {
+	now := time.Date(2026, 5, 22, 9, 0, 0, 0, time.UTC)
+	guild, err := NewGuild(Guild{
+		ID:              "guild_go",
+		Slug:            "go",
+		Name:            "Go",
+		Description:     "Go guild",
+		Icon:            "GO",
+		Color:           "#00acd7",
+		SortOrder:       1,
+		GuildExperience: 900,
+		CreatedAt:       now.Add(-time.Hour),
+		UpdatedAt:       now.Add(-time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("NewGuild() がエラーを返しました: %v", err)
+	}
+
+	updated, err := guild.AddExperience(300, now)
+	if err != nil {
+		t.Fatalf("AddExperience() がエラーを返しました: %v", err)
+	}
+	if updated.GuildExperience != 1200 {
+		t.Fatalf("GuildExperience = %d, 期待値 1200", updated.GuildExperience)
+	}
+	if updated.GuildLevel != 2 {
+		t.Fatalf("GuildLevel = %d, 期待値 2", updated.GuildLevel)
+	}
+	if !updated.UpdatedAt.Equal(now) {
+		t.Fatalf("UpdatedAt = %v, 期待値 %v", updated.UpdatedAt, now)
+	}
+}
+
 func TestMembershipLeave(t *testing.T) {
 	joinedAt := time.Date(2026, 5, 16, 10, 0, 0, 0, time.UTC)
 	leftAt := joinedAt.Add(2 * time.Hour)

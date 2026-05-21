@@ -18,7 +18,8 @@ import (
 )
 
 type guildTownTestRepository struct {
-	inventory []guildtowndomain.InventoryItem
+	inventory  []guildtowndomain.InventoryItem
+	placements []guildtowndomain.Placement
 }
 
 func (r guildTownTestRepository) ListInventory(ctx context.Context, guildID guilddomain.ID) ([]guildtowndomain.InventoryItem, error) {
@@ -26,11 +27,45 @@ func (r guildTownTestRepository) ListInventory(ctx context.Context, guildID guil
 }
 
 func (r guildTownTestRepository) ListPlacements(ctx context.Context, guildID guilddomain.ID) ([]guildtowndomain.Placement, error) {
-	return nil, nil
+	return r.placements, nil
 }
 
 func (r guildTownTestRepository) ReplacePlacements(ctx context.Context, guildID guilddomain.ID, placements []guildtowndomain.Placement) error {
 	return nil
+}
+
+func (r guildTownTestRepository) BuyBuilding(ctx context.Context, guildID guilddomain.ID, buildingType guildtowndomain.BuildingType, exp int64, now time.Time) (guilddomain.Guild, error) {
+	return guilddomain.NewGuild(guilddomain.Guild{
+		ID:              guildID,
+		Slug:            "go",
+		Name:            "Go",
+		Description:     "Go guild",
+		Icon:            "GO",
+		Color:           "#00acd7",
+		SortOrder:       1,
+		GuildExperience: exp,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	})
+}
+
+func (r guildTownTestRepository) CreatePlacement(ctx context.Context, guildID guilddomain.ID, placement guildtowndomain.Placement) error {
+	return nil
+}
+
+func (r guildTownTestRepository) UpgradePlacement(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, exp int64, now time.Time) (guilddomain.Guild, error) {
+	return guilddomain.NewGuild(guilddomain.Guild{
+		ID:              guildID,
+		Slug:            "go",
+		Name:            "Go",
+		Description:     "Go guild",
+		Icon:            "GO",
+		Color:           "#00acd7",
+		SortOrder:       1,
+		GuildExperience: exp,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	})
 }
 
 type guildTownTestCurrentUserRepository struct{}
@@ -132,6 +167,36 @@ func TestGuildTownControllerGetTownReturnsGuildLevel(t *testing.T) {
 	}
 	if body.NextLevelExp != 3000 {
 		t.Fatalf("next_guild_level_experience = %d, 期待値 3000", body.NextLevelExp)
+	}
+}
+
+func TestGuildTownControllerBuyBuildingAcceptsCamelCaseBuildingID(t *testing.T) {
+	controller := newGuildTownTestController()
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodPost, "/me/guild/town/buildings", strings.NewReader(`{"buildingId":"tent"}`))
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusCreated {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusCreated)
+	}
+
+	var body struct {
+		CurrentExp int64 `json:"currentExp"`
+		GuildLevel int   `json:"guildLevel"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
+	}
+	if body.CurrentExp != 300 {
+		t.Fatalf("currentExp = %d, 期待値 300", body.CurrentExp)
+	}
+	if body.GuildLevel != 1 {
+		t.Fatalf("guildLevel = %d, 期待値 1", body.GuildLevel)
 	}
 }
 

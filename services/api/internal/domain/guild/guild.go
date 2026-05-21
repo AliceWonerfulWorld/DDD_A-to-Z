@@ -127,6 +127,20 @@ func NewGuild(guild Guild) (Guild, error) {
 	return guild, nil
 }
 
+func (g Guild) AddExperience(amount int64, now time.Time) (Guild, error) {
+	if amount < 0 {
+		return Guild{}, errors.New("guild experience amount cannot be negative")
+	}
+	if now.IsZero() {
+		return Guild{}, errors.New("guild experience updated at is required")
+	}
+
+	g.GuildExperience += amount
+	g.UpdatedAt = now
+
+	return NewGuild(g)
+}
+
 func NewCPContribution(contribution CPContribution) (CPContribution, error) {
 	if contribution.ID == "" {
 		return CPContribution{}, errors.New("guild cp contribution id is required")

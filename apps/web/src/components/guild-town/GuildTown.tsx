@@ -602,7 +602,7 @@ export function GuildTown({
     }
 
     try {
-      await upgradeBuilding(placedItemId);
+      await upgradeBuilding(placedItemId, nextLevel.level);
       await reloadGuildTownStatus();
       setBuildFeedbackMessage("");
     } catch (error) {

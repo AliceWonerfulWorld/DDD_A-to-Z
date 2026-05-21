@@ -9,6 +9,9 @@ export interface Guild {
   color: string;
   member_count: number;
   total_contributed_cp: number;
+  currentExp?: number;
+  current_exp?: number;
+  guildLevel?: number;
   guild_experience?: number;
   guild_level?: number;
   current_guild_level_experience?: number;

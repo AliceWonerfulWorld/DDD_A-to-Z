@@ -1,10 +1,12 @@
 package guild
 
 const (
-	MaxGuildLevel                 = 5
-	GuildTownPlacementExperience  = 250
-	GuildTownUpgradeExperience    = 500
-	GuildExperienceSourceTypeLike = "guild_%"
+	MaxGuildLevel             = 5
+	BuyBuildingExperience     = 300
+	GuildTownUpgradeLevel2Exp = 100
+	GuildTownUpgradeLevel3Exp = 150
+	GuildTownUpgradeLevel4Exp = 200
+	GuildTownUpgradeLevel5Exp = 500
 )
 
 var guildLevelExperienceThresholds = []int64{0, 1000, 3000, 7000, 15000}
@@ -42,5 +44,20 @@ func GuildLevelProgressFromExperience(experience int64) LevelProgress {
 		Experience:             experience,
 		CurrentLevelExperience: current,
 		NextLevelExperience:    next,
+	}
+}
+
+func CalculateUpgradeExp(nextLevel int) int64 {
+	switch nextLevel {
+	case 2:
+		return GuildTownUpgradeLevel2Exp
+	case 3:
+		return GuildTownUpgradeLevel3Exp
+	case 4:
+		return GuildTownUpgradeLevel4Exp
+	case 5:
+		return GuildTownUpgradeLevel5Exp
+	default:
+		return 0
 	}
 }

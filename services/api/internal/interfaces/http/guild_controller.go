@@ -305,7 +305,10 @@ func guildResponse(guild guilddomain.Guild) map[string]any {
 		"member_count":                   guild.MemberCount,
 		"total_contributed_cp":           guild.TotalContributedCP,
 		"guild_experience":               guild.GuildExperience,
+		"current_exp":                    guild.GuildExperience,
+		"currentExp":                     guild.GuildExperience,
 		"guild_level":                    guildLevel,
+		"guildLevel":                     guildLevel,
 		"current_guild_level_experience": currentLevelExperience,
 		"next_guild_level_experience":    nextLevelExperience,
 	}
