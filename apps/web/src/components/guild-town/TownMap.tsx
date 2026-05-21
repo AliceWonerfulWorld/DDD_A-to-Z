@@ -2,7 +2,7 @@ import { motion, type MotionValue, type PanInfo } from "framer-motion";
 import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from "react";
 import { steppedEase } from "../../lib/animationUtils";
 import type { PlacedItem } from "./types";
-import { getTownUnlockRadiusPercent } from "./townUnlock";
+import { getTownUnlockRadiusPercent, getTownUnlockRings } from "./townUnlock";
 
 export interface DeploymentPreview {
   id: string;
@@ -38,6 +38,7 @@ interface TownMapProps {
   selectedPlacedItemId: string | null;
   stopNestedDrag: (event: ReactPointerEvent<HTMLElement>) => void;
   storingPlacedItemIds: string[];
+  unlockClearingLevel: number | null;
 }
 
 export function TownMap({
@@ -60,9 +61,11 @@ export function TownMap({
   selectedPlacedItemId,
   stopNestedDrag,
   storingPlacedItemIds,
+  unlockClearingLevel,
 }: TownMapProps) {
   const isDeployMode = deploymentPreview !== null;
   const unlockRadiusPercent = getTownUnlockRadiusPercent(currentGuildLevel);
+  const unlockRings = getTownUnlockRings();
 
   return (
     <motion.div
@@ -125,6 +128,13 @@ export function TownMap({
         currentGuildLevel={currentGuildLevel}
         unlockRadiusPercent={unlockRadiusPercent}
       />
+      <UnlockBoundaryRings currentGuildLevel={currentGuildLevel} rings={unlockRings} />
+      {unlockClearingLevel && (
+        <UnlockClearingBurst
+          level={unlockClearingLevel}
+          radiusPercent={getTownUnlockRadiusPercent(unlockClearingLevel)}
+        />
+      )}
 
       {placedItems.map((item) => {
         const isSelected = selectedPlacedItemId === item.id;
@@ -382,6 +392,123 @@ function LockedTownFog({
         LOCKED LV.{currentGuildLevel + 1}
       </span>
     </div>
+  );
+}
+
+function UnlockBoundaryRings({
+  currentGuildLevel,
+  rings,
+}: {
+  currentGuildLevel: number;
+  rings: ReturnType<typeof getTownUnlockRings>;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 6,
+        pointerEvents: "none",
+      }}
+    >
+      {rings.map((ring) => {
+        const isCurrent = ring.level === currentGuildLevel;
+        const isUnlocked = ring.level <= currentGuildLevel;
+        const borderColor = isUnlocked ? "rgba(116, 247, 161, 0.56)" : "rgba(184, 208, 255, 0.54)";
+        const labelColor = isUnlocked ? "#74f7a1" : "#b8d0ff";
+
+        return (
+          <div
+            key={ring.level}
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: `${(ring.radiusPercent * 2) / 1.08}%`,
+              height: `${(ring.radiusPercent * 2) / 0.82}%`,
+              transform: "translate(-50%, -50%)",
+              border: `${isCurrent ? 3 : 2}px ${isUnlocked ? "solid" : "dashed"} ${borderColor}`,
+              borderRadius: "50%",
+              boxShadow: isCurrent
+                ? `0 0 18px ${borderColor}, inset 0 0 18px rgba(116,247,161,0.1)`
+                : `0 0 10px ${borderColor}`,
+              opacity: isCurrent ? 0.9 : 0.64,
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "-12px",
+                transform: "translateX(-50%)",
+                border: `2px solid ${borderColor}`,
+                background: "rgba(3, 10, 24, 0.78)",
+                boxShadow: `0 0 12px ${borderColor}`,
+                color: labelColor,
+                fontFamily: '"Press Start 2P", "DotGothic16", monospace',
+                fontSize: "0.42rem",
+                lineHeight: 1,
+                padding: "5px 6px",
+                textShadow: "2px 2px 0 rgba(0,0,0,0.78)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              LV.{ring.level}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function UnlockClearingBurst({ level, radiusPercent }: { level: number; radiusPercent: number }) {
+  return (
+    <motion.div
+      aria-hidden="true"
+      initial={{ opacity: 0.95, scale: 0.9 }}
+      animate={{ opacity: 0, scale: 1.16 }}
+      transition={{ duration: 1.75, ease: steppedEase(12) }}
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        zIndex: 9,
+        width: `${(radiusPercent * 2) / 1.08}%`,
+        height: `${(radiusPercent * 2) / 0.82}%`,
+        transform: "translate(-50%, -50%)",
+        borderRadius: "50%",
+        background:
+          "radial-gradient(ellipse at center, rgba(255,255,255,0.42) 0%, rgba(116,247,161,0.28) 38%, rgba(184,208,255,0.5) 66%, rgba(184,208,255,0) 100%)",
+        boxShadow: "0 0 34px rgba(116,247,161,0.52), 0 0 72px rgba(184,208,255,0.4)",
+        pointerEvents: "none",
+      }}
+    >
+      <motion.span
+        initial={{ opacity: 0, y: 10, scale: 0.92 }}
+        animate={{ opacity: [0, 1, 1, 0], y: [10, 0, 0, -8], scale: [0.92, 1, 1, 1] }}
+        transition={{ duration: 1.55, ease: steppedEase(10) }}
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "18%",
+          transform: "translateX(-50%)",
+          border: "3px solid rgba(116,247,161,0.86)",
+          background: "rgba(1, 12, 24, 0.92)",
+          boxShadow: "0 0 0 2px rgba(0,0,0,0.58), 0 0 22px rgba(116,247,161,0.48)",
+          color: "#74f7a1",
+          fontFamily: '"Press Start 2P", "DotGothic16", monospace',
+          fontSize: "0.58rem",
+          lineHeight: 1,
+          padding: "8px 10px",
+          textShadow: "2px 2px 0 rgba(0,0,0,0.78)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        LV.{level} AREA OPEN
+      </motion.span>
+    </motion.div>
   );
 }
 

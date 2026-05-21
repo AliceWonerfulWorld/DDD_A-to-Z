@@ -73,6 +73,7 @@ export function GuildTown({
   const [deployingBuildingId, setDeployingBuildingId] = useState<string | null>(null);
   const [deploymentDraft, setDeploymentDraft] = useState<DeploymentDraft | null>(null);
   const [newlyDeployedItemId, setNewlyDeployedItemId] = useState<string | null>(null);
+  const [unlockClearingLevel, setUnlockClearingLevel] = useState<number | null>(null);
   const [storingPlacedItemIds, setStoringPlacedItemIds] = useState<string[]>([]);
   const [buildFeedbackMessage, setBuildFeedbackMessage] = useState<string | null>(null);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
@@ -89,6 +90,7 @@ export function GuildTown({
   );
   const mapRef = useRef<HTMLDivElement>(null);
   const inventoryRef = useRef<HTMLDivElement>(null);
+  const previousGuildLevelRef = useRef(currentGuildLevel);
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
   const progress = Math.min(100, Math.max(0, (userCp / townNextLevelCp) * 100));
@@ -165,6 +167,22 @@ export function GuildTown({
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const previousGuildLevel = previousGuildLevelRef.current;
+    previousGuildLevelRef.current = currentGuildLevel;
+
+    if (currentGuildLevel <= previousGuildLevel) {
+      return;
+    }
+
+    setUnlockClearingLevel(currentGuildLevel);
+    const clearUnlockAnimation = window.setTimeout(() => {
+      setUnlockClearingLevel(null);
+    }, 1900);
+
+    return () => window.clearTimeout(clearUnlockAnimation);
+  }, [currentGuildLevel]);
 
   useEffect(() => {
     if (viewport.width === 0 || viewport.height === 0) return;
@@ -601,6 +619,7 @@ export function GuildTown({
         currentGuildLevel={currentGuildLevel}
         deploymentPreview={deploymentPreview}
         newlyDeployedItemId={newlyDeployedItemId}
+        unlockClearingLevel={unlockClearingLevel}
         onMoveItem={handlePlacedItemDragEnd}
         onCancelDeployment={cancelDeployMode}
         onCommitDeployment={() => void commitDeployment()}
