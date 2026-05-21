@@ -39,6 +39,12 @@ const (
 
 // HomeServiceClient is a client for the langwar.home.v1.HomeService service.
 type HomeServiceClient interface {
+	// GetHome は認証済みユーザーのホームページ表示に必要なデータを返す。
+	// リクエストにフィールドはなく、ユーザー識別はセッションクッキーから行う。
+	//
+	// エラー:
+	//   - UNAUTHENTICATED: セッションクッキーが存在しないか、セッションが期限切れ。
+	//   - INTERNAL: サーバー内部エラーが発生した。
 	GetHome(context.Context, *connect.Request[v1.GetHomeRequest]) (*connect.Response[v1.GetHomeResponse], error)
 }
 
@@ -74,6 +80,12 @@ func (c *homeServiceClient) GetHome(ctx context.Context, req *connect.Request[v1
 
 // HomeServiceHandler is an implementation of the langwar.home.v1.HomeService service.
 type HomeServiceHandler interface {
+	// GetHome は認証済みユーザーのホームページ表示に必要なデータを返す。
+	// リクエストにフィールドはなく、ユーザー識別はセッションクッキーから行う。
+	//
+	// エラー:
+	//   - UNAUTHENTICATED: セッションクッキーが存在しないか、セッションが期限切れ。
+	//   - INTERNAL: サーバー内部エラーが発生した。
 	GetHome(context.Context, *connect.Request[v1.GetHomeRequest]) (*connect.Response[v1.GetHomeResponse], error)
 }
 

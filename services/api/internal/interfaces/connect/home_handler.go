@@ -60,7 +60,7 @@ func extractCookie(headers http.Header, name string) (string, error) {
 	req := &http.Request{Header: headers}
 	cookie, err := req.Cookie(name)
 	if err != nil {
-		return "", connect.NewError(connect.CodeUnauthenticated, err)
+		return "", err
 	}
 	return cookie.Value, nil
 }

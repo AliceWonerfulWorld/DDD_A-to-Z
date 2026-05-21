@@ -116,3 +116,19 @@ func TestHomeControllerGetHomeReturnsCPError(t *testing.T) {
 		t.Fatalf("status = %d, 期待値 %d", response.Code, stdhttp.StatusInternalServerError)
 	}
 }
+
+func TestHomeControllerGetHomeReturnsUnauthenticatedFromUseCase(t *testing.T) {
+	controller := NewHomeController(
+		homeUseCaseStub{err: homeapp.ErrUnauthenticated},
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+	request := httptest.NewRequest(stdhttp.MethodGet, "/home", nil)
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+	response := httptest.NewRecorder()
+
+	controller.getHome(response, request)
+
+	if response.Code != stdhttp.StatusUnauthorized {
+		t.Fatalf("status = %d, 期待値 %d", response.Code, stdhttp.StatusUnauthorized)
+	}
+}

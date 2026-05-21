@@ -28,10 +28,21 @@ export const GetHomeRequestSchema: GenMessage<GetHomeRequest> = /*@__PURE__*/
   messageDesc(file_langwar_home_v1_home_service, 0);
 
 /**
+ * HomeService はユーザーのホームページ用データを取得する公開エンドポイントを提供する。
+ * 呼び出し元は有効なセッションクッキーを送信する必要がある。
+ * GitHub OAuth 認証後のフロントエンドホーム画面からの利用を想定している。
+ *
  * @generated from service langwar.home.v1.HomeService
  */
 export const HomeService: GenService<{
   /**
+   * GetHome は認証済みユーザーのホームページ表示に必要なデータを返す。
+   * リクエストにフィールドはなく、ユーザー識別はセッションクッキーから行う。
+   *
+   * エラー:
+   *   - UNAUTHENTICATED: セッションクッキーが存在しないか、セッションが期限切れ。
+   *   - INTERNAL: サーバー内部エラーが発生した。
+   *
    * @generated from rpc langwar.home.v1.HomeService.GetHome
    */
   getHome: {
