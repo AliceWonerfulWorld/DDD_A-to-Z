@@ -46,3 +46,8 @@ jobs:
 
       - name: Lint migrations
         run: nix develop -c ./scripts/atlas.sh migrate lint --env ci
+
+      - name: Dry-run migrations
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: nix develop -c ./scripts/atlas.sh migrate apply --env prod --dry-run
