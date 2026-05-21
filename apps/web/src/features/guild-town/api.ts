@@ -33,6 +33,10 @@ interface GuildTownPlacementResponse {
 }
 
 interface GuildTownResponse {
+  guild_level?: number;
+  guild_experience?: number;
+  current_guild_level_experience?: number;
+  next_guild_level_experience?: number;
   buildings: GuildTownBuildingResponse[];
   inventory: GuildTownInventoryResponse[];
   placements: GuildTownPlacementResponse[];
@@ -40,8 +44,6 @@ interface GuildTownResponse {
 
 interface HomeCPResponse {
   total_cp: number;
-  next_player_level_total_cp?: number;
-  player_level?: number;
 }
 
 interface SkillPointResponse {
@@ -54,6 +56,8 @@ interface SkillPointResponse {
 export interface GuildTownStatus {
   availableItems: InventoryItem[];
   currentCp: number;
+  currentGuildLevelExperience: number;
+  guildExperience: number;
   guildLevel: number;
   nextLevelCp: number;
   placedItems: PlacedItem[];
@@ -85,8 +89,10 @@ export async function fetchGuildTownStatus(): Promise<GuildTownStatus> {
   return {
     availableItems,
     currentCp: home.total_cp,
-    guildLevel: home.player_level ?? 1,
-    nextLevelCp: home.next_player_level_total_cp ?? Math.max(home.total_cp, 1),
+    currentGuildLevelExperience: town.current_guild_level_experience ?? 0,
+    guildExperience: town.guild_experience ?? 0,
+    guildLevel: town.guild_level ?? 1,
+    nextLevelCp: town.next_guild_level_experience ?? Math.max(town.guild_experience ?? 0, 1),
     placedItems: town.placements
       .map((placement) => toPlacedItem(placement, itemByType))
       .sort((a, b) => (placementOrderById.get(a.id) ?? 0) - (placementOrderById.get(b.id) ?? 0)),

@@ -72,7 +72,7 @@ func TestUseCaseSavePlacements(t *testing.T) {
 		appUser: user.User{ID: "user_1"},
 		ok:      true,
 	}, testGuildRepository{
-		membership: guilddomain.MembershipWithGuild{Guild: guilddomain.Guild{ID: "guild_go"}},
+		membership: testMembershipWithGuild("guild_go", "user_1", now),
 		ok:         true,
 	}, testIDGenerator{})
 	usecase.now = func() time.Time { return now }
@@ -114,7 +114,7 @@ func TestUseCaseSavePlacementsRejectsInsufficientInventory(t *testing.T) {
 		appUser: user.User{ID: "user_1"},
 		ok:      true,
 	}, testGuildRepository{
-		membership: guilddomain.MembershipWithGuild{Guild: guilddomain.Guild{ID: "guild_go"}},
+		membership: testMembershipWithGuild("guild_go", "user_1", now),
 		ok:         true,
 	}, testIDGenerator{})
 
@@ -124,5 +124,19 @@ func TestUseCaseSavePlacementsRejectsInsufficientInventory(t *testing.T) {
 	})
 	if !errors.Is(err, ErrInsufficientInventory) {
 		t.Fatalf("SavePlacements() error = %v, 期待値 ErrInsufficientInventory", err)
+	}
+}
+
+func testMembershipWithGuild(guildID guilddomain.ID, userID user.ID, now time.Time) guilddomain.MembershipWithGuild {
+	return guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    userID,
+			GuildID:   guildID,
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{ID: guildID},
 	}
 }

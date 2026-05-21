@@ -8,6 +8,7 @@ import (
 	stdhttp "net/http"
 
 	guildtownapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guildtown"
+	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	guildtowndomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guildtown"
 )
 
@@ -156,10 +157,28 @@ func (c *GuildTownController) writeError(w stdhttp.ResponseWriter, err error) {
 }
 
 func townStateResponse(state guildtownapp.TownState) map[string]any {
+	progress := guilddomain.GuildLevelProgressFromExperience(state.Guild.GuildExperience)
+	guildLevel := state.Guild.GuildLevel
+	if guildLevel <= 0 {
+		guildLevel = progress.Level
+	}
+	currentLevelExperience := state.Guild.CurrentGuildLevelExperience
+	if currentLevelExperience == 0 {
+		currentLevelExperience = progress.CurrentLevelExperience
+	}
+	nextLevelExperience := state.Guild.NextGuildLevelExperience
+	if nextLevelExperience == 0 {
+		nextLevelExperience = progress.NextLevelExperience
+	}
+
 	return map[string]any{
-		"buildings":  buildingResponses(state.Buildings),
-		"inventory":  inventoryResponses(state.Inventory),
-		"placements": placementResponses(state.Placements),
+		"guild_level":                    guildLevel,
+		"guild_experience":               state.Guild.GuildExperience,
+		"current_guild_level_experience": currentLevelExperience,
+		"next_guild_level_experience":    nextLevelExperience,
+		"buildings":                      buildingResponses(state.Buildings),
+		"inventory":                      inventoryResponses(state.Inventory),
+		"placements":                     placementResponses(state.Placements),
 	}
 }
 

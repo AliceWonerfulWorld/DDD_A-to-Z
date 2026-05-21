@@ -10,6 +10,10 @@ export interface GuildMaster {
   memberCount: number;
   previousSeasonCp: number;
   oath: string;
+  guildExperience?: number;
+  guildLevel?: number;
+  currentGuildLevelExperience?: number;
+  nextGuildLevelExperience?: number;
 }
 
 export const GUILD_MASTERS: GuildMaster[] = [

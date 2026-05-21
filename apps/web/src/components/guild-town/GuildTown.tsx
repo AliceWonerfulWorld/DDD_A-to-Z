@@ -79,6 +79,8 @@ export function GuildTown({
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
   const [isTownLoading, setIsTownLoading] = useState(true);
   const [userCp, setUserCp] = useState(initialCurrentCp);
+  const [guildExperience, setGuildExperience] = useState(initialCurrentCp);
+  const [currentGuildLevelExperience, setCurrentGuildLevelExperience] = useState(0);
   const [townNextLevelCp, setTownNextLevelCp] = useState(initialNextLevelCp);
   const [currentGuildLevel, setCurrentGuildLevel] = useState(townLevel);
   const [currentGuildLanguage, setCurrentGuildLanguage] = useState<GuildSpLanguage>(() =>
@@ -94,7 +96,17 @@ export function GuildTown({
   const previousGuildLevelRef = useRef(currentGuildLevel);
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
-  const progress = Math.min(100, Math.max(0, (userCp / townNextLevelCp) * 100));
+  const guildLevelExperienceRange = Math.max(1, townNextLevelCp - currentGuildLevelExperience);
+  const progress =
+    townNextLevelCp <= currentGuildLevelExperience
+      ? 100
+      : Math.min(
+          100,
+          Math.max(
+            0,
+            ((guildExperience - currentGuildLevelExperience) / guildLevelExperienceRange) * 100,
+          ),
+        );
   const selectedPlacedItem =
     placedItems.find((placedItem) => placedItem.id === selectedPlacedItemId) ?? null;
   const userGuildSp = useMemo(
@@ -607,6 +619,8 @@ export function GuildTown({
 
     setAvailableItems(status.availableItems);
     setCurrentGuildLevel(status.guildLevel);
+    setCurrentGuildLevelExperience(status.currentGuildLevelExperience);
+    setGuildExperience(status.guildExperience);
     setPlacedItems(status.placedItems);
     setTownNextLevelCp(status.nextLevelCp);
     setUserCp(status.currentCp);
@@ -665,10 +679,10 @@ export function GuildTown({
       />
 
       <TownStatusHeader
-        currentCp={userCp}
+        currentCp={guildExperience}
         nextLevelCp={townNextLevelCp}
         progress={progress}
-        townLevel={currentGuildLevel}
+        guildLevel={currentGuildLevel}
       />
       <BackButton onNavigate={onNavigate} />
       <BuildInventory

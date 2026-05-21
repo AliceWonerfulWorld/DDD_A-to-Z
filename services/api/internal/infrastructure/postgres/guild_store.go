@@ -39,7 +39,8 @@ func (s *GuildStore) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error
 			g.created_at,
 			g.updated_at,
 			COALESCE(gm.member_count, 0) AS member_count,
-			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
+			COALESCE(gxp.spent_experience, 0) + COALESCE(gtp.placement_experience, 0) AS guild_experience
 		FROM guilds g
 		LEFT JOIN (
 			SELECT guild_id, COUNT(*) AS member_count
@@ -52,8 +53,23 @@ func (s *GuildStore) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error
 			FROM guild_cp_contributions
 			GROUP BY guild_id
 		) gcc ON gcc.guild_id = g.id
+		LEFT JOIN (
+			SELECT gm.guild_id, SUM(ABS(pl.amount)) AS spent_experience
+			FROM guild_memberships gm
+			JOIN point_ledger pl ON pl.user_id = gm.user_id
+				AND pl.created_at >= gm.joined_at
+				AND pl.type = ?
+				AND pl.source_type LIKE ?
+			WHERE gm.left_at IS NULL
+			GROUP BY gm.guild_id
+		) gxp ON gxp.guild_id = g.id
+		LEFT JOIN (
+			SELECT guild_id, COUNT(*) * ? AS placement_experience
+			FROM guild_town_placements
+			GROUP BY guild_id
+		) gtp ON gtp.guild_id = g.id
 		ORDER BY g.sort_order ASC, g.name ASC
-	`).Scan(&records).Error; err != nil {
+	`, contributionpointdomain.EntryTypeSpend, guilddomain.GuildExperienceSourceTypeLike, guilddomain.GuildTownPlacementExperience).Scan(&records).Error; err != nil {
 		return nil, err
 	}
 
@@ -83,7 +99,8 @@ func (s *GuildStore) FindGuildByID(ctx context.Context, guildID guilddomain.ID) 
 			g.created_at,
 			g.updated_at,
 			COALESCE(gm.member_count, 0) AS member_count,
-			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
+			COALESCE(gxp.spent_experience, 0) + COALESCE(gtp.placement_experience, 0) AS guild_experience
 		FROM guilds g
 		LEFT JOIN (
 			SELECT guild_id, COUNT(*) AS member_count
@@ -96,8 +113,23 @@ func (s *GuildStore) FindGuildByID(ctx context.Context, guildID guilddomain.ID) 
 			FROM guild_cp_contributions
 			GROUP BY guild_id
 		) gcc ON gcc.guild_id = g.id
+		LEFT JOIN (
+			SELECT gm.guild_id, SUM(ABS(pl.amount)) AS spent_experience
+			FROM guild_memberships gm
+			JOIN point_ledger pl ON pl.user_id = gm.user_id
+				AND pl.created_at >= gm.joined_at
+				AND pl.type = ?
+				AND pl.source_type LIKE ?
+			WHERE gm.left_at IS NULL
+			GROUP BY gm.guild_id
+		) gxp ON gxp.guild_id = g.id
+		LEFT JOIN (
+			SELECT guild_id, COUNT(*) * ? AS placement_experience
+			FROM guild_town_placements
+			GROUP BY guild_id
+		) gtp ON gtp.guild_id = g.id
 		WHERE g.id = ?
-	`, guildID).Scan(&record)
+	`, contributionpointdomain.EntryTypeSpend, guilddomain.GuildExperienceSourceTypeLike, guilddomain.GuildTownPlacementExperience, guildID).Scan(&record)
 	if result.Error != nil {
 		return guilddomain.Guild{}, false, result.Error
 	}
@@ -134,7 +166,8 @@ func (s *GuildStore) FindActiveMembershipByUserID(ctx context.Context, userID us
 			g.created_at,
 			g.updated_at,
 			COALESCE(active_gm.member_count, 0) AS member_count,
-			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
+			COALESCE(gxp.spent_experience, 0) + COALESCE(gtp.placement_experience, 0) AS guild_experience
 		FROM guild_memberships gm
 		JOIN guilds g ON g.id = gm.guild_id
 		LEFT JOIN (
@@ -148,9 +181,24 @@ func (s *GuildStore) FindActiveMembershipByUserID(ctx context.Context, userID us
 			FROM guild_cp_contributions
 			GROUP BY guild_id
 		) gcc ON gcc.guild_id = g.id
+		LEFT JOIN (
+			SELECT gm2.guild_id, SUM(ABS(pl.amount)) AS spent_experience
+			FROM guild_memberships gm2
+			JOIN point_ledger pl ON pl.user_id = gm2.user_id
+				AND pl.created_at >= gm2.joined_at
+				AND pl.type = ?
+				AND pl.source_type LIKE ?
+			WHERE gm2.left_at IS NULL
+			GROUP BY gm2.guild_id
+		) gxp ON gxp.guild_id = g.id
+		LEFT JOIN (
+			SELECT guild_id, COUNT(*) * ? AS placement_experience
+			FROM guild_town_placements
+			GROUP BY guild_id
+		) gtp ON gtp.guild_id = g.id
 		WHERE gm.user_id = ?
 			AND gm.left_at IS NULL
-	`, userID).Scan(&record)
+	`, contributionpointdomain.EntryTypeSpend, guilddomain.GuildExperienceSourceTypeLike, guilddomain.GuildTownPlacementExperience, userID).Scan(&record)
 	if result.Error != nil {
 		return guilddomain.MembershipWithGuild{}, false, result.Error
 	}
@@ -362,6 +410,7 @@ type guildRecord struct {
 	SortOrder          int            `gorm:"column:sort_order"`
 	MemberCount        int64          `gorm:"column:member_count"`
 	TotalContributedCP int64          `gorm:"column:total_contributed_cp"`
+	GuildExperience    int64          `gorm:"column:guild_experience"`
 	CreatedAt          time.Time      `gorm:"column:created_at"`
 	UpdatedAt          time.Time      `gorm:"column:updated_at"`
 }
@@ -377,6 +426,7 @@ func (r guildRecord) toDomain() (guilddomain.Guild, error) {
 		SortOrder:          r.SortOrder,
 		MemberCount:        r.MemberCount,
 		TotalContributedCP: r.TotalContributedCP,
+		GuildExperience:    r.GuildExperience,
 		CreatedAt:          r.CreatedAt,
 		UpdatedAt:          r.UpdatedAt,
 	})
@@ -399,6 +449,7 @@ type guildMembershipWithGuildRecord struct {
 	SortOrder           int                      `gorm:"column:sort_order"`
 	MemberCount         int64                    `gorm:"column:member_count"`
 	TotalContributedCP  int64                    `gorm:"column:total_contributed_cp"`
+	GuildExperience     int64                    `gorm:"column:guild_experience"`
 	CreatedAt           time.Time                `gorm:"column:created_at"`
 	UpdatedAt           time.Time                `gorm:"column:updated_at"`
 }
@@ -427,6 +478,7 @@ func (r guildMembershipWithGuildRecord) toDomain() (guilddomain.MembershipWithGu
 		SortOrder:          r.SortOrder,
 		MemberCount:        r.MemberCount,
 		TotalContributedCP: r.TotalContributedCP,
+		GuildExperience:    r.GuildExperience,
 		CreatedAt:          r.CreatedAt,
 		UpdatedAt:          r.UpdatedAt,
 	})

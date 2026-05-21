@@ -68,12 +68,48 @@ func TestNewGuild(t *testing.T) {
 			guild.MemberCount = -1
 			return guild
 		}()},
+		{name: "guild experience は非負", guild: func() Guild {
+			guild := valid
+			guild.GuildExperience = -1
+			return guild
+		}()},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if _, err := NewGuild(tt.guild); err == nil {
 				t.Fatal("NewGuild() error = nil, 期待値 エラー")
+			}
+		})
+	}
+}
+
+func TestGuildLevelProgressFromExperience(t *testing.T) {
+	tests := []struct {
+		name        string
+		experience  int64
+		wantLevel   int
+		wantCurrent int64
+		wantNext    int64
+	}{
+		{name: "0 exp is level 1", experience: 0, wantLevel: 1, wantCurrent: 0, wantNext: 1000},
+		{name: "threshold reaches level 2", experience: 1000, wantLevel: 2, wantCurrent: 1000, wantNext: 3000},
+		{name: "between thresholds stays level 3", experience: 4500, wantLevel: 3, wantCurrent: 3000, wantNext: 7000},
+		{name: "max level caps at level 5", experience: 25000, wantLevel: 5, wantCurrent: 15000, wantNext: 15000},
+		{name: "negative exp is treated as zero", experience: -10, wantLevel: 1, wantCurrent: 0, wantNext: 1000},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			progress := GuildLevelProgressFromExperience(tt.experience)
+			if progress.Level != tt.wantLevel {
+				t.Fatalf("Level = %d, 期待値 %d", progress.Level, tt.wantLevel)
+			}
+			if progress.CurrentLevelExperience != tt.wantCurrent {
+				t.Fatalf("CurrentLevelExperience = %d, 期待値 %d", progress.CurrentLevelExperience, tt.wantCurrent)
+			}
+			if progress.NextLevelExperience != tt.wantNext {
+				t.Fatalf("NextLevelExperience = %d, 期待値 %d", progress.NextLevelExperience, tt.wantNext)
 			}
 		})
 	}

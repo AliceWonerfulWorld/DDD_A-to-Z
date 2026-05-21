@@ -23,7 +23,18 @@ export function DashboardMonitor({
 }: DashboardMonitorProps) {
   const guildName = isGuildLoading ? "SYNCING GUILD" : guild ? `${guild.name} GUILD` : "NO GUILD";
   const guildRank = guild ? `Rank: #${guild.sortOrder + 1}` : "Rank: --";
-  const guildCp = guild ? `Last CP: ${guild.previousSeasonCp.toLocaleString()}` : "Last CP: --";
+  const guildLevel = guild?.guildLevel ?? 1;
+  const guildExperience = guild?.guildExperience ?? 0;
+  const currentLevelExperience = guild?.currentGuildLevelExperience ?? 0;
+  const nextLevelExperience = guild?.nextGuildLevelExperience ?? 1000;
+  const isMaxGuildLevel = guildLevel >= 5 && nextLevelExperience <= currentLevelExperience;
+  const progressRange = Math.max(1, nextLevelExperience - currentLevelExperience);
+  const progressValue = isMaxGuildLevel
+    ? 100
+    : Math.min(
+        100,
+        Math.max(0, ((guildExperience - currentLevelExperience) / progressRange) * 100),
+      );
 
   return (
     <motion.section
@@ -68,7 +79,52 @@ export function DashboardMonitor({
             {guildName}
           </strong>
           <span style={{ color: "#ffd966", whiteSpace: "nowrap" }}>{guildRank}</span>
-          <span style={{ color: "#74f7a1", whiteSpace: "nowrap" }}>{guildCp}</span>
+          <span style={{ color: "#74f7a1", whiteSpace: "nowrap" }}>Guild Lv.{guildLevel}</span>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "auto 1fr auto",
+            alignItems: "center",
+            gap: "10px",
+            color: "#d9fbff",
+            fontSize: "clamp(0.48rem, 0.82vw, 0.62rem)",
+            lineHeight: 1.4,
+          }}
+        >
+          <span style={{ color: "#ffd966", whiteSpace: "nowrap" }}>EXP</span>
+          <div
+            role="progressbar"
+            aria-label="Guild level experience"
+            aria-valuemin={currentLevelExperience}
+            aria-valuemax={nextLevelExperience}
+            aria-valuenow={guildExperience}
+            style={{
+              height: "10px",
+              border: "2px solid rgba(116, 247, 161, 0.6)",
+              background: "rgba(1, 8, 22, 0.72)",
+              boxShadow: "inset 0 0 8px rgba(0,0,0,0.64)",
+              overflow: "hidden",
+            }}
+          >
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progressValue}%` }}
+              transition={{ duration: 0.42, ease: steppedEase(8) }}
+              style={{
+                height: "100%",
+                background:
+                  "repeating-linear-gradient(90deg, #74f7a1 0, #74f7a1 8px, #39ff14 8px, #39ff14 16px)",
+                boxShadow: "0 0 10px rgba(116,247,161,0.68)",
+              }}
+            />
+          </div>
+          <span style={{ color: "#f4ecd0", whiteSpace: "nowrap" }}>
+            {isMaxGuildLevel
+              ? "MAX"
+              : `${guildExperience.toLocaleString()} / ${nextLevelExperience.toLocaleString()}`}
+          </span>
         </div>
 
         <nav

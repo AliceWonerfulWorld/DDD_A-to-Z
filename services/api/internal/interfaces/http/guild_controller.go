@@ -281,15 +281,33 @@ func guildDashboardResponse(details guildapp.MyGuildDetails) map[string]any {
 }
 
 func guildResponse(guild guilddomain.Guild) map[string]any {
+	progress := guilddomain.GuildLevelProgressFromExperience(guild.GuildExperience)
+	guildLevel := guild.GuildLevel
+	if guildLevel <= 0 {
+		guildLevel = progress.Level
+	}
+	currentLevelExperience := guild.CurrentGuildLevelExperience
+	if currentLevelExperience == 0 {
+		currentLevelExperience = progress.CurrentLevelExperience
+	}
+	nextLevelExperience := guild.NextGuildLevelExperience
+	if nextLevelExperience == 0 {
+		nextLevelExperience = progress.NextLevelExperience
+	}
+
 	return map[string]any{
-		"id":                   guild.ID,
-		"slug":                 guild.Slug,
-		"name":                 guild.Name,
-		"description":          guild.Description,
-		"icon":                 guild.Icon,
-		"color":                guild.Color,
-		"member_count":         guild.MemberCount,
-		"total_contributed_cp": guild.TotalContributedCP,
+		"id":                             guild.ID,
+		"slug":                           guild.Slug,
+		"name":                           guild.Name,
+		"description":                    guild.Description,
+		"icon":                           guild.Icon,
+		"color":                          guild.Color,
+		"member_count":                   guild.MemberCount,
+		"total_contributed_cp":           guild.TotalContributedCP,
+		"guild_experience":               guild.GuildExperience,
+		"guild_level":                    guildLevel,
+		"current_guild_level_experience": currentLevelExperience,
+		"next_guild_level_experience":    nextLevelExperience,
 	}
 }
 
