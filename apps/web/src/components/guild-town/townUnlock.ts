@@ -80,3 +80,9 @@ export function isTownRectUnlocked(rect: TownMapRect, guildLevel: number) {
 
   return checkPoints.every((point) => isTownPointUnlocked(point, guildLevel));
 }
+
+export function getRequiredTownUnlockLevel(rect: TownMapRect) {
+  const requiredRing = getTownUnlockRings().find((ring) => isTownRectUnlocked(rect, ring.level));
+
+  return requiredRing?.level ?? MAX_UNLOCK_LEVEL;
+}

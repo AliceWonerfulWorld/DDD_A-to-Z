@@ -30,7 +30,7 @@ import { TownStatusHeader } from "./TownStatusHeader";
 import { steppedEase } from "../../lib/animationUtils";
 import { BUILDING_MASTERS, MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS } from "./townData";
 import { clampValue, isPointInsideRect } from "./townMath";
-import { isTownRectUnlocked } from "./townUnlock";
+import { getRequiredTownUnlockLevel, isTownRectUnlocked } from "./townUnlock";
 import { GUILD_LANGUAGES } from "./types";
 import type {
   BuildingMaster,
@@ -336,6 +336,20 @@ export function GuildTown({
     );
   }
 
+  function getRequiredDeploymentLevel(draft: DeploymentDraft, itemWidth: number) {
+    const mapSize = getMapSize();
+
+    return getRequiredTownUnlockLevel(
+      getBuildingUnlockRect({
+        itemWidth,
+        mapHeight: mapSize.height,
+        mapWidth: mapSize.width,
+        x: draft.x,
+        y: draft.y,
+      }),
+    );
+  }
+
   function moveDeploymentDraftBy(deltaX: number, deltaY: number, step: number) {
     if (!deploymentDraft || viewport.width === 0) return;
 
@@ -347,8 +361,9 @@ export function GuildTown({
     };
 
     setDeploymentDraft(nextDraft);
+    const requiredLevel = getRequiredDeploymentLevel(nextDraft, width);
     if (!isDeploymentDraftUnlocked(nextDraft, width)) {
-      setBuildFeedbackMessage(getLockedDeploymentMessage(currentGuildLevel));
+      setBuildFeedbackMessage(getLockedDeploymentMessage(requiredLevel));
     } else {
       setBuildFeedbackMessage(null);
     }
@@ -390,8 +405,9 @@ export function GuildTown({
     const dropPoint = getMapDropPoint(info.point, item.width);
     if (!dropPoint) return;
 
+    const requiredLevel = getRequiredDeploymentLevel(dropPoint, item.width);
     if (!isDeploymentDraftUnlocked(dropPoint, item.width)) {
-      setBuildFeedbackMessage(getLockedDeploymentMessage(currentGuildLevel));
+      setBuildFeedbackMessage(getLockedDeploymentMessage(requiredLevel));
       return;
     }
 
@@ -485,8 +501,9 @@ export function GuildTown({
     if (!dropPoint) return;
 
     setDeploymentDraft(dropPoint);
+    const requiredLevel = getRequiredDeploymentLevel(dropPoint, width);
     if (!isDeploymentDraftUnlocked(dropPoint, width)) {
-      setBuildFeedbackMessage(getLockedDeploymentMessage(currentGuildLevel));
+      setBuildFeedbackMessage(getLockedDeploymentMessage(requiredLevel));
     } else {
       setBuildFeedbackMessage(null);
     }
@@ -509,8 +526,9 @@ export function GuildTown({
     }
 
     const width = getBuildingMapWidth(viewport.width);
+    const requiredLevel = getRequiredDeploymentLevel(deploymentDraft, width);
     if (!isDeploymentDraftUnlocked(deploymentDraft, width)) {
-      setBuildFeedbackMessage(getLockedDeploymentMessage(currentGuildLevel));
+      setBuildFeedbackMessage(getLockedDeploymentMessage(requiredLevel));
       return;
     }
 
@@ -728,8 +746,8 @@ function getBuildingUnlockRect({
   };
 }
 
-function getLockedDeploymentMessage(currentGuildLevel: number) {
-  return `このエリアはまだロックされています。ギルドLV.${currentGuildLevel + 1}以上に上げて解放すると配置できます。`;
+function getLockedDeploymentMessage(requiredLevel: number) {
+  return `このエリアはまだロックされています。ギルドLV.${requiredLevel}以上に上げて解放すると配置できます。`;
 }
 
 function getBuyFailureMessage({
