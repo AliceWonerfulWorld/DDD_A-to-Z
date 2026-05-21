@@ -30,7 +30,7 @@ import { TownStatusHeader } from "./TownStatusHeader";
 import { steppedEase } from "../../lib/animationUtils";
 import { BUILDING_MASTERS, MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS } from "./townData";
 import { clampValue, isPointInsideRect } from "./townMath";
-import { isTownPointUnlocked } from "./townUnlock";
+import { isTownRectUnlocked } from "./townUnlock";
 import { GUILD_LANGUAGES } from "./types";
 import type {
   BuildingMaster,
@@ -323,13 +323,14 @@ export function GuildTown({
   function isDeploymentDraftUnlocked(draft: DeploymentDraft, itemWidth: number) {
     const mapSize = getMapSize();
 
-    return isTownPointUnlocked(
-      {
+    return isTownRectUnlocked(
+      getBuildingUnlockRect({
+        itemWidth,
         mapHeight: mapSize.height,
         mapWidth: mapSize.width,
-        x: draft.x + itemWidth / 2,
-        y: draft.y + itemWidth / 2,
-      },
+        x: draft.x,
+        y: draft.y,
+      }),
       currentGuildLevel,
     );
   }
@@ -359,13 +360,17 @@ export function GuildTown({
 
     const width = getBuildingMapWidth(viewport.width);
     const mapSize = getMapSize();
-    const centerX = deploymentDraft.x + width / 2;
-    const centerY = deploymentDraft.y + width / 2;
 
     return {
       id: deployingBuilding.id,
-      isUnlocked: isTownPointUnlocked(
-        { mapHeight: mapSize.height, mapWidth: mapSize.width, x: centerX, y: centerY },
+      isUnlocked: isTownRectUnlocked(
+        getBuildingUnlockRect({
+          itemWidth: width,
+          mapHeight: mapSize.height,
+          mapWidth: mapSize.width,
+          x: deploymentDraft.x,
+          y: deploymentDraft.y,
+        }),
         currentGuildLevel,
       ),
       name: deployingBuilding.name,
@@ -692,6 +697,29 @@ export function GuildTown({
 
 function getBuildingMapWidth(viewportWidth: number) {
   return clampValue(viewportWidth * 0.14, 112, 220);
+}
+
+function getBuildingUnlockRect({
+  itemWidth,
+  mapHeight,
+  mapWidth,
+  x,
+  y,
+}: {
+  itemWidth: number;
+  mapHeight: number;
+  mapWidth: number;
+  x: number;
+  y: number;
+}) {
+  return {
+    height: itemWidth * 0.72,
+    mapHeight,
+    mapWidth,
+    width: itemWidth * 0.82,
+    x: x + itemWidth * 0.09,
+    y: y + itemWidth * 0.18,
+  };
 }
 
 function getLockedDeploymentMessage(currentGuildLevel: number) {

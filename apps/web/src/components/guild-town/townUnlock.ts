@@ -8,6 +8,15 @@ export interface TownMapPoint {
   y: number;
 }
 
+export interface TownMapRect {
+  height: number;
+  mapHeight: number;
+  mapWidth: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
 export function getTownUnlockRadiusPercent(guildLevel: number) {
   const levelIndex = Math.min(
     Math.max(0, Math.floor(guildLevel) - 1),
@@ -36,4 +45,38 @@ export function isTownPointUnlocked(point: TownMapPoint, guildLevel: number) {
   const dy = ((point.y / mapHeight) * 100 - 50) * 0.82;
 
   return Math.hypot(dx, dy) <= radius;
+}
+
+export function isTownRectUnlocked(rect: TownMapRect, guildLevel: number) {
+  const insetX = Math.min(rect.width * 0.18, 24);
+  const insetY = Math.min(rect.height * 0.18, 24);
+  const checkPoints: TownMapPoint[] = [
+    {
+      mapHeight: rect.mapHeight,
+      mapWidth: rect.mapWidth,
+      x: rect.x + rect.width / 2,
+      y: rect.y + rect.height / 2,
+    },
+    { mapHeight: rect.mapHeight, mapWidth: rect.mapWidth, x: rect.x + insetX, y: rect.y + insetY },
+    {
+      mapHeight: rect.mapHeight,
+      mapWidth: rect.mapWidth,
+      x: rect.x + rect.width - insetX,
+      y: rect.y + insetY,
+    },
+    {
+      mapHeight: rect.mapHeight,
+      mapWidth: rect.mapWidth,
+      x: rect.x + insetX,
+      y: rect.y + rect.height - insetY,
+    },
+    {
+      mapHeight: rect.mapHeight,
+      mapWidth: rect.mapWidth,
+      x: rect.x + rect.width - insetX,
+      y: rect.y + rect.height - insetY,
+    },
+  ];
+
+  return checkPoints.every((point) => isTownPointUnlocked(point, guildLevel));
 }
