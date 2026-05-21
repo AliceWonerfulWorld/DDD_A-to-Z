@@ -1,4 +1,4 @@
-h1:O7CqUz40j8SPhBPgA0/Zw4epyNx+5+kSqQgvC6t9grM=
+h1:oTaw76rUUy7cFoQXAKGtTbjzUYzWT4y6mNs9fSnJDzU=
 20260511165019_create_auth_tables.sql h1:xBhU31KhHPurVx2RqVxMmiyIjEg1sqKV3RUJyU6gr9Y=
 20260513090000_create_cp_tables.sql h1:3Ax1icNsujVhIX3ObVtWMEbIP/a3XPD2JQHeLhQG5Mg=
 20260514113146_contribution_point.sql h1:ZUdMX0wLF3+SpmuKtFVvhtIdFQSC+P0fjO8k/eYmEhA=
@@ -13,3 +13,4 @@ h1:O7CqUz40j8SPhBPgA0/Zw4epyNx+5+kSqQgvC6t9grM=
 20260520200234_redesign_point_types_for_sp.sql h1:OcT9E+bOiCHF2+FXrMR1xfSOUiknTDF/PsRDVQf/mUA=
 20260520201234_update_point_triggers.sql h1:lTQpvc3Q8131gmbRrGJfbMtwLjF6uwXXPQ2mWwEQu98=
 20260520212345_add_missing_sp_languages.sql h1:p9vqO1xAd991JjCq3XK5JE+RY3JIHQkxPXs8JP38aUk=
+20260521202820_add_chat_tokens.sql h1:O+ySQolCWjYJHPVpN0O6X1vDsO5bBe+uhUEiU9JC2Bo=
