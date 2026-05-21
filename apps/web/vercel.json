@@ -5,6 +5,10 @@
       "destination": "https://lang-war-api-885177952038.asia-northeast1.run.app/:path*"
     },
     {
+      "source": "/langwar.home.v1.HomeService/:path*",
+      "destination": "https://lang-war-api-885177952038.asia-northeast1.run.app/langwar.home.v1.HomeService/:path*"
+    },
+    {
       "source": "/:path*",
       "destination": "/index.html"
     }

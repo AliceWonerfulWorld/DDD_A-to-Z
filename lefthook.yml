@@ -15,9 +15,19 @@ pre-commit:
     api-lint:
       root: services/api
       run: pnpm lint
+    proto-format:
+      glob: "proto/**/*.proto"
+      run: pnpm proto:format
+      stage_fixed: true
+    proto-lint:
+      glob: "proto/**/*.proto"
+      run: pnpm proto:lint
 
 pre-push:
   commands:
     verify:
-      glob: "*"
+      glob: "{apps,services,packages,gen}/**/*,package.json,pnpm-lock.yaml"
       run: pnpm format:check && pnpm lint && pnpm test && pnpm build
+    proto-check:
+      glob: "proto/**/*.proto,proto/buf*.yaml,scripts/buf.sh"
+      run: pnpm proto:build && pnpm proto:gen && git diff --exit-code gen/

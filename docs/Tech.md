@@ -5,13 +5,15 @@
 | レイヤー | 技術 | 選定理由 |
 |---|---|---|
 | フロントエンド | React + Vite | 決定済み |
-| 通信 | HTTP JSON | MVPでは画面とGo APIの開発速度を優先 |
+| 通信 (REST) | HTTP JSON | MVPでは画面とGo APIの開発速度を優先 |
+| 通信 (RPC) | Protobuf + Connect RPC | 多言語サービス化に備えた共通契約。HTTP/JSON と同一ポートで共存 |
+| スキーマ管理 | buf | proto lint / build / generate / breaking change 検出 |
 | バックエンド (MVP) | Go | GitHub連携と集計処理をシンプルに実装できる |
 | DB | PostgreSQL | 勢力データの永続化 |
 | DB schema管理 | Atlas | Go以外のサービスからも使える言語非依存の schema / migration 管理 |
 | GitHub連携 | OAuth + REST API | まずはユーザー連携と直近活動の取り込みに絞る |
 
-Valkey、Protobuf + Connect、buf、Webhook常時受信は、MVP後に必要性が見えた段階で導入する。
+Valkey、Webhook常時受信は、MVP後に必要性が見えた段階で導入する。
 
 ## A〜Z 技術割り当て（たたき台）
 
@@ -56,4 +58,4 @@ I・Q・U・Xの4つが未確定。
 
 ## 設計上の最重要判断
 
-MVPの最重要判断は、コア体験を「GitHub活動が言語勢力ランキングに反映されること」に絞ること。多言語サービス化や `.proto` 契約は魅力的だが、最初から固定すると検証速度が落ちる。まずはGo単体のHTTP APIでドメインモデルを固め、サービス分割が必要になった時点でProtobuf + Connectへ移行する。
+MVPのコア体験は「GitHub活動が言語勢力ランキングに反映されること」に絞った。多言語サービス化に備えて Protobuf + Connect RPC を早期導入し、HTTP/JSON と同一ポートで共存させることで既存実装を破壊せずに基盤を整えた。新しい言語サービスを追加する際は同じ `.proto` を実装するだけで接続できる。

@@ -41,7 +41,8 @@ services/api/
     │   ├── security/                 # token生成など技術詳細
     │   └── logger/                   # logger初期化
     ├── interfaces/
-    │   └── http/                     # controller、router、request/response変換
+    │   ├── http/                     # controller、router、request/response変換
+    │   └── connect/                  # Connect RPC ハンドラ (Protobuf)
 ```
 
 ## フォルダごとの説明
@@ -154,7 +155,7 @@ application/auth/ports.go        # GitHubOAuthClient, UserRepository などの i
 
 ### `internal/interfaces`
 
-外部からアプリに入ってくる入口を置く場所。今は HTTP API だけなので `interfaces/http` がある。
+外部からアプリに入ってくる入口を置く場所。HTTP API (`interfaces/http`) と Connect RPC (`interfaces/connect`) の2つがある。
 
 置いてよいもの:
 
@@ -164,6 +165,7 @@ application/auth/ports.go        # GitHubOAuthClient, UserRepository などの i
 - response DTO
 - HTTP status code の選択
 - cookie や header の設定
+- Connect RPC ハンドラ (proto 生成インターフェースを実装)
 
 置かないもの:
 
@@ -177,6 +179,7 @@ application/auth/ports.go        # GitHubOAuthClient, UserRepository などの i
 - controller は request を読み、use case を呼び、response を返す。
 - controller が直接 repository や GitHub client を呼ばない。
 - request / response の形は domain model と分けてよい。
+- `interfaces/connect` は `interfaces/http` と同じ application 層の依存 (port interface) を再利用する。HTTP/JSON と Connect RPC は同一 ServeMux で共存する。
 
 ## 実装例
 

@@ -39,6 +39,7 @@ scripts/
 ├── ci-api.yml    # Go API の format / lint / test / build
 ├── ci-web.yml    # フロントエンドの format / lint / test / build
 ├── ci-db.yml     # migration の validate / lint
+├── ci-proto.yml  # buf lint / build / generate / breaking change 検出
 ├── ci-infra.yml  # flake.nix の検証
 └── deploy.yml    # main マージ時の自動デプロイ
 ```

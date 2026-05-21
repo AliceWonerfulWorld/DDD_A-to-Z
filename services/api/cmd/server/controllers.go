@@ -8,6 +8,7 @@ import (
 	githubapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/github"
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
 	guildtownapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guildtown"
+	homeapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/home"
 	mypageapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/mypage"
 	profileapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/profile"
 	analysisapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/repositoryanalysis"
@@ -16,9 +17,14 @@ import (
 	infragithub "github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/github"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/postgres"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/security"
+	connectapi "github.com/jyogi-web/ddd-a-to-z/services/api/internal/interfaces/connect"
 	httpapi "github.com/jyogi-web/ddd-a-to-z/services/api/internal/interfaces/http"
 	"gorm.io/gorm"
 )
+
+type connectHandlerSet struct {
+	home *connectapi.HomeHandler
+}
 
 type controllerSet struct {
 	auth       *httpapi.AuthController
@@ -46,15 +52,15 @@ func (c controllerSet) registrars() []httpapi.RouteRegistrar {
 	}
 }
 
-func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
+func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectHandlerSet, error) {
 	settings, err := loadControllerSettings()
 	if err != nil {
-		return controllerSet{}, err
+		return controllerSet{}, connectHandlerSet{}, err
 	}
 
 	tokenCipher, err := security.NewTokenCipher(settings.githubTokenSecret)
 	if err != nil {
-		return controllerSet{}, err
+		return controllerSet{}, connectHandlerSet{}, err
 	}
 
 	oauthClient := infragithub.NewOAuthClient(settings.oauthConfig, nil)
@@ -67,7 +73,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 	profileStore := postgres.NewProfileStore(db)
 	guildStore, err := postgres.NewGuildStore(db)
 	if err != nil {
-		return controllerSet{}, err
+		return controllerSet{}, connectHandlerSet{}, err
 	}
 	guildTownStore := postgres.NewGuildTownStore(db)
 
@@ -111,6 +117,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 	)
 	spUseCase := spapp.NewUseCase(authStore, contributionPointStore)
 	homeCPProvider := newHomeCPDataProvider(contributionPointStore, mypageStore)
+	homeUseCase := homeapp.NewUseCase(authStore, homeCPProvider)
 	profileUseCase := profileapp.NewUseCase(
 		authStore,
 		profileStore,
@@ -131,22 +138,26 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, error) {
 	)
 
 	return controllerSet{
-		auth: httpapi.NewAuthController(
-			authUseCase,
-			logger,
-			security.NewSignedValueCodec(settings.cookieSecret),
-			settings.cookieSecure,
-			settings.frontendURL,
-		),
-		repository: httpapi.NewRepositoryController(repositoryUseCase, logger),
-		guild:      httpapi.NewGuildController(guildUseCase, logger),
-		guildTown:  httpapi.NewGuildTownController(guildTownUseCase, logger),
-		mypage:     httpapi.NewMypageController(mypageUseCase, logger),
-		profile:    httpapi.NewProfileController(profileUseCase, logger),
-		analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), logger),
-		home:       httpapi.NewHomeController(authStore, homeCPProvider, logger),
-		sp:         httpapi.NewSPController(spUseCase, logger),
-	}, nil
+			auth: httpapi.NewAuthController(
+				authUseCase,
+				logger,
+				security.NewSignedValueCodec(settings.cookieSecret),
+				settings.cookieSecure,
+				settings.frontendURL,
+			),
+			repository: httpapi.NewRepositoryController(repositoryUseCase, logger),
+			guild:      httpapi.NewGuildController(guildUseCase, logger),
+			guildTown:  httpapi.NewGuildTownController(guildTownUseCase, logger),
+			mypage:     httpapi.NewMypageController(mypageUseCase, logger),
+			profile:    httpapi.NewProfileController(profileUseCase, logger),
+			analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), logger),
+			home:       httpapi.NewHomeController(homeUseCase, logger),
+			sp:         httpapi.NewSPController(spUseCase, logger),
+		},
+		connectHandlerSet{
+			home: connectapi.NewHomeHandler(homeUseCase),
+		},
+		nil
 }
 
 type controllerSettings struct {

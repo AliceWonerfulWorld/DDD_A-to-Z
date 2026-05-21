@@ -54,6 +54,45 @@ React
     -> PostgreSQL に保存
 ```
 
+## フロントエンド API クライアント構成
+
+フロントエンドは2種類の API クライアントを使い分ける。どちらも `apps/web/src/lib/api/` に集約している。
+
+```text
+apps/web/src/lib/api/
+├── client.ts    — HTTP JSON (REST) クライアント。apiFetch() を提供
+└── connect.ts   — Connect RPC クライアント。connectClient() を提供
+```
+
+### 使い分け
+
+| 通信種別 | 関数 | 用途 |
+|---|---|---|
+| HTTP JSON (REST) | `apiFetch<T>(path, init?)` | 認証・OAuth・未変換のエンドポイント |
+| Connect RPC | `connectClient(Service)` | proto 定義済みのエンドポイント |
+
+### Connect RPC クライアントの使い方
+
+`connectClient()` は transport をシングルトンで保持し、任意のサービスのクライアントを返す。transport の設定（interceptor 追加、baseUrl 変更など）は `connect.ts` の1箇所で管理する。
+
+```typescript
+// features/home/api.connect.ts
+import { connectClient } from "../../lib/api/connect";
+import { HomeService } from "@lang-war/proto-ts/langwar/home/v1/home_service_pb";
+
+const client = connectClient(HomeService);
+
+export async function fetchHomeViaConnect() {
+  return client.getHome({});
+}
+```
+
+新しい proto サービスを追加した場合も `connectClient(NewService)` の1行で済む。
+
+### 共存方針
+
+REST と Connect RPC は同一ポートで共存している。新しいエンドポイントは最初から proto で定義し、既存の REST エンドポイントは段階的に移行する。認証・OAuth フローは REST のまま維持する。
+
 ## スケール方針
 
 MVPではスケールよりも検証速度を優先する。ランキング集計はPostgreSQLで行い、更新頻度やレスポンス時間が問題になってからキャッシュや非同期処理を追加する。
@@ -121,18 +160,30 @@ DDD_A-to-Z/
 │       │   └── lib/
 │       └── Dockerfile
 │
+├── proto/                        # Protobuf スキーマ定義
+│   ├── buf.yaml
+│   ├── buf.gen.go.yaml
+│   ├── buf.gen.web.yaml
+│   └── langwar/
+│       └── home/
+│           └── v1/
+│
+├── gen/                          # buf generate で生成されるコード (コミット対象)
+│   ├── go/                       # Go 生成コード (go.work 独立モジュール)
+│   └── ts/                       # TypeScript 生成コード (@lang-war/proto-ts パッケージ)
+│
 ├── services/
 │   └── api/
-│   │   ├── cmd/
-│   │   │   └── server/
-│   │   │       └── main.go
-│   │   ├── internal/
-│   │   │   ├── domain/
-│   │   │   ├── application/
-│   │   │   ├── infrastructure/
-│   │   │   ├── interfaces/
-│   │   ├── go.mod
-│   │   └── Dockerfile
+│       ├── cmd/
+│       │   └── server/
+│       │       └── main.go
+│       ├── internal/
+│       │   ├── domain/
+│       │   ├── application/
+│       │   ├── infrastructure/
+│       │   └── interfaces/
+│       ├── go.mod
+│       └── Dockerfile
 │
 ├── packages/
 │   └── shared-types/
@@ -148,13 +199,13 @@ DDD_A-to-Z/
 │   └── terraform/
 │
 ├── scripts/
-│   ├── dev.sh
 │   ├── atlas.sh
-│   └── deploy.sh
+│   └── buf.sh
 │
 └── .github/
     └── workflows/
-        ├── ci.yml
+        ├── ci-api.yml
+        ├── ci-proto.yml
         └── deploy.yml
 ```
 
@@ -187,7 +238,7 @@ services/
 - MVP では Go 内部でモジュール分割し、外部サービス化が必要になった処理から切り出す。
 - ユーザー導線上で 26 サービスを同期呼び出ししない。
 - `lang-service-*` を追加する場合も、DB に直接書き込ませない。
-- `proto/` は、多言語サービス分割が現実になってから全サービス共通の契約として導入する。
+- `proto/` は全サービス共通の契約として導入済み。新しい言語サービスを追加する際は同じ `.proto` を実装するだけで接続できる。
 - Cloud Run のゼロスケールは、ユーザー導線から外れた非同期サービスを中心に使う。
 
 ## DDD 方針
@@ -349,15 +400,17 @@ DDD_A-to-Z/
     └── docker-compose.yml
 ```
 
-`pnpm-workspace.yaml` は、まず JS/TS の package だけを対象にする。
+`pnpm-workspace.yaml` は JS/TS の package を対象にする。
 
 ```yaml
 packages:
   - "apps/*"
+  - "gen/*"
   - "packages/*"
+  - "services/*"
 ```
 
-将来 `services/lang-typescript` や `services/lang-bun` のような JS/TS 系サービスを追加した場合は、そのサービスだけ workspace 対象に加える。
+`gen/ts` は `@lang-war/proto-ts` として workspace パッケージ化されており、`apps/web` から `workspace:*` 参照している。将来言語が増えた場合も `gen/<lang>/` に同様のパッケージを追加するだけで対応できる。
 
 ## root scripts
 
@@ -447,7 +500,7 @@ pnpm dev:api
 | production build の Nix 化 | Cloud Run 用 Dockerfile が安定してから検討 |
 | Valkey | PostgreSQL集計で足りなくなってから導入 |
 | Pub/Sub / Cloud Tasks | 非同期処理が必要になってから導入 |
-| Protobuf + Connect | 多言語サービス分割が現実になってから導入 |
+| gRPC / 他プロトコル移行 | Connect RPC (HTTP/1.1 + JSON) で足りる間は不要 |
 | 言語別サービス | Go単体でコア体験を検証してから分離 |
 
 当面の採用方針は、`pnpm workspace`、`flake.nix`、Docker Compose、Go 標準 tooling とする。

@@ -1,0 +1,54 @@
+name: CI Proto
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-proto.yml"
+      - "proto/**"
+      - "gen/**"
+      - "flake.nix"
+      - "flake.lock"
+  push:
+    branches:
+      - main
+    paths:
+      - "proto/**"
+      - "gen/**"
+      - "flake.nix"
+      - "flake.lock"
+
+jobs:
+  proto:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@21a544727d0c62386e78b4befe52d19ad12692e3
+
+      - name: Install dependencies
+        run: nix develop -c pnpm install --frozen-lockfile
+
+      - name: buf lint
+        run: nix develop -c pnpm proto:lint
+
+      - name: buf build
+        run: nix develop -c pnpm proto:build
+
+      - name: buf generate
+        run: nix develop -c pnpm proto:gen
+
+      - name: Check generated code is up to date
+        run: git diff --exit-code gen/
+
+      - name: buf breaking (against main)
+        if: github.event_name == 'pull_request'
+        run: nix develop -c pnpm proto:breaking

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package langwar.home.v1;
+
+import "langwar/home/v1/home.proto";
+
+option go_package = "github.com/jyogi-web/ddd-a-to-z/gen/go/langwar/home/v1;homev1";
+
+// HomeService はユーザーのホームページ用データを取得する公開エンドポイントを提供する。
+// 呼び出し元は有効なセッションクッキーを送信する必要がある。
+// GitHub OAuth 認証後のフロントエンドホーム画面からの利用を想定している。
+service HomeService {
+  // GetHome は認証済みユーザーのホームページ表示に必要なデータを返す。
+  // リクエストにフィールドはなく、ユーザー識別はセッションクッキーから行う。
+  //
+  // エラー:
+  //   - UNAUTHENTICATED: セッションクッキーが存在しないか、セッションが期限切れ。
+  //   - INTERNAL: サーバー内部エラーが発生した。
+  rpc GetHome(GetHomeRequest) returns (GetHomeResponse);
+}
+
+message GetHomeRequest {}
