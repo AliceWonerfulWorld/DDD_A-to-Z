@@ -8,9 +8,9 @@ interface ZoomControlsProps {
 export function ZoomControls({ onZoom }: ZoomControlsProps) {
   return (
     <div
-      className="absolute right-6 z-[6] flex flex-col gap-3"
+      className="absolute right-6 z-[12] flex flex-col gap-3"
       style={{
-        bottom: "calc(env(safe-area-inset-bottom, 0px) + 142px)",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 178px)",
       }}
     >
       <ZoomButton ariaLabel="Zoom in" label="+" onClick={() => onZoom(ZOOM_STEP)} />

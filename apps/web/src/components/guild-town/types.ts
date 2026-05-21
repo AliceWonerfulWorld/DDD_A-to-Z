@@ -67,6 +67,7 @@ export interface PlacedItem {
   id: string;
   type: string;
   buildingId?: string;
+  level: number;
   name: string;
   title: string;
   description: string;

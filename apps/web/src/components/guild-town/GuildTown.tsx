@@ -328,6 +328,34 @@ export function GuildTown({
     setSelectedPlacedItemId(placedItemId);
   };
 
+  const handleUpgradeBuilding = (placedItemId: string) => {
+    const placedItem = placedItems.find((item) => item.id === placedItemId);
+    const building = placedItem?.buildingId
+      ? BUILDING_MASTERS.find((buildingMaster) => buildingMaster.id === placedItem.buildingId)
+      : undefined;
+    if (!placedItem || !building) return;
+
+    const currentLevel = Math.min(Math.max(placedItem.level, 1), building.levels.length);
+    const nextLevel = building.levels[currentLevel];
+    if (!nextLevel) return;
+
+    if (userCp < nextLevel.upgradeCostCp || userGuildSp < nextLevel.upgradeCostSp) {
+      setBuildFeedbackMessage(
+        `${building.name}の強化には ${nextLevel.upgradeCostCp.toLocaleString()} CP / ${nextLevel.upgradeCostSp.toLocaleString()} ${building.targetSpLanguage}-SP が必要です。`,
+      );
+      return;
+    }
+
+    setUserCp((currentValue) => currentValue - nextLevel.upgradeCostCp);
+    setUserGuildSp((currentValue) => currentValue - nextLevel.upgradeCostSp);
+    setPlacedItems((currentItems) =>
+      currentItems.map((item) =>
+        item.id === placedItemId ? { ...item, level: nextLevel.level } : item,
+      ),
+    );
+    setBuildFeedbackMessage("");
+  };
+
   return (
     <main
       className="relative h-screen w-full overflow-hidden"
@@ -404,7 +432,13 @@ export function GuildTown({
           {buildFeedbackMessage}
         </p>
       )}
-      <BuildingInfoPanel item={selectedPlacedItem} onClose={() => setSelectedPlacedItemId(null)} />
+      <BuildingInfoPanel
+        item={selectedPlacedItem}
+        onClose={() => setSelectedPlacedItemId(null)}
+        onUpgradeBuilding={handleUpgradeBuilding}
+        userCp={userCp}
+        userGuildSp={userGuildSp}
+      />
       <ZoomControls onZoom={handleZoom} />
 
       <div
@@ -477,6 +511,7 @@ function createPlacedBuildingItem(
     id: placement.id,
     type: building.id,
     buildingId: building.id,
+    level: 1,
     name: building.name,
     title: building.name,
     description: building.description,
@@ -494,6 +529,7 @@ function createPlacedItem(
   return {
     id: placement.id,
     type: item.type,
+    level: 1,
     name: item.name,
     title: item.title,
     description: item.description,
