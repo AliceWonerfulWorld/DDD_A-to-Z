@@ -428,11 +428,15 @@ function LockedAreaLabels({
                 position: "absolute",
                 left: `${labelPosition.x}%`,
                 top: `${labelPosition.y}%`,
+                border: `2px solid ${lockedColor.line}`,
+                background: "rgba(3, 10, 24, 0.76)",
+                boxShadow: `0 0 0 2px rgba(0,0,0,0.54), 0 0 18px ${lockedColor.line}`,
                 color: lockedColor.text,
                 fontFamily: '"Press Start 2P", "DotGothic16", monospace',
-                fontSize: "0.54rem",
+                fontSize: "1rem",
                 letterSpacing: 0,
-                lineHeight: 1.35,
+                lineHeight: 1.25,
+                padding: "8px 10px",
                 textAlign: "center",
                 textShadow: `2px 2px 0 rgba(0,0,0,0.88), 0 0 10px ${lockedColor.line}, 0 0 18px rgba(0,0,0,0.8)`,
                 transform: "translate(-50%, -50%)",
@@ -487,10 +491,10 @@ function getLockedFogGradient(
 
 function getLockedAreaLabelPosition(level: number) {
   const positionByLevel: Record<number, { x: number; y: number }> = {
-    2: { x: 63, y: 27 },
-    3: { x: 76, y: 39 },
-    4: { x: 78, y: 58 },
-    5: { x: 66, y: 76 },
+    2: { x: 62, y: 30 },
+    3: { x: 76, y: 44 },
+    4: { x: 30, y: 18 },
+    5: { x: 83, y: 82 },
   };
 
   return positionByLevel[level] ?? { x: 76, y: 50 };
