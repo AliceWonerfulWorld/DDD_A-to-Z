@@ -535,6 +535,7 @@ export function GuildTown({
     const placementX = deploymentDraft.x;
     const placementY = deploymentDraft.y;
     const placedItemId = `local-${building.id}-${Date.now()}`;
+    const previousPlacedItems = placedItems;
 
     const nextItems = [
       ...placedItems,
@@ -555,12 +556,7 @@ export function GuildTown({
     try {
       const status = await deployBuilding({ placements: nextItems });
       applyGuildTownStatus(status);
-      const deployedItem = findDeployedItem(
-        status.placedItems,
-        building.id,
-        placementX,
-        placementY,
-      );
+      const deployedItem = findDeployedItem(status.placedItems, previousPlacedItems);
       setNewlyDeployedItemId(deployedItem?.id ?? placedItemId);
       setSelectedPlacedItemId(deployedItem?.id ?? placedItemId);
       setDeployingBuildingId(null);
@@ -812,18 +808,10 @@ function createPlacedBuildingItem(
   };
 }
 
-function findDeployedItem(
-  placedItems: PlacedItem[],
-  buildingId: string,
-  x: number,
-  y: number,
-): PlacedItem | null {
-  return (
-    placedItems.find(
-      (item) =>
-        item.buildingId === buildingId && Math.abs(item.x - x) < 1 && Math.abs(item.y - y) < 1,
-    ) ?? null
-  );
+function findDeployedItem(placedItems: PlacedItem[], previousPlacedItems: PlacedItem[]) {
+  const previousIds = new Set(previousPlacedItems.map((item) => item.id));
+
+  return placedItems.find((item) => !previousIds.has(item.id)) ?? null;
 }
 
 function toInventoryBuildingMaster(item: InventoryItem): BuildingMaster {
