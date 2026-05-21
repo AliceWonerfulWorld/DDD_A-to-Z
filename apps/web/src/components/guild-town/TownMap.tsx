@@ -417,16 +417,8 @@ function LockedAreaLabels({
     >
       {rings
         .filter((ring) => ring.level > currentGuildLevel)
-        .map((ring, index, lockedRings) => {
-          const previousRadius =
-            rings.find((candidate) => candidate.level === ring.level - 1)?.radiusPercent ??
-            getTownUnlockRadiusPercent(currentGuildLevel);
-          const nextRadius =
-            lockedRings[index + 1]?.radiusPercent ?? Math.min(72, ring.radiusPercent + 16);
-          const labelRadius = (previousRadius + nextRadius) / 2;
-          const labelAngle = getLockedAreaLabelAngle(ring.level);
-          const x = 50 + (Math.cos(labelAngle) * labelRadius) / 1.08;
-          const y = 50 + (Math.sin(labelAngle) * labelRadius) / 0.82;
+        .map((ring) => {
+          const labelPosition = getLockedAreaLabelPosition(ring.level);
           const lockedColor = getLockedLevelColor(ring.level);
 
           return (
@@ -434,8 +426,8 @@ function LockedAreaLabels({
               key={ring.level}
               style={{
                 position: "absolute",
-                left: `${x}%`,
-                top: `${y}%`,
+                left: `${labelPosition.x}%`,
+                top: `${labelPosition.y}%`,
                 color: lockedColor.text,
                 fontFamily: '"Press Start 2P", "DotGothic16", monospace',
                 fontSize: "0.54rem",
@@ -493,15 +485,15 @@ function getLockedFogGradient(
   return `radial-gradient(ellipse at center, ${stops.join(", ")})`;
 }
 
-function getLockedAreaLabelAngle(level: number) {
-  const angleByLevel: Record<number, number> = {
-    2: -1.05,
-    3: -0.32,
-    4: 0.2,
-    5: 0.75,
+function getLockedAreaLabelPosition(level: number) {
+  const positionByLevel: Record<number, { x: number; y: number }> = {
+    2: { x: 63, y: 27 },
+    3: { x: 76, y: 39 },
+    4: { x: 78, y: 58 },
+    5: { x: 66, y: 76 },
   };
 
-  return angleByLevel[level] ?? 0;
+  return positionByLevel[level] ?? { x: 76, y: 50 };
 }
 
 function getLockedLevelColor(level: number) {

@@ -1,8 +1,4 @@
-import { clampValue } from "./townMath";
-
-const MIN_UNLOCK_RADIUS_PERCENT = 20;
-const UNLOCK_RADIUS_STEP_PERCENT = 9;
-const MAX_UNLOCK_RADIUS_PERCENT = 54;
+const UNLOCK_RADIUS_BY_LEVEL = [32, 46, 60, 74, 88] as const;
 const MAX_UNLOCK_LEVEL = 5;
 
 export interface TownMapPoint {
@@ -13,11 +9,12 @@ export interface TownMapPoint {
 }
 
 export function getTownUnlockRadiusPercent(guildLevel: number) {
-  return clampValue(
-    MIN_UNLOCK_RADIUS_PERCENT + Math.max(0, guildLevel - 1) * UNLOCK_RADIUS_STEP_PERCENT,
-    MIN_UNLOCK_RADIUS_PERCENT,
-    MAX_UNLOCK_RADIUS_PERCENT,
+  const levelIndex = Math.min(
+    Math.max(0, Math.floor(guildLevel) - 1),
+    UNLOCK_RADIUS_BY_LEVEL.length - 1,
   );
+
+  return UNLOCK_RADIUS_BY_LEVEL[levelIndex];
 }
 
 export function getTownUnlockRings(maxLevel = MAX_UNLOCK_LEVEL) {
