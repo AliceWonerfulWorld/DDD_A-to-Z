@@ -7,11 +7,12 @@ import {
   fetchMyGuild,
   type GuildActivityLog,
 } from "../../features/guild/api";
+import { connectChat, type GuildChatMessage } from "../../features/guild/chatApi";
+import type { ChatConnection } from "../../features/guild/chatApi";
 import { toDisplayGuild, type DisplayGuild } from "../../features/guild/presentation";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { steppedEase } from "../../lib/animationUtils";
 import { PATHS } from "../../constants/paths";
-import { GUILD_CHAT_MESSAGES } from "./chatData";
 import { GuildChatExpandedModal } from "./GuildChatExpandedModal";
 import { GuildChatOverlay } from "./GuildChatOverlay";
 import { DashboardMonitor } from "./DashboardMonitor";
@@ -19,6 +20,8 @@ import { GUILD_TABS } from "./data";
 import { GuildBadge } from "./GuildBadge";
 import { GuildNavigation } from "./GuildNavigation";
 import type { ActivityLog, GuildTab } from "./types";
+
+const CHAT_SERVICE_URL = import.meta.env.VITE_CHAT_SERVICE_URL ?? "ws://localhost:4000";
 
 interface GuildDashboardProps {
   onNavigate: (path: string) => void;
@@ -48,6 +51,8 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [currentGuild, setCurrentGuild] = useState<DisplayGuild | null>(null);
   const [isCurrentGuildLoaded, setIsCurrentGuildLoaded] = useState(false);
+  const [chatMessages, setChatMessages] = useState<GuildChatMessage[]>([]);
+  const chatConnectionRef = useRef<ChatConnection | null>(null);
   const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
   const tabSwitchSeRef = useRef<HTMLAudioElement | null>(null);
 
@@ -110,6 +115,55 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
       isMounted = false;
     };
   }, [onNavigate]);
+
+  useEffect(() => {
+    if (!currentGuild) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const startChat = async () => {
+      try {
+        const connection = await connectChat(
+          currentGuild.id,
+          CHAT_SERVICE_URL,
+          (msg) => {
+            if (isMounted) {
+              setChatMessages((prev) => [...prev, msg]);
+            }
+          },
+          (msgs) => {
+            if (isMounted) {
+              setChatMessages(msgs);
+            }
+          },
+          (reason) => {
+            if (isMounted) {
+              console.error("chat join error", reason);
+            }
+          },
+        );
+        if (isMounted) {
+          chatConnectionRef.current = connection;
+        } else {
+          connection.disconnect();
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("failed to connect to chat", error);
+        }
+      }
+    };
+
+    void startChat();
+
+    return () => {
+      isMounted = false;
+      chatConnectionRef.current?.disconnect();
+      chatConnectionRef.current = null;
+    };
+  }, [currentGuild]);
 
   useEffect(() => {
     if (!currentGuild || activeTab !== "activity") {
@@ -246,13 +300,15 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
       </motion.button>
       <GuildChatOverlay
         isOpen={chatView === "compact"}
-        messages={GUILD_CHAT_MESSAGES.slice(-4)}
+        messages={chatMessages.slice(-4)}
+        channel={chatConnectionRef.current?.channel ?? null}
         onExpand={() => setChatView("expanded")}
         onClose={() => setChatView("closed")}
       />
       <GuildChatExpandedModal
         isOpen={chatView === "expanded"}
-        messages={GUILD_CHAT_MESSAGES}
+        messages={chatMessages}
+        channel={chatConnectionRef.current?.channel ?? null}
         onMinimize={() => setChatView("compact")}
         onClose={() => setChatView("closed")}
       />
