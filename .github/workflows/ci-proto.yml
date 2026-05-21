@@ -17,6 +17,7 @@ on:
       - main
     paths:
       - "proto/**"
+      - "gen/**"
       - "flake.nix"
       - "flake.lock"
 
@@ -28,6 +29,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@21a544727d0c62386e78b4befe52d19ad12692e3

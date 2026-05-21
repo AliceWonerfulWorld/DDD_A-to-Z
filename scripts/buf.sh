@@ -16,7 +16,11 @@ fi
 if [ "${1:-}" = "breaking" ]; then
   against_ref="${3:-}"
   if [ "$against_ref" = "../.git#branch=origin/main,subdir=proto" ]; then
-    if ! git -C "$ROOT" ls-tree -r --name-only origin/main -- proto 2>/dev/null | grep -q '\.proto$'; then
+    if ! proto_files="$(git -C "$ROOT" ls-tree -r --name-only origin/main -- proto 2>/dev/null)"; then
+      echo "Failed to inspect origin/main for proto files." >&2
+      exit 1
+    fi
+    if ! printf '%s\n' "$proto_files" | grep -q '\.proto$'; then
       echo "No proto files on origin/main; skipping breaking check."
       exit 0
     fi

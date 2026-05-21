@@ -29,5 +29,5 @@ pre-push:
       glob: "{apps,services,packages,gen}/**/*,package.json,pnpm-lock.yaml"
       run: pnpm format:check && pnpm lint && pnpm test && pnpm build
     proto-check:
-      glob: "proto/**/*.proto"
+      glob: "proto/**/*.proto,proto/buf*.yaml,scripts/buf.sh"
       run: pnpm proto:build && pnpm proto:gen && git diff --exit-code gen/

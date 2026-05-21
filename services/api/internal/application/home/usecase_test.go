@@ -73,6 +73,9 @@ func TestUseCaseGetHome(t *testing.T) {
 		if auth.now != usecase.now() {
 			t.Fatalf("認証へ渡した now = %v, 期待値 %v", auth.now, usecase.now())
 		}
+		if len(cp.userIDs) != 3 {
+			t.Fatalf("CP reader 呼び出し回数 = %d, 期待値 3", len(cp.userIDs))
+		}
 		for _, got := range cp.userIDs {
 			if got != "user_1" {
 				t.Fatalf("CP reader に渡した userID = %q, 期待値 user_1", got)

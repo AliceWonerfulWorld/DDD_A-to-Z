@@ -500,7 +500,7 @@ pnpm dev:api
 | production build の Nix 化 | Cloud Run 用 Dockerfile が安定してから検討 |
 | Valkey | PostgreSQL集計で足りなくなってから導入 |
 | Pub/Sub / Cloud Tasks | 非同期処理が必要になってから導入 |
-| Protobuf + Connect | 多言語サービス分割が現実になってから導入 |
+| gRPC / 他プロトコル移行 | Connect RPC (HTTP/1.1 + JSON) で足りる間は不要 |
 | 言語別サービス | Go単体でコア体験を検証してから分離 |
 
 当面の採用方針は、`pnpm workspace`、`flake.nix`、Docker Compose、Go 標準 tooling とする。
