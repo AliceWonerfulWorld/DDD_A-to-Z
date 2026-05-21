@@ -1,4 +1,4 @@
-import { useMotionValue, type PanInfo } from "framer-motion";
+import { motion, useMotionValue, type PanInfo } from "framer-motion";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { fetchMyGuild } from "../../features/guild/api";
 import { findGuildBySlug } from "../../features/guild/guildMaster";
@@ -17,6 +17,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent,
 } from "react";
@@ -24,10 +25,12 @@ import { GuildBgm } from "../shared/GuildBgm";
 import { BackButton } from "./BackButton";
 import { BuildInventory } from "./BuildInventory";
 import { BuildingInfoPanel } from "./BuildingInfoPanel";
-import { TownMap } from "./TownMap";
+import { TownMap, type DeploymentPreview } from "./TownMap";
 import { TownStatusHeader } from "./TownStatusHeader";
+import { steppedEase } from "../../lib/animationUtils";
 import { BUILDING_MASTERS, MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS } from "./townData";
 import { clampValue, isPointInsideRect } from "./townMath";
+import { isTownPointUnlocked } from "./townUnlock";
 import { GUILD_LANGUAGES } from "./types";
 import type {
   BuildingMaster,
@@ -49,6 +52,11 @@ interface GuildTownProps {
   bonfireSrc?: string;
 }
 
+interface DeploymentDraft {
+  x: number;
+  y: number;
+}
+
 export function GuildTown({
   onNavigate,
   townLevel = 1,
@@ -62,6 +70,9 @@ export function GuildTown({
   const [availableItems, setAvailableItems] = useState<InventoryItem[]>([]);
   const [inventoryVisible, setInventoryVisible] = useState(true);
   const [selectedPlacedItemId, setSelectedPlacedItemId] = useState<string | null>(null);
+  const [deployingBuildingId, setDeployingBuildingId] = useState<string | null>(null);
+  const [deploymentDraft, setDeploymentDraft] = useState<DeploymentDraft | null>(null);
+  const [newlyDeployedItemId, setNewlyDeployedItemId] = useState<string | null>(null);
   const [storingPlacedItemIds, setStoringPlacedItemIds] = useState<string[]>([]);
   const [buildFeedbackMessage, setBuildFeedbackMessage] = useState<string | null>(null);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
@@ -91,6 +102,13 @@ export function GuildTown({
     () => availableItems.map(toInventoryBuildingMaster),
     [availableItems],
   );
+  const deployingBuilding =
+    deployingBuildingId === null
+      ? null
+      : (BUILDING_MASTERS.find((building) => building.id === deployingBuildingId) ??
+        inventoryBuildingCatalog.find((building) => building.id === deployingBuildingId) ??
+        null);
+  const deploymentPreview = getDeploymentPreview();
   const dragConstraints = {
     left: Math.min(0, viewport.width - viewport.width * 2 * scale),
     right: 0,
@@ -167,6 +185,51 @@ export function GuildTown({
     mapY,
   ]);
 
+  useEffect(() => {
+    if (deployingBuildingId === null) return;
+
+    const handleDeployKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelDeployMode();
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        void commitDeployment();
+        return;
+      }
+
+      const arrowDeltaByKey: Record<string, { x: number; y: number }> = {
+        ArrowDown: { x: 0, y: 1 },
+        ArrowLeft: { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 },
+        ArrowUp: { x: 0, y: -1 },
+      };
+      const arrowDelta = arrowDeltaByKey[event.key];
+      if (!arrowDelta) {
+        return;
+      }
+
+      event.preventDefault();
+      moveDeploymentDraftBy(arrowDelta.x, arrowDelta.y, event.shiftKey ? 48 : 16);
+    };
+
+    window.addEventListener("keydown", handleDeployKeyDown);
+    return () => window.removeEventListener("keydown", handleDeployKeyDown);
+  });
+
+  useEffect(() => {
+    if (newlyDeployedItemId === null) return;
+
+    const resetAnimationTarget = window.setTimeout(() => {
+      setNewlyDeployedItemId(null);
+    }, 900);
+
+    return () => window.clearTimeout(resetAnimationTarget);
+  }, [newlyDeployedItemId]);
+
   const handleZoom = (delta: number) => {
     setScale((currentScale) => clampValue(currentScale + delta, MIN_SCALE, MAX_SCALE));
   };
@@ -178,6 +241,19 @@ export function GuildTown({
 
   const stopNestedDrag = (event: ReactPointerEvent<HTMLElement>) => {
     event.stopPropagation();
+  };
+
+  function cancelDeployMode() {
+    setDeployingBuildingId(null);
+    setDeploymentDraft(null);
+    setBuildFeedbackMessage(null);
+  }
+
+  const handleTownContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    if (deployingBuildingId === null) return;
+
+    event.preventDefault();
+    cancelDeployMode();
   };
 
   const getMapDropPoint = (point: PanInfo["point"], itemWidth: number) => {
@@ -200,6 +276,87 @@ export function GuildTown({
       y: clampValue(y, 0, Math.max(0, mapHeight - itemWidth)),
     };
   };
+
+  function getMapSize() {
+    const mapElement = mapRef.current;
+
+    return {
+      height: mapElement?.offsetHeight ?? viewport.height * 2,
+      width: mapElement?.offsetWidth ?? viewport.width * 2,
+    };
+  }
+
+  function getInitialDeploymentDraft(itemWidth: number): DeploymentDraft {
+    const mapSize = getMapSize();
+    const x = clampValue(
+      (-mapX.get() + viewport.width / 2) / scale - itemWidth / 2,
+      0,
+      Math.max(0, mapSize.width - itemWidth),
+    );
+    const y = clampValue(
+      (-mapY.get() + viewport.height / 2) / scale - itemWidth / 2,
+      0,
+      Math.max(0, mapSize.height - itemWidth),
+    );
+
+    return { x, y };
+  }
+
+  function isDeploymentDraftUnlocked(draft: DeploymentDraft, itemWidth: number) {
+    const mapSize = getMapSize();
+
+    return isTownPointUnlocked(
+      {
+        mapHeight: mapSize.height,
+        mapWidth: mapSize.width,
+        x: draft.x + itemWidth / 2,
+        y: draft.y + itemWidth / 2,
+      },
+      currentGuildLevel,
+    );
+  }
+
+  function moveDeploymentDraftBy(deltaX: number, deltaY: number, step: number) {
+    if (!deploymentDraft || viewport.width === 0) return;
+
+    const width = getBuildingMapWidth(viewport.width);
+    const mapSize = getMapSize();
+    const nextDraft = {
+      x: clampValue(deploymentDraft.x + deltaX * step, 0, Math.max(0, mapSize.width - width)),
+      y: clampValue(deploymentDraft.y + deltaY * step, 0, Math.max(0, mapSize.height - width)),
+    };
+
+    setDeploymentDraft(nextDraft);
+    if (!isDeploymentDraftUnlocked(nextDraft, width)) {
+      setBuildFeedbackMessage(getLockedDeploymentMessage(currentGuildLevel));
+    } else {
+      setBuildFeedbackMessage(null);
+    }
+  }
+
+  function getDeploymentPreview(): DeploymentPreview | null {
+    if (!deployingBuilding || !deploymentDraft || viewport.width === 0 || viewport.height === 0) {
+      return null;
+    }
+
+    const width = getBuildingMapWidth(viewport.width);
+    const mapSize = getMapSize();
+    const centerX = deploymentDraft.x + width / 2;
+    const centerY = deploymentDraft.y + width / 2;
+
+    return {
+      id: deployingBuilding.id,
+      isUnlocked: isTownPointUnlocked(
+        { mapHeight: mapSize.height, mapWidth: mapSize.width, x: centerX, y: centerY },
+        currentGuildLevel,
+      ),
+      name: deployingBuilding.name,
+      src: deployingBuilding.previewSrc ?? "/build-items/plasma-capacitor.jpeg",
+      width,
+      x: deploymentDraft.x,
+      y: deploymentDraft.y,
+    };
+  }
 
   const handlePlacedItemDragEnd = (
     item: PlacedItem,
@@ -274,30 +431,61 @@ export function GuildTown({
     }
   };
 
-  const handleDeployBuilding = async (building: BuildingMaster) => {
+  const handleBeginDeployBuilding = (building: BuildingMaster) => {
     const inventoryItem = userInventory.find((item) => item.buildingId === building.id);
-    if (
-      !inventoryItem ||
-      inventoryItem.count <= 0 ||
-      viewport.width === 0 ||
-      viewport.height === 0
-    ) {
+    if (!inventoryItem || inventoryItem.count <= 0) {
+      setBuildFeedbackMessage("配置できる建物がインベントリにありません。");
+      return;
+    }
+
+    setSelectedPlacedItemId(null);
+    setDeployingBuildingId(building.id);
+    setDeploymentDraft(getInitialDeploymentDraft(getBuildingMapWidth(viewport.width)));
+    setBuildFeedbackMessage(null);
+  };
+
+  const handleMoveDeploymentPreview = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo,
+  ) => {
+    if (!deploymentDraft || viewport.width === 0) return;
+
+    const width = getBuildingMapWidth(viewport.width);
+    const dropPoint = getMapDropPoint(info.point, width);
+    if (!dropPoint) return;
+
+    setDeploymentDraft(dropPoint);
+    if (!isDeploymentDraftUnlocked(dropPoint, width)) {
+      setBuildFeedbackMessage(getLockedDeploymentMessage(currentGuildLevel));
+    } else {
+      setBuildFeedbackMessage(null);
+    }
+  };
+
+  async function commitDeployment() {
+    if (!deployingBuildingId || !deploymentDraft) return;
+
+    const building =
+      BUILDING_MASTERS.find((buildingMaster) => buildingMaster.id === deployingBuildingId) ??
+      inventoryBuildingCatalog.find(
+        (inventoryBuilding) => inventoryBuilding.id === deployingBuildingId,
+      );
+    const inventoryItem = userInventory.find((item) => item.buildingId === deployingBuildingId);
+
+    if (!building || !inventoryItem || inventoryItem.count <= 0 || viewport.width === 0) {
+      setBuildFeedbackMessage("配置できる建物がインベントリにありません。");
+      cancelDeployMode();
       return;
     }
 
     const width = getBuildingMapWidth(viewport.width);
-    const mapWidth = viewport.width * 2;
-    const mapHeight = viewport.height * 2;
-    const x = clampValue(
-      (-mapX.get() + viewport.width / 2) / scale - width / 2,
-      0,
-      mapWidth - width,
-    );
-    const y = clampValue(
-      (-mapY.get() + viewport.height / 2) / scale - width / 2,
-      0,
-      mapHeight - width,
-    );
+    if (!isDeploymentDraftUnlocked(deploymentDraft, width)) {
+      setBuildFeedbackMessage(getLockedDeploymentMessage(currentGuildLevel));
+      return;
+    }
+
+    const placementX = deploymentDraft.x;
+    const placementY = deploymentDraft.y;
     const placedItemId = `local-${building.id}-${Date.now()}`;
 
     const nextItems = [
@@ -305,8 +493,8 @@ export function GuildTown({
       createPlacedBuildingItem(building, {
         id: placedItemId,
         width,
-        x,
-        y,
+        x: placementX,
+        y: placementY,
       }),
     ];
     setUserInventory((currentInventory) =>
@@ -319,13 +507,25 @@ export function GuildTown({
     try {
       const status = await deployBuilding({ placements: nextItems });
       applyGuildTownStatus(status);
+      const deployedItem = findDeployedItem(
+        status.placedItems,
+        building.id,
+        placementX,
+        placementY,
+      );
+      setNewlyDeployedItemId(deployedItem?.id ?? placedItemId);
+      setSelectedPlacedItemId(deployedItem?.id ?? placedItemId);
+      setDeployingBuildingId(null);
+      setDeploymentDraft(null);
       setBuildFeedbackMessage("");
     } catch (error) {
       console.error("failed to deploy guild town building", error);
       setBuildFeedbackMessage("配置の保存に失敗しました。インベントリ数を確認してください。");
+      setDeployingBuildingId(null);
+      setDeploymentDraft(null);
       await reloadGuildTownStatus();
     }
-  };
+  }
 
   const handleUpgradeBuilding = async (placedItemId: string) => {
     const placedItem = placedItems.find((item) => item.id === placedItemId);
@@ -382,6 +582,7 @@ export function GuildTown({
   return (
     <main
       className="relative h-screen w-full overflow-hidden"
+      onContextMenu={handleTownContextMenu}
       onWheel={handleWheel}
       style={{
         background: "#112b1a",
@@ -397,7 +598,13 @@ export function GuildTown({
         mapRef={mapRef}
         mapX={mapX}
         mapY={mapY}
+        currentGuildLevel={currentGuildLevel}
+        deploymentPreview={deploymentPreview}
+        newlyDeployedItemId={newlyDeployedItemId}
         onMoveItem={handlePlacedItemDragEnd}
+        onCancelDeployment={cancelDeployMode}
+        onCommitDeployment={() => void commitDeployment()}
+        onMoveDeploymentPreview={handleMoveDeploymentPreview}
         onSelectItem={setSelectedPlacedItemId}
         onStoreItem={handleStorePlacedItem}
         placedItems={placedItems}
@@ -421,7 +628,7 @@ export function GuildTown({
         inventoryBuildings={inventoryBuildingCatalog}
         inventoryRef={inventoryRef}
         onBuyBuilding={handleBuyBuilding}
-        onDeployBuilding={handleDeployBuilding}
+        onDeployBuilding={handleBeginDeployBuilding}
         onToggleVisible={() => setInventoryVisible((currentVisible) => !currentVisible)}
         stopNestedDrag={stopNestedDrag}
         userCp={userCp}
@@ -429,6 +636,9 @@ export function GuildTown({
         visible={inventoryVisible}
       />
       {isTownLoading && <GuildTownLoadingOverlay />}
+      {deployingBuilding && (
+        <DeployModePanel buildingName={deployingBuilding.name} onCancel={cancelDeployMode} />
+      )}
       {loadErrorMessage && <GuildTownToast message={loadErrorMessage} />}
       {buildFeedbackMessage && <GuildTownToast message={buildFeedbackMessage} />}
       <BuildingInfoPanel
@@ -457,6 +667,10 @@ export function GuildTown({
 
 function getBuildingMapWidth(viewportWidth: number) {
   return clampValue(viewportWidth * 0.14, 112, 220);
+}
+
+function getLockedDeploymentMessage(currentGuildLevel: number) {
+  return `このエリアはまだロックされています。ギルドLV.${currentGuildLevel + 1}以上に上げて解放すると配置できます。`;
 }
 
 function getBuyFailureMessage({
@@ -521,6 +735,20 @@ function createPlacedBuildingItem(
   };
 }
 
+function findDeployedItem(
+  placedItems: PlacedItem[],
+  buildingId: string,
+  x: number,
+  y: number,
+): PlacedItem | null {
+  return (
+    placedItems.find(
+      (item) =>
+        item.buildingId === buildingId && Math.abs(item.x - x) < 1 && Math.abs(item.y - y) < 1,
+    ) ?? null
+  );
+}
+
 function toInventoryBuildingMaster(item: InventoryItem): BuildingMaster {
   return {
     name: item.name,
@@ -566,6 +794,74 @@ function GuildTownLoadingOverlay() {
         SYNCING GUILD TOWN...
       </span>
     </div>
+  );
+}
+
+function DeployModePanel({
+  buildingName,
+  onCancel,
+}: {
+  buildingName: string;
+  onCancel: () => void;
+}) {
+  return (
+    <motion.div
+      role="status"
+      aria-live="polite"
+      initial={{ opacity: 0, y: -10, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+      transition={{ duration: 0.18, ease: steppedEase(5) }}
+      style={{
+        position: "fixed",
+        left: "50%",
+        top: "calc(env(safe-area-inset-top, 0px) + 92px)",
+        zIndex: 13,
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) auto",
+        alignItems: "center",
+        gap: "12px",
+        maxWidth: "min(720px, calc(100vw - 32px))",
+        transform: "translateX(-50%)",
+        border: "3px solid rgba(116, 247, 161, 0.86)",
+        borderBottomColor: "rgba(24, 83, 45, 0.95)",
+        borderRightColor: "rgba(24, 83, 45, 0.95)",
+        background: "rgba(1, 12, 24, 0.94)",
+        boxShadow:
+          "0 0 0 2px rgba(0,0,0,0.68), 4px 4px 0 rgba(0,0,0,0.34), 0 0 22px rgba(116,247,161,0.24)",
+        color: "#fff8d7",
+        fontFamily: '"DotGothic16", monospace',
+        fontSize: "0.9rem",
+        lineHeight: 1.35,
+        padding: "10px 12px",
+        textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+      }}
+    >
+      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+        {buildingName} をドラッグまたは矢印キーで動かし、BUILD / Enter で配置してください
+      </span>
+      <button
+        type="button"
+        onClick={onCancel}
+        style={{
+          minHeight: "34px",
+          border: "2px solid rgba(255, 217, 102, 0.86)",
+          borderBottomColor: "rgba(96, 62, 22, 0.98)",
+          borderRightColor: "rgba(96, 62, 22, 0.98)",
+          background: "rgba(3, 10, 24, 0.9)",
+          boxShadow: "0 0 0 2px rgba(0,0,0,0.58), 3px 3px 0 rgba(0,0,0,0.28)",
+          color: "#ffd966",
+          cursor: "pointer",
+          fontFamily: '"Press Start 2P", "DotGothic16", monospace',
+          fontSize: "0.5rem",
+          lineHeight: 1,
+          padding: "8px 10px",
+          textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+        }}
+      >
+        CANCEL
+      </button>
+    </motion.div>
   );
 }
 
