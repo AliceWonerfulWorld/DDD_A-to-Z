@@ -90,6 +90,7 @@ export function GuildTown({
   );
   const mapRef = useRef<HTMLDivElement>(null);
   const inventoryRef = useRef<HTMLDivElement>(null);
+  const hasSyncedGuildLevelRef = useRef(false);
   const previousGuildLevelRef = useRef(currentGuildLevel);
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
@@ -585,6 +586,11 @@ export function GuildTown({
   };
 
   const applyGuildTownStatus = (status: GuildTownStatus) => {
+    if (!hasSyncedGuildLevelRef.current) {
+      previousGuildLevelRef.current = status.guildLevel;
+      hasSyncedGuildLevelRef.current = true;
+    }
+
     setAvailableItems(status.availableItems);
     setCurrentGuildLevel(status.guildLevel);
     setPlacedItems(status.placedItems);
