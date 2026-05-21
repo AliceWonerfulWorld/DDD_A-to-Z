@@ -92,7 +92,6 @@ export function TownMap({
   unlockClearingLevel,
 }: TownMapProps) {
   const isDeployMode = deploymentPreview !== null;
-  const unlockRadiusPercent = getTownUnlockRadiusPercent(currentGuildLevel);
   const unlockRings = getTownUnlockRings();
 
   return (
@@ -152,12 +151,8 @@ export function TownMap({
         }}
       />
 
-      <LockedTownFog
-        currentGuildLevel={currentGuildLevel}
-        rings={unlockRings}
-        unlockRadiusPercent={unlockRadiusPercent}
-      />
-      <UnlockBoundaryRings currentGuildLevel={currentGuildLevel} rings={unlockRings} />
+      <LockedTownFog currentGuildLevel={currentGuildLevel} rings={unlockRings} />
+      <LockedAreaLabels currentGuildLevel={currentGuildLevel} rings={unlockRings} />
       {unlockClearingLevel && (
         <UnlockClearingBurst
           level={unlockClearingLevel}
@@ -384,14 +379,10 @@ export function TownMap({
 function LockedTownFog({
   currentGuildLevel,
   rings,
-  unlockRadiusPercent,
 }: {
   currentGuildLevel: number;
   rings: ReturnType<typeof getTownUnlockRings>;
-  unlockRadiusPercent: number;
 }) {
-  const nextLockedColor = getLockedLevelColor(currentGuildLevel + 1);
-
   return (
     <div
       aria-hidden="true"
@@ -402,32 +393,12 @@ function LockedTownFog({
         background: getLockedFogGradient(currentGuildLevel, rings),
         backdropFilter: "blur(1.4px) saturate(0.72)",
         pointerEvents: "none",
-        ["--unlock-radius" as string]: `${unlockRadiusPercent}%`,
       }}
-    >
-      <span
-        style={{
-          position: "absolute",
-          right: "7%",
-          top: "16%",
-          border: `2px solid ${nextLockedColor.line}`,
-          background: "rgba(4, 12, 24, 0.74)",
-          boxShadow: `0 0 18px ${nextLockedColor.line}, 3px 3px 0 rgba(0,0,0,0.26)`,
-          color: nextLockedColor.text,
-          fontFamily: '"DotGothic16", monospace',
-          fontSize: "0.78rem",
-          lineHeight: 1.25,
-          padding: "7px 9px",
-          textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
-        }}
-      >
-        LOCKED LV.{currentGuildLevel + 1}
-      </span>
-    </div>
+    />
   );
 }
 
-function UnlockBoundaryRings({
+function LockedAreaLabels({
   currentGuildLevel,
   rings,
 }: {
@@ -444,54 +415,44 @@ function UnlockBoundaryRings({
         pointerEvents: "none",
       }}
     >
-      {rings.map((ring) => {
-        const isCurrent = ring.level === currentGuildLevel;
-        const isUnlocked = ring.level <= currentGuildLevel;
-        const lockedColor = getLockedLevelColor(ring.level);
-        const borderColor = isUnlocked ? "rgba(116, 247, 161, 0.56)" : lockedColor.line;
-        const labelColor = isUnlocked ? "#74f7a1" : lockedColor.text;
+      {rings
+        .filter((ring) => ring.level > currentGuildLevel)
+        .map((ring, index, lockedRings) => {
+          const previousRadius =
+            rings.find((candidate) => candidate.level === ring.level - 1)?.radiusPercent ??
+            getTownUnlockRadiusPercent(currentGuildLevel);
+          const nextRadius =
+            lockedRings[index + 1]?.radiusPercent ?? Math.min(72, ring.radiusPercent + 16);
+          const labelRadius = (previousRadius + nextRadius) / 2;
+          const labelAngle = getLockedAreaLabelAngle(ring.level);
+          const x = 50 + (Math.cos(labelAngle) * labelRadius) / 1.08;
+          const y = 50 + (Math.sin(labelAngle) * labelRadius) / 0.82;
+          const lockedColor = getLockedLevelColor(ring.level);
 
-        return (
-          <div
-            key={ring.level}
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              width: `${(ring.radiusPercent * 2) / 1.08}%`,
-              height: `${(ring.radiusPercent * 2) / 0.82}%`,
-              transform: "translate(-50%, -50%)",
-              border: `${isCurrent ? 3 : 2}px ${isUnlocked ? "solid" : "dashed"} ${borderColor}`,
-              borderRadius: "50%",
-              boxShadow: isCurrent
-                ? `0 0 18px ${borderColor}, inset 0 0 18px rgba(116,247,161,0.1)`
-                : `0 0 10px ${borderColor}`,
-              opacity: isCurrent ? 0.9 : 0.64,
-            }}
-          >
+          return (
             <span
+              key={ring.level}
               style={{
                 position: "absolute",
-                left: "50%",
-                top: "-12px",
-                transform: "translateX(-50%)",
-                border: `2px solid ${borderColor}`,
-                background: "rgba(3, 10, 24, 0.78)",
-                boxShadow: `0 0 12px ${borderColor}`,
-                color: labelColor,
+                left: `${x}%`,
+                top: `${y}%`,
+                color: lockedColor.text,
                 fontFamily: '"Press Start 2P", "DotGothic16", monospace',
-                fontSize: "0.42rem",
-                lineHeight: 1,
-                padding: "5px 6px",
-                textShadow: "2px 2px 0 rgba(0,0,0,0.78)",
+                fontSize: "0.54rem",
+                letterSpacing: 0,
+                lineHeight: 1.35,
+                textAlign: "center",
+                textShadow: `2px 2px 0 rgba(0,0,0,0.88), 0 0 10px ${lockedColor.line}, 0 0 18px rgba(0,0,0,0.8)`,
+                transform: "translate(-50%, -50%)",
                 whiteSpace: "nowrap",
               }}
             >
               LV.{ring.level}
+              <br />
+              UNLOCK
             </span>
-          </div>
-        );
-      })}
+          );
+        })}
     </div>
   );
 }
@@ -511,8 +472,8 @@ function getLockedFogGradient(
 
   const stops = [
     "transparent 0%",
-    `transparent ${Math.max(0, currentRadius - 2)}%`,
-    `${getLockedLevelColor(lockedRings[0].level).fog} ${currentRadius}%`,
+    `transparent ${currentRadius}%`,
+    `${getLockedLevelColor(lockedRings[0].level).fog} ${currentRadius + 1}%`,
   ];
 
   for (const ring of lockedRings) {
@@ -520,7 +481,7 @@ function getLockedFogGradient(
     const nextRing = lockedRings.find((candidate) => candidate.level === ring.level + 1);
     const endRadius = ring.radiusPercent;
 
-    stops.push(`${color} ${Math.max(currentRadius, endRadius - 1)}%`);
+    stops.push(`${color} ${Math.max(currentRadius + 1, endRadius)}%`);
 
     if (nextRing) {
       stops.push(`${getLockedLevelColor(nextRing.level).fog} ${endRadius + 1}%`);
@@ -530,6 +491,17 @@ function getLockedFogGradient(
   }
 
   return `radial-gradient(ellipse at center, ${stops.join(", ")})`;
+}
+
+function getLockedAreaLabelAngle(level: number) {
+  const angleByLevel: Record<number, number> = {
+    2: -1.05,
+    3: -0.32,
+    4: 0.2,
+    5: 0.75,
+  };
+
+  return angleByLevel[level] ?? 0;
 }
 
 function getLockedLevelColor(level: number) {
