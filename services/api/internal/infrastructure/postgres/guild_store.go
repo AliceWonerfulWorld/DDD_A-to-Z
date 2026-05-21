@@ -39,7 +39,7 @@ func (s *GuildStore) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error
 			g.created_at,
 			g.updated_at,
 			COALESCE(gm.member_count, 0) AS member_count,
-			COALESCE(gc.total_contributed_cp, 0) AS total_contributed_cp
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
 		FROM guilds g
 		LEFT JOIN (
 			SELECT guild_id, COUNT(*) AS member_count
@@ -48,16 +48,12 @@ func (s *GuildStore) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error
 			GROUP BY guild_id
 		) gm ON gm.guild_id = g.id
 		LEFT JOIN (
-			SELECT gm.guild_id, SUM(pa.balance) AS total_contributed_cp
-			FROM guild_memberships gm
-			JOIN point_accounts pa ON pa.user_id = gm.user_id
-				AND pa.point_type_code = ?
-				AND pa.language = ?
-			WHERE gm.left_at IS NULL
-			GROUP BY gm.guild_id
-		) gc ON gc.guild_id = g.id
+			SELECT guild_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id
+		) gcc ON gcc.guild_id = g.id
 		ORDER BY g.sort_order ASC, g.name ASC
-	`, contributionpointdomain.PointTypeCP.Code, contributionpointdomain.PointTypeCP.Language).Scan(&records).Error; err != nil {
+	`).Scan(&records).Error; err != nil {
 		return nil, err
 	}
 
@@ -87,7 +83,7 @@ func (s *GuildStore) FindGuildByID(ctx context.Context, guildID guilddomain.ID) 
 			g.created_at,
 			g.updated_at,
 			COALESCE(gm.member_count, 0) AS member_count,
-			COALESCE(gc.total_contributed_cp, 0) AS total_contributed_cp
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
 		FROM guilds g
 		LEFT JOIN (
 			SELECT guild_id, COUNT(*) AS member_count
@@ -96,16 +92,12 @@ func (s *GuildStore) FindGuildByID(ctx context.Context, guildID guilddomain.ID) 
 			GROUP BY guild_id
 		) gm ON gm.guild_id = g.id
 		LEFT JOIN (
-			SELECT gm.guild_id, SUM(pa.balance) AS total_contributed_cp
-			FROM guild_memberships gm
-			JOIN point_accounts pa ON pa.user_id = gm.user_id
-				AND pa.point_type_code = ?
-				AND pa.language = ?
-			WHERE gm.left_at IS NULL
-			GROUP BY gm.guild_id
-		) gc ON gc.guild_id = g.id
+			SELECT guild_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id
+		) gcc ON gcc.guild_id = g.id
 		WHERE g.id = ?
-	`, contributionpointdomain.PointTypeCP.Code, contributionpointdomain.PointTypeCP.Language, guildID).Scan(&record)
+	`, guildID).Scan(&record)
 	if result.Error != nil {
 		return guilddomain.Guild{}, false, result.Error
 	}
@@ -142,7 +134,7 @@ func (s *GuildStore) FindActiveMembershipByUserID(ctx context.Context, userID us
 			g.created_at,
 			g.updated_at,
 			COALESCE(active_gm.member_count, 0) AS member_count,
-			COALESCE(gc.total_contributed_cp, 0) AS total_contributed_cp
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
 		FROM guild_memberships gm
 		JOIN guilds g ON g.id = gm.guild_id
 		LEFT JOIN (
@@ -152,17 +144,13 @@ func (s *GuildStore) FindActiveMembershipByUserID(ctx context.Context, userID us
 			GROUP BY guild_id
 		) active_gm ON active_gm.guild_id = g.id
 		LEFT JOIN (
-			SELECT gm_cp.guild_id, SUM(pa.balance) AS total_contributed_cp
-			FROM guild_memberships gm_cp
-			JOIN point_accounts pa ON pa.user_id = gm_cp.user_id
-				AND pa.point_type_code = ?
-				AND pa.language = ?
-			WHERE gm_cp.left_at IS NULL
-			GROUP BY gm_cp.guild_id
-		) gc ON gc.guild_id = g.id
+			SELECT guild_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id
+		) gcc ON gcc.guild_id = g.id
 		WHERE gm.user_id = ?
 			AND gm.left_at IS NULL
-	`, contributionpointdomain.PointTypeCP.Code, contributionpointdomain.PointTypeCP.Language, userID).Scan(&record)
+	`, userID).Scan(&record)
 	if result.Error != nil {
 		return guilddomain.MembershipWithGuild{}, false, result.Error
 	}

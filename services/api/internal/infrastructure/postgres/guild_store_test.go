@@ -57,8 +57,9 @@ func TestGuildStoreListGuilds(t *testing.T) {
 	leftAt := now.Add(time.Hour)
 	insertPostgresTestMembership(t, ctx, tx, "membership_left_"+string(leftUser.ID), leftUser.ID, goID, now, &leftAt)
 	cpStore := NewContributionPointStore(tx)
-	recordEarnedCP(t, ctx, cpStore, activeUser.ID, 349, now)
+	activeCP := recordEarnedCP(t, ctx, cpStore, activeUser.ID, 349, now)
 	recordEarnedCP(t, ctx, cpStore, leftUser.ID, 999, now)
+	insertPostgresTestGuildCPContribution(t, ctx, tx, "guild_cp_list_"+string(activeUser.ID), activeUser.ID, goID, activeCP.ID, 349, now)
 
 	guilds, err := store.ListGuilds(ctx)
 	if err != nil {
@@ -695,7 +696,21 @@ func insertPostgresTestMembership(t *testing.T, ctx context.Context, tx *gorm.DB
 	}
 }
 
-func recordEarnedCP(t *testing.T, ctx context.Context, store *ContributionPointStore, userID user.ID, amount int64, createdAt time.Time) {
+func insertPostgresTestGuildCPContribution(t *testing.T, ctx context.Context, tx *gorm.DB, id string, userID user.ID, guildID string, pointLedgerID string, amount int64, createdAt time.Time) {
+	t.Helper()
+
+	if err := tx.WithContext(ctx).Exec(`
+		INSERT INTO guild_cp_contributions (id, guild_id, user_id, point_ledger_id, amount, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, id, guildID, userID, pointLedgerID, amount, createdAt).Error; err != nil {
+		if isMissingSchemaError(err) {
+			t.Skipf("PostgreSQL 結合テストをスキップします: guild cp contribution schema が migrate されていません: %v", err)
+		}
+		t.Fatalf("guild_cp_contributions INSERT でエラーが発生しました: %v", err)
+	}
+}
+
+func recordEarnedCP(t *testing.T, ctx context.Context, store *ContributionPointStore, userID user.ID, amount int64, createdAt time.Time) contributionpointdomain.LedgerEntry {
 	t.Helper()
 
 	entry, err := contributionpointdomain.NewLedgerEntry(
@@ -712,7 +727,9 @@ func recordEarnedCP(t *testing.T, ctx context.Context, store *ContributionPointS
 	if err != nil {
 		t.Fatalf("NewLedgerEntry() がエラーを返しました: %v", err)
 	}
-	if _, err := store.Record(ctx, entry); err != nil {
+	recorded, err := store.Record(ctx, entry)
+	if err != nil {
 		t.Fatalf("CP獲得履歴保存でエラーが発生しました: %v", err)
 	}
+	return recorded
 }
