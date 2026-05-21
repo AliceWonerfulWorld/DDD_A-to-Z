@@ -1,0 +1,13 @@
+{
+  "name": "@lang-war/chat",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nix develop ../.. -c sh -c 'mix deps.get && mix phx.server'",
+    "build": "nix develop ../.. -c mix compile",
+    "test": "nix develop ../.. -c mix test",
+    "lint": "nix develop ../.. -c mix credo --strict",
+    "format": "nix develop ../.. -c mix format",
+    "format:check": "nix develop ../.. -c mix format --check-formatted"
+  }
+}
