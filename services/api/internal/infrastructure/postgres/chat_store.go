@@ -1,0 +1,37 @@
+package postgres
+
+import (
+	"context"
+	"errors"
+
+	chatapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/chat"
+	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
+	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
+	"gorm.io/gorm"
+)
+
+type ChatStore struct {
+	db    *gorm.DB
+	guild *GuildStore
+}
+
+func NewChatStore(db *gorm.DB, guild *GuildStore) *ChatStore {
+	if db == nil {
+		panic(errors.New("NewChatStore: nil db"))
+	}
+	if guild == nil {
+		panic(errors.New("NewChatStore: nil guild store"))
+	}
+	return &ChatStore{db: db, guild: guild}
+}
+
+func (s *ChatStore) FindMembershipByUserAndGuild(ctx context.Context, userID user.ID, guildID guilddomain.ID) (guilddomain.MembershipWithGuild, bool, error) {
+	return s.guild.FindMembershipByUserAndGuild(ctx, userID, guildID)
+}
+
+func (s *ChatStore) InsertChatToken(ctx context.Context, token chatapp.ChatToken) error {
+	return s.db.WithContext(ctx).Exec(`
+		INSERT INTO chat_tokens (token_hash, user_id, guild_id, expires_at, created_at)
+		VALUES (?, ?, ?, ?, ?)
+	`, token.TokenHash, token.UserID, token.GuildID, token.ExpiresAt, token.CreatedAt).Error
+}

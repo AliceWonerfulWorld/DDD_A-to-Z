@@ -1,12 +1,14 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { steppedEase } from "../../lib/animationUtils";
+import type { Channel } from "phoenix";
+import type { GuildChatMessage } from "../api";
+import { steppedEase } from "../../../lib/animationUtils";
 import { ChatComposer } from "./ChatComposer";
 import { ChatMessageList } from "./ChatMessageList";
-import type { GuildChatMessage } from "./chatData";
 
 interface GuildChatExpandedModalProps {
   isOpen: boolean;
   messages: GuildChatMessage[];
+  channel: Channel | null;
   onMinimize: () => void;
   onClose: () => void;
 }
@@ -14,6 +16,7 @@ interface GuildChatExpandedModalProps {
 export function GuildChatExpandedModal({
   isOpen,
   messages,
+  channel,
   onMinimize,
   onClose,
 }: GuildChatExpandedModalProps) {
@@ -138,7 +141,7 @@ export function GuildChatExpandedModal({
             </div>
 
             <ChatMessageList messages={messages} />
-            <ChatComposer placeholder="write a message to the whole guild..." />
+            <ChatComposer channel={channel} placeholder="write a message to the whole guild..." />
           </motion.section>
         </>
       )}
