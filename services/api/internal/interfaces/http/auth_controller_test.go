@@ -245,7 +245,7 @@ func newTestAuthController(tokens *fakeTokenGenerator) *AuthController {
 	return NewAuthController(
 		usecase,
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
-		security.NewSignedValueCodec("test-secret"),
+		security.NewSignedValueCodecWithMixer("test-secret", nil),
 		false,
 		"https://app.test",
 	)

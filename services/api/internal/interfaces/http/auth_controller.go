@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -18,8 +19,8 @@ const (
 )
 
 type StateCodec interface {
-	Sign(value string, expiresAt time.Time) (string, error)
-	Verify(signedValue string, now time.Time) (string, error)
+	SignContext(ctx context.Context, value string, expiresAt time.Time) (string, error)
+	VerifyContext(ctx context.Context, signedValue string, now time.Time) (string, error)
 }
 
 type AuthController struct {
@@ -63,7 +64,7 @@ func (c *AuthController) beginGitHubLogin(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	signedState, err := c.stateCodec.Sign(start.State, start.StateExpiresAt)
+	signedState, err := c.stateCodec.SignContext(r.Context(), start.State, start.StateExpiresAt)
 	if err != nil {
 		c.logger.Error("failed to sign oauth state", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -174,7 +175,7 @@ func (c *AuthController) validOAuthState(r *http.Request) bool {
 		return false
 	}
 
-	signedState, err := c.stateCodec.Verify(cookie.Value, c.now())
+	signedState, err := c.stateCodec.VerifyContext(r.Context(), cookie.Value, c.now())
 	return err == nil && signedState == state
 }
 

@@ -33,10 +33,7 @@ func NewAwkTextMixer() *AwkTextMixer {
 }
 
 func MixWithAwk(input string, salt string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), defaultAwkMixerTimeout)
-	defer cancel()
-
-	return NewAwkTextMixer().Mix(ctx, input, salt)
+	return NewAwkTextMixer().Mix(context.Background(), input, salt)
 }
 
 func (m *AwkTextMixer) Mix(ctx context.Context, input string, salt string) (string, error) {

@@ -3,6 +3,7 @@ package security
 import (
 	"context"
 	"errors"
+	"os/exec"
 	"testing"
 	"time"
 )
@@ -13,7 +14,23 @@ func (failingTextMixer) Mix(context.Context, string, string) (string, error) {
 	return "", errors.New("mixer failed")
 }
 
+type contextCheckingTextMixer struct {
+	want context.Context
+}
+
+type signedValueTestContextKey struct{}
+
+func (m contextCheckingTextMixer) Mix(ctx context.Context, input string, _ string) (string, error) {
+	if ctx != m.want {
+		return "", errors.New("unexpected context")
+	}
+
+	return input, nil
+}
+
 func TestSignedValueCodecVerify(t *testing.T) {
+	requireAwkCommand(t)
+
 	t.Run("署名付き値を検証できる", func(t *testing.T) {
 		codec := NewSignedValueCodec("test-secret")
 		expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
@@ -34,6 +51,8 @@ func TestSignedValueCodecVerify(t *testing.T) {
 }
 
 func TestSignedValueCodecRejectsExpiredValue(t *testing.T) {
+	requireAwkCommand(t)
+
 	t.Run("期限切れの署名付き値を拒否する", func(t *testing.T) {
 		codec := NewSignedValueCodec("test-secret")
 		expiresAt := time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC)
@@ -49,7 +68,24 @@ func TestSignedValueCodecRejectsExpiredValue(t *testing.T) {
 	})
 }
 
+func TestSignedValueCodecPassesContextToMixer(t *testing.T) {
+	ctx := context.WithValue(context.Background(), signedValueTestContextKey{}, "request-context")
+	codec := NewSignedValueCodecWithMixer("test-secret", contextCheckingTextMixer{want: ctx})
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	signedValue, err := codec.SignContext(ctx, "state-token", expiresAt)
+	if err != nil {
+		t.Fatalf("SignContext がエラーを返しました: %v", err)
+	}
+
+	if _, err := codec.VerifyContext(ctx, signedValue, time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("VerifyContext がエラーを返しました: %v", err)
+	}
+}
+
 func TestSignedValueCodecVerifiesLegacySignature(t *testing.T) {
+	requireAwkCommand(t)
+
 	legacyCodec := NewSignedValueCodecWithMixer("test-secret", nil)
 	codec := NewSignedValueCodec("test-secret")
 	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
@@ -93,5 +129,13 @@ func TestSignedValueCodecReturnsMixerError(t *testing.T) {
 
 	if _, err := codec.Sign("state-token", expiresAt); err == nil {
 		t.Fatal("Sign のエラー = nil, 期待値 mixer error")
+	}
+}
+
+func requireAwkCommand(t *testing.T) {
+	t.Helper()
+
+	if _, err := exec.LookPath("awk"); err != nil {
+		t.Skip("awk command is not available")
 	}
 }

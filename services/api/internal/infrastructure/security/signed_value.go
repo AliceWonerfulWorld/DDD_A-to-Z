@@ -35,6 +35,10 @@ func NewSignedValueCodecWithMixer(secret string, mixer TextMixer) *SignedValueCo
 }
 
 func (c *SignedValueCodec) Sign(value string, expiresAt time.Time) (string, error) {
+	return c.SignContext(context.Background(), value, expiresAt)
+}
+
+func (c *SignedValueCodec) SignContext(ctx context.Context, value string, expiresAt time.Time) (string, error) {
 	payload, err := json.Marshal(signedValuePayload{
 		Value:     value,
 		ExpiresAt: expiresAt.Unix(),
@@ -44,7 +48,7 @@ func (c *SignedValueCodec) Sign(value string, expiresAt time.Time) (string, erro
 	}
 
 	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
-	signature, err := c.signature(encodedPayload)
+	signature, err := c.signature(ctx, encodedPayload)
 	if err != nil {
 		return "", err
 	}
@@ -53,12 +57,16 @@ func (c *SignedValueCodec) Sign(value string, expiresAt time.Time) (string, erro
 }
 
 func (c *SignedValueCodec) Verify(signedValue string, now time.Time) (string, error) {
+	return c.VerifyContext(context.Background(), signedValue, now)
+}
+
+func (c *SignedValueCodec) VerifyContext(ctx context.Context, signedValue string, now time.Time) (string, error) {
 	encodedPayload, signature, ok := strings.Cut(signedValue, ".")
 	if !ok || encodedPayload == "" || signature == "" {
 		return "", ErrInvalidSignedValue
 	}
 
-	validSignature, err := c.validSignature(encodedPayload, signature)
+	validSignature, err := c.validSignature(ctx, encodedPayload, signature)
 	if err != nil {
 		return "", err
 	}
@@ -82,10 +90,14 @@ func (c *SignedValueCodec) Verify(signedValue string, now time.Time) (string, er
 	return payload.Value, nil
 }
 
-func (c *SignedValueCodec) signature(encodedPayload string) (string, error) {
+func (c *SignedValueCodec) signature(ctx context.Context, encodedPayload string) (string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	signatureInput := encodedPayload
 	if c.mixer != nil {
-		mixed, err := c.mixer.Mix(context.Background(), encodedPayload, string(c.secret))
+		mixed, err := c.mixer.Mix(ctx, encodedPayload, string(c.secret))
 		if err != nil {
 			return "", err
 		}
@@ -95,8 +107,8 @@ func (c *SignedValueCodec) signature(encodedPayload string) (string, error) {
 	return c.hmacSignature(signatureInput), nil
 }
 
-func (c *SignedValueCodec) validSignature(encodedPayload string, signature string) (bool, error) {
-	expectedSignature, err := c.signature(encodedPayload)
+func (c *SignedValueCodec) validSignature(ctx context.Context, encodedPayload string, signature string) (bool, error) {
+	expectedSignature, err := c.signature(ctx, encodedPayload)
 	if err == nil && hmac.Equal([]byte(signature), []byte(expectedSignature)) {
 		return true, nil
 	}
