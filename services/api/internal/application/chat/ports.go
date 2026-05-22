@@ -13,7 +13,7 @@ type CurrentUserRepository interface {
 }
 
 type Repository interface {
-	FindActiveMembershipByUserID(ctx context.Context, userID user.ID) (guilddomain.MembershipWithGuild, bool, error)
+	FindMembershipByUserAndGuild(ctx context.Context, userID user.ID, guildID guilddomain.ID) (guilddomain.MembershipWithGuild, bool, error)
 	InsertChatToken(ctx context.Context, token ChatToken) error
 }
 

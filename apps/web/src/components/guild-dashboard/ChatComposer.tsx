@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import type { Channel } from "phoenix";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 interface ChatComposerProps {
   channel: Channel | null;
@@ -12,6 +12,7 @@ export function ChatComposer({
   placeholder = "broadcast your next move...",
 }: ChatComposerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [sendError, setSendError] = useState(false);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -23,7 +24,14 @@ export function ChatComposer({
     if (!body) {
       return;
     }
-    channel.push("new_message", { body });
+    setSendError(false);
+    const savedBody = body;
+    channel.push("new_message", { body }).receive("error", () => {
+      setSendError(true);
+      if (input) {
+        input.value = savedBody;
+      }
+    });
     input.value = "";
   };
 
@@ -38,6 +46,20 @@ export function ChatComposer({
         paddingTop: "12px",
       }}
     >
+      {sendError && (
+        <p
+          role="alert"
+          style={{
+            gridColumn: "1 / -1",
+            margin: 0,
+            color: "#ff6b6b",
+            fontSize: "0.68rem",
+            fontFamily: '"DotGothic16", monospace',
+          }}
+        >
+          SEND FAILED — RETRY
+        </p>
+      )}
       <input
         ref={inputRef}
         type="text"

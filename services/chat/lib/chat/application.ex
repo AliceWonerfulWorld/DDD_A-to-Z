@@ -6,7 +6,8 @@ defmodule Chat.Application do
     children = [
       Chat.Repo,
       {Phoenix.PubSub, name: Chat.PubSub},
-      Chat.Endpoint
+      Chat.Endpoint,
+      Chat.TokenCleaner
     ]
 
     opts = [strategy: :one_for_one, name: Chat.Supervisor]

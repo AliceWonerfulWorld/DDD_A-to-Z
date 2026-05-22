@@ -162,6 +162,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
       isMounted = false;
       chatConnectionRef.current?.disconnect();
       chatConnectionRef.current = null;
+      setChatMessages([]);
     };
   }, [currentGuild]);
 

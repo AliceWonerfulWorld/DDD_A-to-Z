@@ -1,6 +1,8 @@
 defmodule Chat.GuildChannel do
   use Phoenix.Channel
 
+  import Ecto.Query, only: [from: 2]
+
   alias Chat.Messages
   alias Chat.Repo
 
@@ -39,18 +41,16 @@ defmodule Chat.GuildChannel do
   end
 
   defp active_member?(user_id, guild_id) do
-    case Repo.query(
-           """
-           SELECT 1 FROM guild_memberships
-           WHERE user_id = $1
-             AND guild_id = $2
-             AND left_at IS NULL
-           LIMIT 1
-           """,
-           [user_id, guild_id]
-         ) do
-      {:ok, %{rows: [_]}} -> true
-      _ -> false
-    end
+    query =
+      from(m in "guild_memberships",
+        where:
+          m.user_id == ^user_id and
+            m.guild_id == ^guild_id and
+            is_nil(m.left_at),
+        select: 1,
+        limit: 1
+      )
+
+    Repo.exists?(query)
   end
 end

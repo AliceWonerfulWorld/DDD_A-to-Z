@@ -14,7 +14,7 @@ var (
 	ErrForbidden       = errors.New("forbidden: not a member of this guild")
 )
 
-const chatTokenTTL = time.Minute
+const chatTokenTTL = 5 * time.Minute
 
 type ChatToken struct {
 	Token     string
@@ -73,11 +73,11 @@ func (u *UseCase) IssueGuildChatToken(ctx context.Context, sessionToken string, 
 		return ChatToken{}, ErrUnauthenticated
 	}
 
-	membership, ok, err := u.repo.FindActiveMembershipByUserID(ctx, appUser.ID)
+	_, ok, err = u.repo.FindMembershipByUserAndGuild(ctx, appUser.ID, guildID)
 	if err != nil {
 		return ChatToken{}, err
 	}
-	if !ok || membership.Guild.ID != guildID {
+	if !ok {
 		return ChatToken{}, ErrForbidden
 	}
 

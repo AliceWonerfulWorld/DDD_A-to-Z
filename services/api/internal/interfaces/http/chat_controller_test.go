@@ -30,8 +30,8 @@ type chatTestRepo struct {
 	insertErr  error
 }
 
-func (r chatTestRepo) FindActiveMembershipByUserID(_ context.Context, userID user.ID) (guilddomain.MembershipWithGuild, bool, error) {
-	if r.membership == nil || r.membership.Membership.UserID != userID {
+func (r chatTestRepo) FindMembershipByUserAndGuild(_ context.Context, userID user.ID, guildID guilddomain.ID) (guilddomain.MembershipWithGuild, bool, error) {
+	if r.membership == nil || r.membership.Membership.UserID != userID || r.membership.Guild.ID != guildID {
 		return guilddomain.MembershipWithGuild{}, false, nil
 	}
 	return *r.membership, true, nil

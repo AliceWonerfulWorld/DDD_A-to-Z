@@ -18,8 +18,8 @@ func NewChatStore(db *gorm.DB, guild *GuildStore) *ChatStore {
 	return &ChatStore{db: db, guild: guild}
 }
 
-func (s *ChatStore) FindActiveMembershipByUserID(ctx context.Context, userID user.ID) (guilddomain.MembershipWithGuild, bool, error) {
-	return s.guild.FindActiveMembershipByUserID(ctx, userID)
+func (s *ChatStore) FindMembershipByUserAndGuild(ctx context.Context, userID user.ID, guildID guilddomain.ID) (guilddomain.MembershipWithGuild, bool, error) {
+	return s.guild.FindMembershipByUserAndGuild(ctx, userID, guildID)
 }
 
 func (s *ChatStore) InsertChatToken(ctx context.Context, token chatapp.ChatToken) error {

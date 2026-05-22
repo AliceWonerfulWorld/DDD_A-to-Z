@@ -3,3 +3,4 @@
 /.elixir_ls/
 *.ez
 erl_crash.dump
+dev-chat-test.js
