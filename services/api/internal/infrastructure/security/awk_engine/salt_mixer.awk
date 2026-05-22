@@ -1,3 +1,7 @@
+BEGIN {
+	salt = ENVIRON["SALT_MIXER_SALT"]
+}
+
 {
 	if (NR > 1) {
 		input = input "\n"

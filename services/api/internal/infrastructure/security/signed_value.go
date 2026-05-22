@@ -58,11 +58,11 @@ func (c *SignedValueCodec) Verify(signedValue string, now time.Time) (string, er
 		return "", ErrInvalidSignedValue
 	}
 
-	expectedSignature, err := c.signature(encodedPayload)
+	validSignature, err := c.validSignature(encodedPayload, signature)
 	if err != nil {
 		return "", err
 	}
-	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+	if !validSignature {
 		return "", ErrInvalidSignedValue
 	}
 
@@ -92,7 +92,28 @@ func (c *SignedValueCodec) signature(encodedPayload string) (string, error) {
 		signatureInput = mixed
 	}
 
+	return c.hmacSignature(signatureInput), nil
+}
+
+func (c *SignedValueCodec) validSignature(encodedPayload string, signature string) (bool, error) {
+	expectedSignature, err := c.signature(encodedPayload)
+	if err == nil && hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+		return true, nil
+	}
+
+	legacySignature := c.hmacSignature(encodedPayload)
+	if hmac.Equal([]byte(signature), []byte(legacySignature)) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	return false, nil
+}
+
+func (c *SignedValueCodec) hmacSignature(input string) string {
 	mac := hmac.New(sha256.New, c.secret)
-	_, _ = mac.Write([]byte(signatureInput))
-	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil)), nil
+	_, _ = mac.Write([]byte(input))
+	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }

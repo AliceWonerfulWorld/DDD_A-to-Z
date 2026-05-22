@@ -41,6 +41,22 @@ func TestMixWithAwkIsDeterministic(t *testing.T) {
 	}
 }
 
+func TestMixWithAwkPreservesBackslashesInSalt(t *testing.T) {
+	if _, err := exec.LookPath("awk"); err != nil {
+		t.Skip("awk command is not available")
+	}
+
+	got, err := MixWithAwk("abc", `a\nb\\c`)
+	if err != nil {
+		t.Fatalf("MixWithAwk がエラーを返しました: %v", err)
+	}
+
+	want := `cbab::3:7`
+	if got != want {
+		t.Fatalf("MixWithAwk() = %q, 期待値 %q", got, want)
+	}
+}
+
 func TestAwkTextMixerReturnsCommandError(t *testing.T) {
 	mixer := &AwkTextMixer{command: "missing-awk-command-for-test"}
 

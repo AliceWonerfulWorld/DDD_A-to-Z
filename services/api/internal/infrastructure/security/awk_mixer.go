@@ -71,7 +71,8 @@ func (m *AwkTextMixer) Mix(ctx context.Context, input string, salt string) (stri
 		return "", fmt.Errorf("close awk mixer script: %w", err)
 	}
 
-	command := exec.CommandContext(ctx, m.command, "-v", "salt="+salt, "-f", script.Name())
+	command := exec.CommandContext(ctx, m.command, "-f", script.Name())
+	command.Env = append(os.Environ(), "SALT_MIXER_SALT="+salt)
 	command.Stdin = strings.NewReader(input)
 
 	var stdout bytes.Buffer

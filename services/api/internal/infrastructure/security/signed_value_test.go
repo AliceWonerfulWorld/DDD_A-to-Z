@@ -49,6 +49,44 @@ func TestSignedValueCodecRejectsExpiredValue(t *testing.T) {
 	})
 }
 
+func TestSignedValueCodecVerifiesLegacySignature(t *testing.T) {
+	legacyCodec := NewSignedValueCodecWithMixer("test-secret", nil)
+	codec := NewSignedValueCodec("test-secret")
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	signedValue, err := legacyCodec.Sign("state-token", expiresAt)
+	if err != nil {
+		t.Fatalf("legacy Sign がエラーを返しました: %v", err)
+	}
+
+	got, err := codec.Verify(signedValue, time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Verify が legacy signature でエラーを返しました: %v", err)
+	}
+	if got != "state-token" {
+		t.Fatalf("Verify の戻り値 = %q, 期待値 state-token", got)
+	}
+}
+
+func TestSignedValueCodecVerifiesLegacySignatureWhenMixerFails(t *testing.T) {
+	legacyCodec := NewSignedValueCodecWithMixer("test-secret", nil)
+	codec := NewSignedValueCodecWithMixer("test-secret", failingTextMixer{})
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	signedValue, err := legacyCodec.Sign("state-token", expiresAt)
+	if err != nil {
+		t.Fatalf("legacy Sign がエラーを返しました: %v", err)
+	}
+
+	got, err := codec.Verify(signedValue, time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Verify が legacy signature でエラーを返しました: %v", err)
+	}
+	if got != "state-token" {
+		t.Fatalf("Verify の戻り値 = %q, 期待値 state-token", got)
+	}
+}
+
 func TestSignedValueCodecReturnsMixerError(t *testing.T) {
 	codec := NewSignedValueCodecWithMixer("test-secret", failingTextMixer{})
 	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
