@@ -5,14 +5,14 @@ interface TownStatusHeaderProps {
   currentCp: number;
   nextLevelCp: number;
   progress: number;
-  townLevel: number;
+  guildLevel: number;
 }
 
 export function TownStatusHeader({
   currentCp,
   nextLevelCp,
   progress,
-  townLevel,
+  guildLevel,
 }: TownStatusHeaderProps) {
   return (
     <motion.header
@@ -52,11 +52,11 @@ export function TownStatusHeader({
             textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
           }}
         >
-          TOWN LEVEL {townLevel}
+          GUILD LEVEL {guildLevel}
         </strong>
         <div style={{ minWidth: 0 }}>
           <div
-            aria-label={`${currentCp.toLocaleString()} / ${nextLevelCp.toLocaleString()} CP`}
+            aria-label={`${currentCp.toLocaleString()} / ${nextLevelCp.toLocaleString()} EXP`}
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={nextLevelCp}
@@ -91,7 +91,7 @@ export function TownStatusHeader({
               textAlign: "right",
             }}
           >
-            {currentCp.toLocaleString()} / {nextLevelCp.toLocaleString()} CP
+            {currentCp.toLocaleString()} / {nextLevelCp.toLocaleString()} EXP
           </p>
         </div>
       </div>

@@ -282,14 +282,21 @@ func guildDashboardResponse(details guildapp.MyGuildDetails) map[string]any {
 
 func guildResponse(guild guilddomain.Guild) map[string]any {
 	return map[string]any{
-		"id":                   guild.ID,
-		"slug":                 guild.Slug,
-		"name":                 guild.Name,
-		"description":          guild.Description,
-		"icon":                 guild.Icon,
-		"color":                guild.Color,
-		"member_count":         guild.MemberCount,
-		"total_contributed_cp": guild.TotalContributedCP,
+		"id":                             guild.ID,
+		"slug":                           guild.Slug,
+		"name":                           guild.Name,
+		"description":                    guild.Description,
+		"icon":                           guild.Icon,
+		"color":                          guild.Color,
+		"member_count":                   guild.MemberCount,
+		"total_contributed_cp":           guild.TotalContributedCP,
+		"guild_experience":               guild.GuildExperience,
+		"current_exp":                    guild.GuildExperience,
+		"currentExp":                     guild.GuildExperience,
+		"guild_level":                    guild.GuildLevel,
+		"guildLevel":                     guild.GuildLevel,
+		"current_guild_level_experience": guild.CurrentGuildLevelExperience,
+		"next_guild_level_experience":    guild.NextGuildLevelExperience,
 	}
 }
 

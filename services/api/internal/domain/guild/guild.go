@@ -12,17 +12,21 @@ import (
 type ID string
 
 type Guild struct {
-	ID                 ID
-	Slug               string
-	Name               string
-	Description        string
-	Icon               string
-	Color              string
-	SortOrder          int
-	MemberCount        int64
-	TotalContributedCP int64
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	ID                          ID
+	Slug                        string
+	Name                        string
+	Description                 string
+	Icon                        string
+	Color                       string
+	SortOrder                   int
+	MemberCount                 int64
+	TotalContributedCP          int64
+	GuildExperience             int64
+	GuildLevel                  int
+	CurrentGuildLevelExperience int64
+	NextGuildLevelExperience    int64
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
 }
 
 type MembershipID string
@@ -105,6 +109,9 @@ func NewGuild(guild Guild) (Guild, error) {
 	if guild.TotalContributedCP < 0 {
 		return Guild{}, errors.New("guild total contributed cp cannot be negative")
 	}
+	if guild.GuildExperience < 0 {
+		return Guild{}, errors.New("guild experience cannot be negative")
+	}
 	if guild.CreatedAt.IsZero() {
 		return Guild{}, errors.New("guild created at is required")
 	}
@@ -112,7 +119,26 @@ func NewGuild(guild Guild) (Guild, error) {
 		return Guild{}, errors.New("guild updated at is required")
 	}
 
+	progress := GuildLevelProgressFromExperience(guild.GuildExperience)
+	guild.GuildLevel = progress.Level
+	guild.CurrentGuildLevelExperience = progress.CurrentLevelExperience
+	guild.NextGuildLevelExperience = progress.NextLevelExperience
+
 	return guild, nil
+}
+
+func (g Guild) AddExperience(amount int64, now time.Time) (Guild, error) {
+	if amount < 0 {
+		return Guild{}, errors.New("guild experience amount cannot be negative")
+	}
+	if now.IsZero() {
+		return Guild{}, errors.New("guild experience updated at is required")
+	}
+
+	g.GuildExperience += amount
+	g.UpdatedAt = now
+
+	return NewGuild(g)
 }
 
 func NewCPContribution(contribution CPContribution) (CPContribution, error) {
