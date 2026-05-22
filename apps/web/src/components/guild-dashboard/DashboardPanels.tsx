@@ -31,6 +31,8 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
       style={{
         height: "100%",
         minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
         border: "2px solid rgba(0, 245, 255, 0.44)",
         background: "rgba(1, 8, 22, 0.74)",
         boxShadow: "inset 0 0 22px rgba(0, 245, 255, 0.12)",
@@ -55,10 +57,12 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
 
       <div
         style={{
-          display: "grid",
-          alignContent: "start",
+          display: "flex",
+          flexDirection: "column",
           gap: "8px",
-          height: "calc(100% - 28px)",
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
         }}
       >
         <AnimatePresence initial={false}>
@@ -89,11 +93,10 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
               exit={{ opacity: 0, x: 18 }}
               transition={{ duration: 0.28, ease: steppedEase(5) }}
               style={{
-                display: "grid",
-                gridTemplateColumns: "auto 1fr auto",
-                alignItems: "baseline",
+                display: "flex",
+                alignItems: "flex-start",
                 gap: "10px",
-                minHeight: "30px",
+                padding: "4px 0",
                 borderBottom: "1px solid rgba(116, 247, 161, 0.12)",
                 color: "#d6ffe4",
                 fontFamily: '"DotGothic16", monospace',
@@ -101,11 +104,18 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
                 lineHeight: 1.35,
               }}
             >
-              <span style={{ color: log.tone }}>&gt;</span>
-              <span style={{ overflowWrap: "anywhere" }}>
+              <span style={{ color: log.tone, flexShrink: 0 }}>&gt;</span>
+              <span
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  overflowWrap: "anywhere",
+                  wordBreak: "break-all",
+                }}
+              >
                 <span style={{ color: "#fff8d7" }}>[{log.player}]</span> {log.action}
               </span>
-              <span style={{ color: "#ffd966", whiteSpace: "nowrap" }}>
+              <span style={{ color: "#ffd966", whiteSpace: "nowrap", flexShrink: 0 }}>
                 +{log.cp.toLocaleString()} CP
               </span>
             </motion.div>
@@ -133,7 +143,7 @@ export function RankingsPanel() {
         display: "grid",
         alignContent: "start",
         gap: "8px",
-        overflow: "hidden",
+        overflowY: "auto",
       }}
     >
       {RANKINGS.map((member, index) => (
@@ -145,7 +155,7 @@ export function RankingsPanel() {
           style={{
             display: "grid",
             gridTemplateColumns: "minmax(34px, auto) 1fr auto",
-            alignItems: "center",
+            alignItems: "start",
             gap: "clamp(8px, 1.4vw, 16px)",
             minHeight: "clamp(38px, 6.5vh, 54px)",
             border: "2px solid rgba(0, 245, 255, 0.24)",
@@ -166,7 +176,7 @@ export function RankingsPanel() {
           >
             #{index + 1}
           </span>
-          <span style={{ minWidth: 0 }}>
+          <span style={{ minWidth: 0, overflow: "hidden" }}>
             <span
               style={{
                 display: "block",
