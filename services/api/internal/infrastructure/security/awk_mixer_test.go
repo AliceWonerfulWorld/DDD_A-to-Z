@@ -1,0 +1,84 @@
+package security
+
+import (
+	"context"
+	"os/exec"
+	"testing"
+)
+
+func TestMixWithAwk(t *testing.T) {
+	if _, err := exec.LookPath("awk"); err != nil {
+		t.Skip("awk command is not available")
+	}
+
+	got, err := MixWithAwk("abcdef", "SALT")
+	if err != nil {
+		t.Fatalf("MixWithAwk がエラーを返しました: %v", err)
+	}
+
+	want := "fedTcbaL::6:4"
+	if got != want {
+		t.Fatalf("MixWithAwk() = %q, 期待値 %q", got, want)
+	}
+}
+
+func TestMixWithAwkIsDeterministic(t *testing.T) {
+	if _, err := exec.LookPath("awk"); err != nil {
+		t.Skip("awk command is not available")
+	}
+
+	first, err := MixWithAwk("state-token", "test-secret")
+	if err != nil {
+		t.Fatalf("1回目の MixWithAwk がエラーを返しました: %v", err)
+	}
+	second, err := MixWithAwk("state-token", "test-secret")
+	if err != nil {
+		t.Fatalf("2回目の MixWithAwk がエラーを返しました: %v", err)
+	}
+
+	if first != second {
+		t.Fatalf("MixWithAwk() が冪等ではありません: 1回目 %q, 2回目 %q", first, second)
+	}
+}
+
+func TestMixWithAwkPreservesBackslashesInSalt(t *testing.T) {
+	if _, err := exec.LookPath("awk"); err != nil {
+		t.Skip("awk command is not available")
+	}
+
+	got, err := MixWithAwk("abc", `a\nb\\c`)
+	if err != nil {
+		t.Fatalf("MixWithAwk がエラーを返しました: %v", err)
+	}
+
+	want := `cbab::3:7`
+	if got != want {
+		t.Fatalf("MixWithAwk() = %q, 期待値 %q", got, want)
+	}
+}
+
+func TestAwkTextMixerCachesScriptFile(t *testing.T) {
+	mixer := NewAwkTextMixer()
+
+	first, err := mixer.script()
+	if err != nil {
+		t.Fatalf("1回目の script() がエラーを返しました: %v", err)
+	}
+	second, err := mixer.script()
+	if err != nil {
+		t.Fatalf("2回目の script() がエラーを返しました: %v", err)
+	}
+
+	if first != second {
+		t.Fatalf("script path = %q, 期待値 %q", second, first)
+	}
+}
+
+func TestAwkTextMixerReturnsCommandError(t *testing.T) {
+	mixer := NewAwkTextMixer()
+	mixer.command = "missing-awk-command-for-test"
+
+	if _, err := mixer.Mix(context.Background(), "abcdef", "SALT"); err == nil {
+		t.Fatal("Mix() のエラー = nil, 期待値 コマンド実行エラー")
+	}
+}

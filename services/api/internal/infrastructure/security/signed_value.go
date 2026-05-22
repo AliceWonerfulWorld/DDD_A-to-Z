@@ -1,6 +1,7 @@
 package security
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -14,6 +15,7 @@ var ErrInvalidSignedValue = errors.New("signed value is invalid")
 
 type SignedValueCodec struct {
 	secret []byte
+	mixer  TextMixer
 }
 
 type signedValuePayload struct {
@@ -22,10 +24,21 @@ type signedValuePayload struct {
 }
 
 func NewSignedValueCodec(secret string) *SignedValueCodec {
-	return &SignedValueCodec{secret: []byte(secret)}
+	return NewSignedValueCodecWithMixer(secret, nil)
+}
+
+func NewSignedValueCodecWithMixer(secret string, mixer TextMixer) *SignedValueCodec {
+	return &SignedValueCodec{
+		secret: []byte(secret),
+		mixer:  mixer,
+	}
 }
 
 func (c *SignedValueCodec) Sign(value string, expiresAt time.Time) (string, error) {
+	return c.SignContext(context.Background(), value, expiresAt)
+}
+
+func (c *SignedValueCodec) SignContext(ctx context.Context, value string, expiresAt time.Time) (string, error) {
 	payload, err := json.Marshal(signedValuePayload{
 		Value:     value,
 		ExpiresAt: expiresAt.Unix(),
@@ -35,18 +48,29 @@ func (c *SignedValueCodec) Sign(value string, expiresAt time.Time) (string, erro
 	}
 
 	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
-	signature := c.signature(encodedPayload)
+	signature, err := c.signature(ctx, encodedPayload)
+	if err != nil {
+		return "", err
+	}
 
 	return encodedPayload + "." + signature, nil
 }
 
 func (c *SignedValueCodec) Verify(signedValue string, now time.Time) (string, error) {
+	return c.VerifyContext(context.Background(), signedValue, now)
+}
+
+func (c *SignedValueCodec) VerifyContext(ctx context.Context, signedValue string, now time.Time) (string, error) {
 	encodedPayload, signature, ok := strings.Cut(signedValue, ".")
 	if !ok || encodedPayload == "" || signature == "" {
 		return "", ErrInvalidSignedValue
 	}
 
-	if !hmac.Equal([]byte(signature), []byte(c.signature(encodedPayload))) {
+	validSignature, err := c.validSignature(ctx, encodedPayload, signature)
+	if err != nil {
+		return "", err
+	}
+	if !validSignature {
 		return "", ErrInvalidSignedValue
 	}
 
@@ -66,8 +90,42 @@ func (c *SignedValueCodec) Verify(signedValue string, now time.Time) (string, er
 	return payload.Value, nil
 }
 
-func (c *SignedValueCodec) signature(encodedPayload string) string {
+func (c *SignedValueCodec) signature(ctx context.Context, encodedPayload string) (string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	signatureInput := encodedPayload
+	if c.mixer != nil {
+		mixed, err := c.mixer.Mix(ctx, encodedPayload, string(c.secret))
+		if err != nil {
+			return "", err
+		}
+		signatureInput = mixed
+	}
+
+	return c.hmacSignature(signatureInput), nil
+}
+
+func (c *SignedValueCodec) validSignature(ctx context.Context, encodedPayload string, signature string) (bool, error) {
+	expectedSignature, err := c.signature(ctx, encodedPayload)
+	if err == nil && hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+		return true, nil
+	}
+
+	legacySignature := c.hmacSignature(encodedPayload)
+	if hmac.Equal([]byte(signature), []byte(legacySignature)) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	return false, nil
+}
+
+func (c *SignedValueCodec) hmacSignature(input string) string {
 	mac := hmac.New(sha256.New, c.secret)
-	_, _ = mac.Write([]byte(encodedPayload))
+	_, _ = mac.Write([]byte(input))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }

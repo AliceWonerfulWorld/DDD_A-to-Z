@@ -1,9 +1,31 @@
 package security
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 )
+
+type failingTextMixer struct{}
+
+func (failingTextMixer) Mix(context.Context, string, string) (string, error) {
+	return "", errors.New("mixer failed")
+}
+
+type contextCheckingTextMixer struct {
+	want context.Context
+}
+
+type signedValueTestContextKey struct{}
+
+func (m contextCheckingTextMixer) Mix(ctx context.Context, input string, _ string) (string, error) {
+	if ctx != m.want {
+		return "", errors.New("unexpected context")
+	}
+
+	return input, nil
+}
 
 func TestSignedValueCodecVerify(t *testing.T) {
 	t.Run("署名付き値を検証できる", func(t *testing.T) {
@@ -39,4 +61,85 @@ func TestSignedValueCodecRejectsExpiredValue(t *testing.T) {
 			t.Fatalf("Verify のエラー = %v, 期待値 ErrInvalidSignedValue", err)
 		}
 	})
+}
+
+func TestSignedValueCodecPassesContextToMixer(t *testing.T) {
+	ctx := context.WithValue(context.Background(), signedValueTestContextKey{}, "request-context")
+	codec := NewSignedValueCodecWithMixer("test-secret", contextCheckingTextMixer{want: ctx})
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	signedValue, err := codec.SignContext(ctx, "state-token", expiresAt)
+	if err != nil {
+		t.Fatalf("SignContext がエラーを返しました: %v", err)
+	}
+
+	if _, err := codec.VerifyContext(ctx, signedValue, time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("VerifyContext がエラーを返しました: %v", err)
+	}
+}
+
+func TestSignedValueCodecWithMixerVerifiesDefaultSignature(t *testing.T) {
+	defaultCodec := NewSignedValueCodec("test-secret")
+	mixedCodec := NewSignedValueCodecWithMixer("test-secret", contextCheckingTextMixer{want: context.Background()})
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	signedValue, err := defaultCodec.Sign("state-token", expiresAt)
+	if err != nil {
+		t.Fatalf("default Sign がエラーを返しました: %v", err)
+	}
+
+	got, err := mixedCodec.Verify(signedValue, time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Verify が default signature でエラーを返しました: %v", err)
+	}
+	if got != "state-token" {
+		t.Fatalf("Verify の戻り値 = %q, 期待値 state-token", got)
+	}
+}
+
+func TestSignedValueCodecVerifiesMixedSignature(t *testing.T) {
+	mixer := contextCheckingTextMixer{want: context.Background()}
+	codec := NewSignedValueCodecWithMixer("test-secret", mixer)
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	signedValue, err := codec.Sign("state-token", expiresAt)
+	if err != nil {
+		t.Fatalf("Sign がエラーを返しました: %v", err)
+	}
+
+	got, err := codec.Verify(signedValue, time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Verify が mixed signature でエラーを返しました: %v", err)
+	}
+	if got != "state-token" {
+		t.Fatalf("Verify の戻り値 = %q, 期待値 state-token", got)
+	}
+}
+
+func TestSignedValueCodecVerifiesLegacySignatureWhenMixerFails(t *testing.T) {
+	legacyCodec := NewSignedValueCodec("test-secret")
+	codec := NewSignedValueCodecWithMixer("test-secret", failingTextMixer{})
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	signedValue, err := legacyCodec.Sign("state-token", expiresAt)
+	if err != nil {
+		t.Fatalf("legacy Sign がエラーを返しました: %v", err)
+	}
+
+	got, err := codec.Verify(signedValue, time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Verify が legacy signature でエラーを返しました: %v", err)
+	}
+	if got != "state-token" {
+		t.Fatalf("Verify の戻り値 = %q, 期待値 state-token", got)
+	}
+}
+
+func TestSignedValueCodecReturnsMixerError(t *testing.T) {
+	codec := NewSignedValueCodecWithMixer("test-secret", failingTextMixer{})
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	if _, err := codec.Sign("state-token", expiresAt); err == nil {
+		t.Fatal("Sign のエラー = nil, 期待値 mixer error")
+	}
 }
