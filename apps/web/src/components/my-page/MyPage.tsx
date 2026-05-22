@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { useGuardedNavigation } from "../../hooks/useGuardedNavigation";
 import { fetchMyPage, type MyPageResponse, type GitHubStats } from "../../features/mypage/api";
+import { findGuildBySlug } from "../../features/guild/guildMaster";
 
 interface MyPageProps {
   onNavigate: (path: string) => void;
@@ -44,6 +45,8 @@ interface LangEntry {
   count: number;
 }
 
+const MOCK_TS_GUILD = findGuildBySlug("typescript");
+
 const MOCK = {
   season: {
     label: "SEASON 1",
@@ -52,17 +55,17 @@ const MOCK = {
     remaining: 52,
   },
   guild: {
-    id: "",
-    name: "TypeScript",
-    slug: "typescript",
-    icon: "📘",
-    color: "#3178c6",
-    description: "型の力で安全で堅牢なコードを書く、\nエレガントな戦士たちの集い。",
-    member_count: 0,
+    id: MOCK_TS_GUILD?.id ?? "",
+    name: MOCK_TS_GUILD?.name ?? "TypeScript",
+    slug: MOCK_TS_GUILD?.slug ?? "typescript",
+    icon: MOCK_TS_GUILD?.icon ?? "TS",
+    color: MOCK_TS_GUILD?.color ?? "#3178c6",
+    description: MOCK_TS_GUILD?.description ?? "型の力で安全で堅牢なコードを書く、\nエレガントな戦士たちの集い。",
+    member_count: MOCK_TS_GUILD?.memberCount ?? 0,
     rank: 42,
     total_guilds: 156,
     cp: 24680,
-    fullName: "TypeScript GUILD",
+    fullName: `${MOCK_TS_GUILD?.name ?? "TypeScript"} GUILD`,
   },
   title: {
     name: "Consistency Master",
@@ -167,7 +170,14 @@ export function MyPage({ onNavigate }: MyPageProps) {
       .slice(0, 6);
   }, [mypageData]);
 
-  const guild = mypageData?.guild ?? MOCK.guild;
+  const guild = useMemo(() => {
+    const apiGuild = mypageData?.guild;
+    if (!apiGuild) return MOCK.guild;
+    const master = findGuildBySlug(apiGuild.slug);
+    return master
+      ? { ...apiGuild, icon: master.icon, color: master.color }
+      : apiGuild;
+  }, [mypageData]);
   const gColor = guild.color ?? "#3178c6";
 
   return (
@@ -412,7 +422,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 transition={{ duration: 2, repeat: Infinity, ease: steppedEase(4) }}
                 style={{
                   width: "100px",
-                  height: "110px",
+                  height: "100px",
                   border: `2px solid ${gColor}`,
                   background: `${gColor}08`,
                   display: "flex",
@@ -421,19 +431,27 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   justifyContent: "center",
                   gap: "2px",
                   position: "relative",
+                  overflow: "hidden",
                 }}
               >
-                <span style={{ fontSize: "3.6rem" }}>{guild.icon ?? "📖"}</span>
-                <div
-                  style={{
-                    fontSize: "0.6rem",
-                    color: gColor,
-                    fontFamily: '"Press Start 2P", monospace',
-                    letterSpacing: "0.2em",
-                  }}
-                >
-                  VOL.3
-                </div>
+                {(() => {
+                  const icon = guild.icon ?? "--";
+                  const isValidIcon = /^[A-Z0-9λ]+$/.test(icon);
+                  return isValidIcon ? (
+                    <img
+                      src={`/guild-icons/${icon}.png`}
+                      alt={`${guild.name} guild icon`}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        imageRendering: "pixelated",
+                      }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: "3.6rem" }}>{icon}</span>
+                  );
+                })()}
                 {/* Laurel decoration */}
                 <span
                   style={{
