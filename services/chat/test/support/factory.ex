@@ -15,6 +15,35 @@ defmodule Chat.Factory do
     id
   end
 
+  def insert_github_account(user_id, username \\ "github_#{System.unique_integer([:positive])}") do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    github_id = System.unique_integer([:positive])
+
+    Repo.query!(
+      """
+      INSERT INTO github_accounts (github_id, user_id, username, avatar_url, created_at, updated_at)
+      VALUES ($1, $2, $3, 'https://example.com/avatar.png', $4, $4)
+      """,
+      [github_id, user_id, username, now]
+    )
+
+    :ok
+  end
+
+  def insert_user_profile(user_id, display_name) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Repo.query!(
+      """
+      INSERT INTO user_profiles (user_id, display_name, created_at, updated_at)
+      VALUES ($1, $2, $3, $3)
+      """,
+      [user_id, display_name, now]
+    )
+
+    :ok
+  end
+
   @doc "テスト用ギルドを直接DBに挿入する"
   def insert_guild(id \\ "guild_test_#{System.unique_integer([:positive])}") do
     now = DateTime.utc_now() |> DateTime.truncate(:second)

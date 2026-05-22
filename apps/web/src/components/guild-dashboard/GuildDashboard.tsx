@@ -7,14 +7,14 @@ import {
   fetchMyGuild,
   type GuildActivityLog,
 } from "../../features/guild/api";
-import { connectChat, type GuildChatMessage } from "../../features/guild/chatApi";
-import type { ChatConnection } from "../../features/guild/chatApi";
+import { connectChat, type GuildChatMessage } from "../../features/chat/api";
+import type { ChatConnection } from "../../features/chat/api";
 import { toDisplayGuild, type DisplayGuild } from "../../features/guild/presentation";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { steppedEase } from "../../lib/animationUtils";
 import { PATHS } from "../../constants/paths";
-import { GuildChatExpandedModal } from "./GuildChatExpandedModal";
-import { GuildChatOverlay } from "./GuildChatOverlay";
+import { GuildChatExpandedModal } from "../../features/chat/components/GuildChatExpandedModal";
+import { GuildChatOverlay } from "../../features/chat/components/GuildChatOverlay";
 import { DashboardMonitor } from "./DashboardMonitor";
 import { GUILD_TABS } from "./data";
 import { GuildBadge } from "./GuildBadge";

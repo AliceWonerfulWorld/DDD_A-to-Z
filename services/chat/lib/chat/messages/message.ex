@@ -6,9 +6,10 @@ defmodule Chat.Messages.Message do
   @timestamps_opts [inserted_at: :created_at, updated_at: false, type: :utc_datetime_usec]
 
   schema "guild_chat_messages" do
-    field :guild_id, :string
-    field :user_id, :string
-    field :body, :string
+    field(:guild_id, :string)
+    field(:user_id, :string)
+    field(:user_name, :string, virtual: true)
+    field(:body, :string)
     timestamps()
   end
 

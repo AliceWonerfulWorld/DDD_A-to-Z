@@ -27,6 +27,8 @@ defmodule Chat.GuildChannelTest do
       user_id = insert_user()
       guild_id = insert_guild()
       insert_membership(user_id, guild_id)
+      insert_github_account(user_id, "github_octocat")
+      insert_user_profile(user_id, "Octo Mage")
 
       {:ok, _} = Chat.Messages.create(guild_id, user_id, "hello")
       {:ok, _} = Chat.Messages.create(guild_id, user_id, "world")
@@ -39,6 +41,23 @@ defmodule Chat.GuildChannelTest do
       bodies = Enum.map(messages, & &1.body)
       assert "hello" in bodies
       assert "world" in bodies
+      assert Enum.all?(messages, &(&1.user_name == "Octo Mage"))
+    end
+
+    test "プロフィールがない場合は GitHub username が過去メッセージに返される" do
+      user_id = insert_user()
+      guild_id = insert_guild()
+      insert_membership(user_id, guild_id)
+      insert_github_account(user_id, "github_fallback")
+
+      {:ok, _} = Chat.Messages.create(guild_id, user_id, "hello")
+
+      socket = connect_as(user_id, guild_id)
+
+      assert {:ok, %{messages: [message]}, _} =
+               subscribe_and_join(socket, "guild:#{guild_id}", %{})
+
+      assert message.user_name == "github_fallback"
     end
 
     test "別ギルドのチャンネルには参加できない" do
@@ -68,15 +87,21 @@ defmodule Chat.GuildChannelTest do
       user_id = insert_user()
       guild_id = insert_guild()
       insert_membership(user_id, guild_id)
+      insert_github_account(user_id, "github_octocat")
+      insert_user_profile(user_id, "Octo Mage")
       socket = connect_as(user_id, guild_id)
 
       {:ok, _, channel_socket} =
         subscribe_and_join(socket, "guild:#{guild_id}", %{})
 
       ref = push(channel_socket, "new_message", %{"body" => "hello chat"})
-      assert_reply ref, :ok
+      assert_reply(ref, :ok)
 
-      assert_broadcast "new_message", %{body: "hello chat", user_id: ^user_id}
+      assert_broadcast("new_message", %{
+        body: "hello chat",
+        user_id: ^user_id,
+        user_name: "Octo Mage"
+      })
     end
 
     test "空ボディは保存されない（バリデーションエラー）" do
@@ -89,7 +114,7 @@ defmodule Chat.GuildChannelTest do
         subscribe_and_join(socket, "guild:#{guild_id}", %{})
 
       ref = push(channel_socket, "new_message", %{"body" => ""})
-      assert_reply ref, :error, %{reason: "failed"}
+      assert_reply(ref, :error, %{reason: "failed"})
     end
 
     test "1000文字超えは保存されない（バリデーションエラー）" do
@@ -103,7 +128,7 @@ defmodule Chat.GuildChannelTest do
 
       long_body = String.duplicate("a", 1001)
       ref = push(channel_socket, "new_message", %{"body" => long_body})
-      assert_reply ref, :error, %{reason: "failed"}
+      assert_reply(ref, :error, %{reason: "failed"})
     end
   end
 end

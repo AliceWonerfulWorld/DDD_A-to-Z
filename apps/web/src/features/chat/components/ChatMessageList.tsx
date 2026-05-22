@@ -1,4 +1,5 @@
-import type { GuildChatMessage } from "../../features/guild/chatApi";
+import type { GuildChatMessage } from "../api";
+import { getChatMessageAuthorLabel } from "./authorLabel";
 
 interface ChatMessageListProps {
   messages: GuildChatMessage[];
@@ -50,7 +51,7 @@ export function ChatMessageList({ messages, currentUserID, dense = false }: Chat
                 lineHeight: 1.4,
               }}
             >
-              <span>{message.user_id}</span>
+              <span>{getChatMessageAuthorLabel(message)}</span>
               <span>{formatTime(message.created_at)}</span>
             </div>
             <p

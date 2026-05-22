@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { Channel } from "phoenix";
-import type { GuildChatMessage } from "../../features/guild/chatApi";
-import { steppedEase } from "../../lib/animationUtils";
+import type { GuildChatMessage } from "../api";
+import { steppedEase } from "../../../lib/animationUtils";
 import { ChatComposer } from "./ChatComposer";
 import { ChatMessageList } from "./ChatMessageList";
 

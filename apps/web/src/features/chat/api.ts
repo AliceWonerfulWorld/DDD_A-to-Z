@@ -5,6 +5,7 @@ export interface GuildChatMessage {
   id: string;
   guild_id: string;
   user_id: string;
+  user_name?: string;
   body: string;
   created_at: string;
 }
