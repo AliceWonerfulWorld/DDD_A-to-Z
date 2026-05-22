@@ -9,12 +9,7 @@ interface WarMapHexProps {
   onSelect: (guild: WarGuild) => void;
 }
 
-export function WarMapHex({
-  guild,
-  isCurrentGuild,
-  isSelected,
-  onSelect,
-}: WarMapHexProps) {
+export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMapHexProps) {
   return (
     <motion.button
       type="button"
@@ -69,19 +64,9 @@ export function WarMapHex({
           MY GUILD
         </span>
       )}
-      <svg
-        viewBox="0 0 100 112"
-        aria-hidden="true"
-        style={{ display: "block", width: "100%" }}
-      >
+      <svg viewBox="0 0 100 112" aria-hidden="true" style={{ display: "block", width: "100%" }}>
         <defs>
-          <linearGradient
-            id={`${guild.id}-hex-fill`}
-            x1="0"
-            x2="1"
-            y1="0"
-            y2="1"
-          >
+          <linearGradient id={`${guild.id}-hex-fill`} x1="0" x2="1" y1="0" y2="1">
             <stop offset="0%" stopColor="rgba(4, 14, 30, 0.96)" />
             <stop offset="100%" stopColor="rgba(0, 0, 0, 0.78)" />
           </linearGradient>
@@ -102,22 +87,8 @@ export function WarMapHex({
           strokeWidth="1.5"
           opacity="0.9"
         />
-        <line
-          x1="50"
-          x2="50"
-          y1="18"
-          y2="92"
-          stroke={guild.color}
-          strokeOpacity="0.22"
-        />
-        <line
-          x1="21"
-          x2="79"
-          y1="54"
-          y2="54"
-          stroke={guild.color}
-          strokeOpacity="0.22"
-        />
+        <line x1="50" x2="50" y1="18" y2="92" stroke={guild.color} strokeOpacity="0.22" />
+        <line x1="21" x2="79" y1="54" y2="54" stroke={guild.color} strokeOpacity="0.22" />
       </svg>
       <span
         style={{

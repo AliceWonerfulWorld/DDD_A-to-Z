@@ -60,7 +60,9 @@ const MOCK = {
     slug: MOCK_TS_GUILD?.slug ?? "typescript",
     icon: MOCK_TS_GUILD?.icon ?? "TS",
     color: MOCK_TS_GUILD?.color ?? "#3178c6",
-    description: MOCK_TS_GUILD?.description ?? "型の力で安全で堅牢なコードを書く、\nエレガントな戦士たちの集い。",
+    description:
+      MOCK_TS_GUILD?.description ??
+      "型の力で安全で堅牢なコードを書く、\nエレガントな戦士たちの集い。",
     member_count: MOCK_TS_GUILD?.memberCount ?? 0,
     rank: 42,
     total_guilds: 156,
@@ -174,9 +176,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
     const apiGuild = mypageData?.guild;
     if (!apiGuild) return MOCK.guild;
     const master = findGuildBySlug(apiGuild.slug);
-    return master
-      ? { ...apiGuild, icon: master.icon, color: master.color }
-      : apiGuild;
+    return master ? { ...apiGuild, icon: master.icon, color: master.color } : apiGuild;
   }, [mypageData]);
   const gColor = guild.color ?? "#3178c6";
 

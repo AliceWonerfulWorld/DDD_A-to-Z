@@ -8,11 +8,7 @@ interface ScoutPanelProps {
   onClose: () => void;
 }
 
-export function ScoutPanel({
-  guild,
-  isCurrentGuild = false,
-  onClose,
-}: ScoutPanelProps) {
+export function ScoutPanel({ guild, isCurrentGuild = false, onClose }: ScoutPanelProps) {
   return (
     <AnimatePresence>
       {guild && (
@@ -32,8 +28,7 @@ export function ScoutPanel({
             border: `3px solid ${guild.color}`,
             borderBottomColor: "rgba(20, 18, 12, 0.98)",
             borderRightColor: "rgba(20, 18, 12, 0.98)",
-            background:
-              "linear-gradient(180deg, rgba(2, 8, 20, 0.94), rgba(0, 0, 0, 0.86))",
+            background: "linear-gradient(180deg, rgba(2, 8, 20, 0.94), rgba(0, 0, 0, 0.86))",
             boxShadow: `0 0 0 2px rgba(0,0,0,0.76), 8px 8px 0 rgba(0,0,0,0.36), inset 0 0 24px ${guild.color}22`,
             color: "#fff8d7",
             padding: "16px",
@@ -186,16 +181,8 @@ export function ScoutPanel({
               margin: 0,
             }}
           >
-            <Stat
-              label="TOTAL CP"
-              value={guild.totalCp.toLocaleString()}
-              color={guild.color}
-            />
-            <Stat
-              label="MEMBERS"
-              value={guild.memberCount.toLocaleString()}
-              color={guild.color}
-            />
+            <Stat label="TOTAL CP" value={guild.totalCp.toLocaleString()} color={guild.color} />
+            <Stat label="MEMBERS" value={guild.memberCount.toLocaleString()} color={guild.color} />
           </dl>
         </motion.aside>
       )}
@@ -203,15 +190,7 @@ export function ScoutPanel({
   );
 }
 
-function Stat({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color: string;
-}) {
+function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div
       style={{

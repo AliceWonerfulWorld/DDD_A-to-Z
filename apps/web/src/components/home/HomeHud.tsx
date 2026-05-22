@@ -31,13 +31,7 @@ const panelVariants: Variants = {
   },
 };
 
-function HudPanel({
-  align = "left",
-  children,
-}: {
-  align?: "left" | "right";
-  children: ReactNode;
-}) {
+function HudPanel({ align = "left", children }: { align?: "left" | "right"; children: ReactNode }) {
   return (
     <motion.section
       variants={panelVariants}
@@ -61,13 +55,7 @@ function HudPanel({
   );
 }
 
-function LabelValue({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
+function LabelValue({ label, value }: { label: string; value: string | number }) {
   return (
     <div
       style={{
@@ -103,10 +91,7 @@ function LabelValue({
 
 function ExpBar({ player }: { player: PlayerSummary }) {
   const levelRange = Math.max(1, player.nextLevelTotalCp - player.levelTotalCp);
-  const earnedInLevel = Math.max(
-    0,
-    player.lifetimeTotalEarnedCp - player.levelTotalCp,
-  );
+  const earnedInLevel = Math.max(0, player.lifetimeTotalEarnedCp - player.levelTotalCp);
   const pct = Math.min(100, Math.max(0, (earnedInLevel / levelRange) * 100));
 
   return (
@@ -227,11 +212,7 @@ function GuildEmblem({ accent, icon }: { accent: string; icon: string }) {
   );
 }
 
-function GuildMembership({
-  guild,
-}: {
-  guild: GuildSummary | null | undefined;
-}) {
+function GuildMembership({ guild }: { guild: GuildSummary | null | undefined }) {
   const accent = guild?.accent ?? "#f4ecd0";
   const icon = guild?.icon ?? "--";
   const name = guild === undefined ? "確認中" : (guild?.name ?? "未所属");
@@ -354,14 +335,8 @@ export function HomeHud({
           CONTRIBUTION POINT
         </div>
         <div style={{ display: "grid", gap: "6px" }}>
-          <LabelValue
-            label="TOTAL CP"
-            value={player.totalCp.toLocaleString()}
-          />
-          <LabelValue
-            label="TODAY CP"
-            value={`+${player.todayCp.toLocaleString()}`}
-          />
+          <LabelValue label="TOTAL CP" value={player.totalCp.toLocaleString()} />
+          <LabelValue label="TODAY CP" value={`+${player.todayCp.toLocaleString()}`} />
           <LabelValue
             label="EXP"
             value={`${player.lifetimeTotalEarnedCp.toLocaleString()} / ${player.nextLevelTotalCp.toLocaleString()}`}

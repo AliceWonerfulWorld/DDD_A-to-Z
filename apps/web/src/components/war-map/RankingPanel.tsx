@@ -47,8 +47,7 @@ export function RankingPanel({
           borderBottomColor: "rgba(0, 49, 64, 0.96)",
           borderRightColor: "rgba(0, 49, 64, 0.96)",
           background: "rgba(2, 10, 24, 0.9)",
-          boxShadow:
-            "0 0 0 2px rgba(0,0,0,0.76), 0 0 18px rgba(0,245,255,0.28)",
+          boxShadow: "0 0 0 2px rgba(0,0,0,0.76), 0 0 18px rgba(0,245,255,0.28)",
           color: "#d9fbff",
           cursor: "pointer",
           fontFamily: "inherit",
@@ -77,8 +76,7 @@ export function RankingPanel({
               border: "3px solid rgba(0, 245, 255, 0.72)",
               borderBottomColor: "rgba(0, 49, 64, 0.96)",
               borderRightColor: "rgba(0, 49, 64, 0.96)",
-              background:
-                "linear-gradient(180deg, rgba(1, 8, 20, 0.92), rgba(0, 0, 0, 0.84))",
+              background: "linear-gradient(180deg, rgba(1, 8, 20, 0.92), rgba(0, 0, 0, 0.84))",
               boxShadow:
                 "0 0 0 2px rgba(0,0,0,0.76), 8px 8px 0 rgba(0,0,0,0.36), inset 0 0 22px rgba(0,245,255,0.1)",
               color: "#fff8d7",
@@ -95,8 +93,7 @@ export function RankingPanel({
                 color: "#00f5ff",
                 fontSize: "0.72rem",
                 lineHeight: 1.45,
-                textShadow:
-                  "2px 2px 0 rgba(0,0,0,0.8), 0 0 12px rgba(0,245,255,0.55)",
+                textShadow: "2px 2px 0 rgba(0,0,0,0.8), 0 0 12px rgba(0,245,255,0.55)",
               }}
             >
               GUILD RANKING
@@ -123,8 +120,7 @@ export function RankingPanel({
               }}
             >
               {rankedGuilds.map((guild, index) => {
-                const rankColor =
-                  rankColors[index] ?? "rgba(255, 248, 215, 0.64)";
+                const rankColor = rankColors[index] ?? "rgba(255, 248, 215, 0.64)";
                 const isCurrentGuild = guild.id === currentGuildID;
 
                 return (
@@ -140,9 +136,7 @@ export function RankingPanel({
                       background: isCurrentGuild
                         ? `linear-gradient(90deg, ${guild.color}38, rgba(0,0,0,0.46))`
                         : "rgba(255,255,255,0.04)",
-                      boxShadow: isCurrentGuild
-                        ? `inset 0 0 14px ${guild.color}25`
-                        : "none",
+                      boxShadow: isCurrentGuild ? `inset 0 0 14px ${guild.color}25` : "none",
                       padding: "8px",
                     }}
                   >
