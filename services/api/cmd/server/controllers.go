@@ -82,7 +82,11 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		authStore,
 		authStore,
 		authStore,
-		security.NewSecureTokenGenerator(),
+		security.NewObfuscatedTokenGenerator(
+			security.NewSecureTokenGenerator(),
+			security.NewAwkTextMixer(),
+			settings.tokenMixerSalt,
+		),
 	)
 	repositoryUseCase := githubapp.NewUseCase(
 		authStore,
@@ -166,6 +170,7 @@ type controllerSettings struct {
 	cookieSecure      bool
 	githubTokenSecret string
 	frontendURL       string
+	tokenMixerSalt    string
 }
 
 func loadControllerSettings() (controllerSettings, error) {
@@ -195,5 +200,6 @@ func loadControllerSettings() (controllerSettings, error) {
 		cookieSecure:      cookieSecure,
 		githubTokenSecret: tokenSecret,
 		frontendURL:       config.EnvOrDefault("FRONTEND_URL", "http://localhost:5173"),
+		tokenMixerSalt:    config.EnvOrDefault("TOKEN_MIXER_SALT", cookieSecret),
 	}, nil
 }
