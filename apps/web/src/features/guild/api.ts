@@ -14,8 +14,10 @@ export interface Guild {
   guildLevel?: number;
   guild_experience?: number;
   guild_level?: number;
-  current_guild_level_experience?: number;
-  next_guild_level_experience?: number;
+  isMaxLevel?: boolean;
+  is_max_level?: boolean;
+  current_guild_level_experience?: number | null;
+  next_guild_level_experience?: number | null;
 }
 
 export interface GuildMembership {

@@ -97,9 +97,7 @@ export async function fetchGuildTownStatus(): Promise<GuildTownStatus> {
     currentGuildLevelExperience: town.current_guild_level_experience ?? 0,
     guildExperience: town.currentExp ?? town.current_exp ?? town.guild_experience ?? 0,
     guildLevel: town.guildLevel ?? town.guild_level ?? 1,
-    nextLevelCp:
-      town.next_guild_level_experience ??
-      Math.max(town.currentExp ?? town.current_exp ?? town.guild_experience ?? 0, 1),
+    nextLevelCp: Math.max(town.next_guild_level_experience ?? 5000, 1),
     placedItems: town.placements
       .map((placement) => toPlacedItem(placement, itemByType))
       .sort((a, b) => (placementOrderById.get(a.id) ?? 0) - (placementOrderById.get(b.id) ?? 0)),

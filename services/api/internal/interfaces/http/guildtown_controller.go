@@ -8,7 +8,6 @@ import (
 	stdhttp "net/http"
 
 	guildtownapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guildtown"
-	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	guildtowndomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guildtown"
 )
 
@@ -256,13 +255,23 @@ func (c *GuildTownController) townState(r *stdhttp.Request) (guildtownapp.TownSt
 }
 
 func decodeStrictJSON(w stdhttp.ResponseWriter, r *stdhttp.Request, target any) error {
+	r.Body = stdhttp.MaxBytesReader(w, r.Body, guildTownPlacementsRequestMaxBytes)
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {
+		var maxBytesErr *stdhttp.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			writeAPIError(w, stdhttp.StatusRequestEntityTooLarge, "request_too_large", "request body too large", 0, nil)
+			return err
+		}
 		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_json", "invalid json", 0, nil)
 		return err
 	}
-	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+	if err := decoder.Decode(&struct{}{}); err == nil {
+		err := errors.New("multiple JSON payloads")
+		writeAPIError(w, stdhttp.StatusBadRequest, "multiple_json_values", "multiple JSON payloads", 0, nil)
+		return err
+	} else if err != io.EOF {
 		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_json", "invalid json", 0, nil)
 		return err
 	}
@@ -276,6 +285,8 @@ func (c *GuildTownController) writeError(w stdhttp.ResponseWriter, err error) {
 		writeAPIError(w, stdhttp.StatusUnauthorized, "unauthenticated", "unauthenticated", 0, nil)
 	case errors.Is(err, guildtownapp.ErrActiveMembershipNotFound):
 		writeAPIError(w, stdhttp.StatusNotFound, "guild_membership_not_found", "active guild membership not found", 0, nil)
+	case errors.Is(err, guildtownapp.ErrGuildNotFound):
+		writeAPIError(w, stdhttp.StatusNotFound, "guild_not_found", "guild not found", 0, nil)
 	case errors.Is(err, guildtownapp.ErrUnknownBuildingType):
 		writeAPIError(w, stdhttp.StatusBadRequest, "unknown_building_type", "unknown building type", 0, nil)
 	case errors.Is(err, guildtownapp.ErrInsufficientInventory):
@@ -291,28 +302,14 @@ func (c *GuildTownController) writeError(w stdhttp.ResponseWriter, err error) {
 }
 
 func townStateResponse(state guildtownapp.TownState) map[string]any {
-	progress := guilddomain.GuildLevelProgressFromExperience(state.Guild.GuildExperience)
-	guildLevel := state.Guild.GuildLevel
-	if guildLevel <= 0 {
-		guildLevel = progress.Level
-	}
-	currentLevelExperience := state.Guild.CurrentGuildLevelExperience
-	if currentLevelExperience == 0 {
-		currentLevelExperience = progress.CurrentLevelExperience
-	}
-	nextLevelExperience := state.Guild.NextGuildLevelExperience
-	if nextLevelExperience == 0 {
-		nextLevelExperience = progress.NextLevelExperience
-	}
-
 	return map[string]any{
-		"guild_level":                    guildLevel,
-		"guildLevel":                     guildLevel,
+		"guild_level":                    state.Guild.GuildLevel,
+		"guildLevel":                     state.Guild.GuildLevel,
 		"guild_experience":               state.Guild.GuildExperience,
 		"current_exp":                    state.Guild.GuildExperience,
 		"currentExp":                     state.Guild.GuildExperience,
-		"current_guild_level_experience": currentLevelExperience,
-		"next_guild_level_experience":    nextLevelExperience,
+		"current_guild_level_experience": state.Guild.CurrentGuildLevelExperience,
+		"next_guild_level_experience":    state.Guild.NextGuildLevelExperience,
 		"buildings":                      buildingResponses(state.Buildings),
 		"inventory":                      inventoryResponses(state.Inventory),
 		"placements":                     placementResponses(state.Placements),

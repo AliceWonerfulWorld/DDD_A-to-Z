@@ -30,6 +30,16 @@ func (r guildTownTestRepository) ListPlacements(ctx context.Context, guildID gui
 	return r.placements, nil
 }
 
+func (r guildTownTestRepository) FindPlacementByID(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID) (guildtowndomain.Placement, bool, error) {
+	for _, placement := range r.placements {
+		if placement.ID == placementID {
+			return placement, true, nil
+		}
+	}
+
+	return guildtowndomain.Placement{}, false, nil
+}
+
 func (r guildTownTestRepository) ReplacePlacements(ctx context.Context, guildID guilddomain.ID, placements []guildtowndomain.Placement) error {
 	return nil
 }
@@ -78,6 +88,22 @@ type guildTownTestGuildRepository struct{}
 
 func (r guildTownTestGuildRepository) FindActiveMembershipByUserID(ctx context.Context, userID user.ID) (guilddomain.MembershipWithGuild, bool, error) {
 	now := time.Date(2026, 5, 18, 9, 0, 0, 0, time.UTC)
+	guild, err := guilddomain.NewGuild(guilddomain.Guild{
+		ID:              guilddomain.ID("guild_go"),
+		Slug:            "go",
+		Name:            "Go",
+		Description:     "Go guild",
+		Icon:            "GO",
+		Color:           "#00acd7",
+		SortOrder:       1,
+		GuildExperience: 5200,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	})
+	if err != nil {
+		return guilddomain.MembershipWithGuild{}, false, err
+	}
+
 	return guilddomain.MembershipWithGuild{
 		Membership: guilddomain.Membership{
 			ID:        "membership_1",
@@ -87,7 +113,7 @@ func (r guildTownTestGuildRepository) FindActiveMembershipByUserID(ctx context.C
 			CreatedAt: now,
 			UpdatedAt: now,
 		},
-		Guild: guilddomain.Guild{ID: guilddomain.ID("guild_go"), GuildExperience: 5200},
+		Guild: guild,
 	}, true, nil
 }
 
@@ -197,6 +223,22 @@ func TestGuildTownControllerBuyBuildingAcceptsCamelCaseBuildingID(t *testing.T) 
 	}
 	if body.GuildLevel != 1 {
 		t.Fatalf("guildLevel = %d, 期待値 1", body.GuildLevel)
+	}
+}
+
+func TestGuildTownControllerBuyBuildingRejectsMultipleJSONValues(t *testing.T) {
+	controller := newGuildTownTestController()
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodPost, "/me/guild/town/buildings", strings.NewReader(`{"buildingId":"tent"}{"extra":1}`))
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusBadRequest {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusBadRequest)
 	}
 }
 

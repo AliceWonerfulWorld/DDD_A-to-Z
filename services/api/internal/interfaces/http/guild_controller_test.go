@@ -160,18 +160,21 @@ func TestGuildControllerListGuilds(t *testing.T) {
 	now := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
 	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
 		guilds: []guilddomain.Guild{{
-			ID:                 "guild_typescript",
-			Slug:               "typescript",
-			Name:               "TypeScript",
-			Description:        "型の力で支えるギルド。",
-			Icon:               "📘",
-			Color:              "#3178c6",
-			SortOrder:          5,
-			MemberCount:        12,
-			TotalContributedCP: 120,
-			GuildExperience:    45000,
-			CreatedAt:          now,
-			UpdatedAt:          now,
+			ID:                          "guild_typescript",
+			Slug:                        "typescript",
+			Name:                        "TypeScript",
+			Description:                 "型の力で支えるギルド。",
+			Icon:                        "📘",
+			Color:                       "#3178c6",
+			SortOrder:                   5,
+			MemberCount:                 12,
+			TotalContributedCP:          120,
+			GuildExperience:             45000,
+			GuildLevel:                  3,
+			CurrentGuildLevelExperience: 20000,
+			NextGuildLevelExperience:    60000,
+			CreatedAt:                   now,
+			UpdatedAt:                   now,
 		}},
 	}, guildTestCurrentUserRepository{ok: true}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	router := stdhttp.NewServeMux()

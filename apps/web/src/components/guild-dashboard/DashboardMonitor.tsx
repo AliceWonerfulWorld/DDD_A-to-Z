@@ -26,15 +26,21 @@ export function DashboardMonitor({
   const guildLevel = guild?.guildLevel ?? 1;
   const guildExperience = guild?.guildExperience ?? 0;
   const currentLevelExperience = guild?.currentGuildLevelExperience ?? 0;
-  const nextLevelExperience = guild?.nextGuildLevelExperience ?? 5000;
-  const isMaxGuildLevel = guildLevel >= 5 && nextLevelExperience <= currentLevelExperience;
-  const progressRange = Math.max(1, nextLevelExperience - currentLevelExperience);
+  const nextLevelExperience = guild?.nextGuildLevelExperience;
+  const isMaxGuildLevel =
+    guild?.isMaxLevel ??
+    (guild
+      ? guildLevel >= 5 || nextLevelExperience === null || nextLevelExperience === undefined
+      : false);
+  const levelRange = Math.max(1, (nextLevelExperience ?? 5000) - currentLevelExperience);
+  const progressInLevel = Math.min(
+    levelRange,
+    Math.max(0, guildExperience - currentLevelExperience),
+  );
+  const progressPercent = isMaxGuildLevel ? 100 : Math.round((progressInLevel / levelRange) * 100);
   const progressValue = isMaxGuildLevel
     ? 100
-    : Math.min(
-        100,
-        Math.max(0, ((guildExperience - currentLevelExperience) / progressRange) * 100),
-      );
+    : Math.min(100, Math.max(0, (progressInLevel / levelRange) * 100));
 
   return (
     <motion.section
@@ -79,7 +85,6 @@ export function DashboardMonitor({
             {guildName}
           </strong>
           <span style={{ color: "#ffd966", whiteSpace: "nowrap" }}>{guildRank}</span>
-          <span style={{ color: "#74f7a1", whiteSpace: "nowrap" }}>Guild Lv.{guildLevel}</span>
         </div>
 
         <div
@@ -97,9 +102,14 @@ export function DashboardMonitor({
           <div
             role="progressbar"
             aria-label="Guild level experience"
-            aria-valuemin={currentLevelExperience}
-            aria-valuemax={nextLevelExperience}
-            aria-valuenow={guildExperience}
+            aria-valuemin={0}
+            aria-valuemax={levelRange}
+            aria-valuenow={isMaxGuildLevel ? levelRange : progressInLevel}
+            aria-valuetext={
+              isMaxGuildLevel
+                ? "MAX"
+                : `${progressInLevel.toLocaleString()} of ${levelRange.toLocaleString()} (${progressPercent}%)`
+            }
             style={{
               height: "10px",
               border: "2px solid rgba(116, 247, 161, 0.6)",
@@ -123,7 +133,7 @@ export function DashboardMonitor({
           <span style={{ color: "#f4ecd0", whiteSpace: "nowrap" }}>
             {isMaxGuildLevel
               ? "MAX"
-              : `${guildExperience.toLocaleString()} / ${nextLevelExperience.toLocaleString()}`}
+              : `${guildExperience.toLocaleString()} / ${(nextLevelExperience ?? 5000).toLocaleString()}`}
           </span>
         </div>
 

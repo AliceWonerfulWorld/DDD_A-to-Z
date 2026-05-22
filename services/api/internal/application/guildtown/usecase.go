@@ -14,6 +14,7 @@ var (
 	ErrUnauthenticated          = errors.New("unauthenticated")
 	ErrActiveMembershipNotFound = errors.New("active guild membership not found")
 	ErrUnknownBuildingType      = errors.New("unknown guild town building type")
+	ErrGuildNotFound            = errors.New("guild not found")
 	ErrInsufficientInventory    = errors.New("insufficient guild town inventory")
 	ErrPlacementNotFound        = errors.New("guild town placement not found")
 	ErrInvalidPlacementLevel    = errors.New("guild town placement level is invalid")
@@ -110,6 +111,15 @@ func (u *UseCase) SavePlacements(ctx context.Context, sessionToken string, comma
 	if err != nil {
 		return TownState{}, err
 	}
+	existingPlacements, err := u.repository.ListPlacements(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return TownState{}, err
+	}
+	levelByPlacementID := make(map[guildtowndomain.PlacementID]int, len(existingPlacements))
+	for _, placement := range existingPlacements {
+		levelByPlacementID[placement.ID] = placement.Level
+	}
+
 	owned := make(map[guildtowndomain.BuildingType]int, len(inventory))
 	for _, item := range inventory {
 		owned[item.BuildingType] = item.Quantity
@@ -135,11 +145,15 @@ func (u *UseCase) SavePlacements(ctx context.Context, sessionToken string, comma
 			}
 			id = guildtowndomain.PlacementID(generatedID)
 		}
+		level := levelByPlacementID[id]
+		if level == 0 {
+			level = 1
+		}
 		placement, err := guildtowndomain.NewPlacement(guildtowndomain.Placement{
 			ID:           id,
 			GuildID:      membership.Membership.GuildID,
 			BuildingType: command.BuildingType,
-			Level:        command.Level,
+			Level:        level,
 			X:            command.X,
 			Y:            command.Y,
 			Width:        command.Width,
@@ -236,6 +250,16 @@ func (u *UseCase) UpgradeBuilding(ctx context.Context, sessionToken string, comm
 		return TownState{}, err
 	}
 	if command.PlacementID == "" || command.NextLevel < 2 || command.NextLevel > guilddomain.MaxGuildLevel {
+		return TownState{}, ErrInvalidPlacementLevel
+	}
+	placement, ok, err := u.repository.FindPlacementByID(ctx, membership.Membership.GuildID, command.PlacementID)
+	if err != nil {
+		return TownState{}, err
+	}
+	if !ok {
+		return TownState{}, ErrPlacementNotFound
+	}
+	if command.NextLevel != placement.Level+1 {
 		return TownState{}, ErrInvalidPlacementLevel
 	}
 

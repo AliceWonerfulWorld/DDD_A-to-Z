@@ -27,7 +27,9 @@ export function toDisplayGuild(guild: Guild): DisplayGuild {
     guildExperience: guild.currentExp ?? guild.current_exp ?? guild.guild_experience ?? 0,
     guildLevel: guild.guildLevel ?? guild.guild_level ?? 1,
     currentGuildLevelExperience: guild.current_guild_level_experience ?? 0,
-    nextGuildLevelExperience: guild.next_guild_level_experience ?? 5000,
+    nextGuildLevelExperience:
+      guild.next_guild_level_experience === undefined ? 5000 : guild.next_guild_level_experience,
+    isMaxLevel: guild.isMaxLevel ?? guild.is_max_level ?? false,
   };
 }
 

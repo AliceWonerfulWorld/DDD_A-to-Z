@@ -12,8 +12,9 @@ export interface GuildMaster {
   oath: string;
   guildExperience?: number;
   guildLevel?: number;
-  currentGuildLevelExperience?: number;
-  nextGuildLevelExperience?: number;
+  currentGuildLevelExperience?: number | null;
+  nextGuildLevelExperience?: number | null;
+  isMaxLevel?: boolean;
 }
 
 export const GUILD_MASTERS: GuildMaster[] = [

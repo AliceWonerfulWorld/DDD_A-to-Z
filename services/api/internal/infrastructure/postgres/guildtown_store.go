@@ -64,6 +64,28 @@ func (s *GuildTownStore) ListPlacements(ctx context.Context, guildID guilddomain
 	return placements, nil
 }
 
+func (s *GuildTownStore) FindPlacementByID(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID) (guildtowndomain.Placement, bool, error) {
+	var record guildTownPlacementRecord
+	result := s.db.WithContext(ctx).Raw(`
+		SELECT id, guild_id, building_type, level, x, y, width, z_index, created_at, updated_at
+		FROM guild_town_placements
+		WHERE guild_id = ? AND id = ?
+	`, guildID, placementID).Scan(&record)
+	if result.Error != nil {
+		return guildtowndomain.Placement{}, false, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return guildtowndomain.Placement{}, false, nil
+	}
+
+	placement, err := record.toDomain()
+	if err != nil {
+		return guildtowndomain.Placement{}, false, err
+	}
+
+	return placement, true, nil
+}
+
 func (s *GuildTownStore) BuyBuilding(ctx context.Context, guildID guilddomain.ID, buildingType guildtowndomain.BuildingType, exp int64, now time.Time) (guilddomain.Guild, error) {
 	var updatedGuild guilddomain.Guild
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -295,7 +317,7 @@ func addGuildExperience(ctx context.Context, tx *gorm.DB, guildID guilddomain.ID
 		return guilddomain.Guild{}, result.Error
 	}
 	if result.RowsAffected == 0 {
-		return guilddomain.Guild{}, guildtownapp.ErrActiveMembershipNotFound
+		return guilddomain.Guild{}, guildtownapp.ErrGuildNotFound
 	}
 
 	guild, err := guilddomain.NewGuild(guilddomain.Guild{

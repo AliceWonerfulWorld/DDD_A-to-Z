@@ -32,6 +32,16 @@ func (r *testRepository) ListPlacements(ctx context.Context, guildID guilddomain
 	return r.placements, nil
 }
 
+func (r *testRepository) FindPlacementByID(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID) (guildtowndomain.Placement, bool, error) {
+	for _, placement := range r.placements {
+		if placement.ID == placementID {
+			return placement, true, nil
+		}
+	}
+
+	return guildtowndomain.Placement{}, false, nil
+}
+
 func (r *testRepository) ReplacePlacements(ctx context.Context, guildID guilddomain.ID, placements []guildtowndomain.Placement) error {
 	r.replaced = placements
 	r.placements = placements
@@ -40,7 +50,7 @@ func (r *testRepository) ReplacePlacements(ctx context.Context, guildID guilddom
 
 func (r *testRepository) BuyBuilding(ctx context.Context, guildID guilddomain.ID, buildingType guildtowndomain.BuildingType, exp int64, now time.Time) (guilddomain.Guild, error) {
 	r.bought = append(r.bought, buildingType)
-	r.addedExp = exp
+	r.addedExp += exp
 	for index, item := range r.inventory {
 		if item.BuildingType == buildingType {
 			r.inventory[index].Quantity++
@@ -52,7 +62,7 @@ func (r *testRepository) BuyBuilding(ctx context.Context, guildID guilddomain.ID
 				Icon:            "GO",
 				Color:           "#00acd7",
 				SortOrder:       1,
-				GuildExperience: exp,
+				GuildExperience: r.addedExp,
 				CreatedAt:       now,
 				UpdatedAt:       now,
 			})
@@ -73,7 +83,7 @@ func (r *testRepository) BuyBuilding(ctx context.Context, guildID guilddomain.ID
 		Icon:            "GO",
 		Color:           "#00acd7",
 		SortOrder:       1,
-		GuildExperience: exp,
+		GuildExperience: r.addedExp,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	})
@@ -88,7 +98,7 @@ func (r *testRepository) CreatePlacement(ctx context.Context, guildID guilddomai
 func (r *testRepository) UpgradePlacement(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, exp int64, now time.Time) (guilddomain.Guild, error) {
 	r.upgradedID = placementID
 	r.upgradedNextLevel = nextLevel
-	r.addedExp = exp
+	r.addedExp += exp
 	for index, placement := range r.placements {
 		if placement.ID == placementID {
 			r.placements[index].Level = nextLevel
@@ -102,7 +112,7 @@ func (r *testRepository) UpgradePlacement(ctx context.Context, guildID guilddoma
 		Icon:            "GO",
 		Color:           "#00acd7",
 		SortOrder:       1,
-		GuildExperience: exp,
+		GuildExperience: r.addedExp,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	})
@@ -170,8 +180,59 @@ func TestUseCaseSavePlacements(t *testing.T) {
 	if len(state.Placements) != 1 {
 		t.Fatalf("state placements length = %d, 期待値 1", len(state.Placements))
 	}
-	if repository.listPlacementsCalls != 0 {
-		t.Fatalf("ListPlacements() calls = %d, 期待値 0", repository.listPlacementsCalls)
+	if repository.replaced[0].Level != 1 {
+		t.Fatalf("placement level = %d, 期待値 1", repository.replaced[0].Level)
+	}
+	if repository.listPlacementsCalls != 1 {
+		t.Fatalf("ListPlacements() calls = %d, 期待値 1", repository.listPlacementsCalls)
+	}
+}
+
+func TestUseCaseSavePlacementsKeepsCanonicalPlacementLevel(t *testing.T) {
+	now := time.Date(2026, 5, 18, 9, 0, 0, 0, time.UTC)
+	repository := &testRepository{
+		inventory: []guildtowndomain.InventoryItem{{
+			GuildID:      "guild_go",
+			BuildingType: "tent",
+			Quantity:     1,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}},
+		placements: []guildtowndomain.Placement{{
+			ID:           "placement_1",
+			GuildID:      "guild_go",
+			BuildingType: "tent",
+			Level:        3,
+			X:            12,
+			Y:            34,
+			Width:        210,
+			ZIndex:       0,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}},
+	}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testGuildRepository{
+		membership: testMembershipWithGuild("guild_go", "user_1", now),
+		ok:         true,
+	}, testIDGenerator{})
+	usecase.now = func() time.Time { return now }
+
+	_, err := usecase.SavePlacements(context.Background(), "session-token", []SavePlacementCommand{{
+		ID:           "placement_1",
+		BuildingType: "tent",
+		Level:        5,
+		X:            20,
+		Y:            40,
+		Width:        210,
+	}})
+	if err != nil {
+		t.Fatalf("SavePlacements() がエラーを返しました: %v", err)
+	}
+	if repository.replaced[0].Level != 3 {
+		t.Fatalf("placement level = %d, 期待値 3", repository.replaced[0].Level)
 	}
 }
 
@@ -235,6 +296,20 @@ func TestUseCaseBuyBuildingAddsPersistentExpForEveryPurchase(t *testing.T) {
 	if len(state.Inventory) != 1 || state.Inventory[0].Quantity != 2 {
 		t.Fatalf("inventory quantity = %+v, 期待値 2", state.Inventory)
 	}
+
+	state, err = usecase.BuyBuilding(context.Background(), "session-token", BuyBuildingCommand{BuildingType: "tent"})
+	if err != nil {
+		t.Fatalf("BuyBuilding() 2回目がエラーを返しました: %v", err)
+	}
+	if repository.addedExp != guilddomain.BuyBuildingExperience*2 {
+		t.Fatalf("added exp after second purchase = %d, 期待値 %d", repository.addedExp, guilddomain.BuyBuildingExperience*2)
+	}
+	if len(repository.bought) != 2 || repository.bought[0] != "tent" || repository.bought[1] != "tent" {
+		t.Fatalf("bought = %v, 期待値 [tent tent]", repository.bought)
+	}
+	if len(state.Inventory) != 1 || state.Inventory[0].Quantity != 3 {
+		t.Fatalf("inventory quantity after second purchase = %+v, 期待値 3", state.Inventory)
+	}
 }
 
 func TestUseCaseDeployBuildingDoesNotAddExp(t *testing.T) {
@@ -296,16 +371,50 @@ func TestUseCaseUpgradeBuildingAddsExpByNextLevel(t *testing.T) {
 
 	_, err := usecase.UpgradeBuilding(context.Background(), "session-token", UpgradeBuildingCommand{
 		PlacementID: "placement_1",
-		NextLevel:   5,
+		NextLevel:   2,
 	})
 	if err != nil {
 		t.Fatalf("UpgradeBuilding() がエラーを返しました: %v", err)
 	}
-	if repository.addedExp != guilddomain.GuildTownUpgradeLevel5Exp {
-		t.Fatalf("upgrade exp = %d, 期待値 %d", repository.addedExp, guilddomain.GuildTownUpgradeLevel5Exp)
+	if repository.addedExp != guilddomain.GuildTownUpgradeLevel2Exp {
+		t.Fatalf("upgrade exp = %d, 期待値 %d", repository.addedExp, guilddomain.GuildTownUpgradeLevel2Exp)
 	}
-	if repository.upgradedNextLevel != 5 {
-		t.Fatalf("upgraded next level = %d, 期待値 5", repository.upgradedNextLevel)
+	if repository.upgradedNextLevel != 2 {
+		t.Fatalf("upgraded next level = %d, 期待値 2", repository.upgradedNextLevel)
+	}
+}
+
+func TestUseCaseUpgradeBuildingRejectsSkippedLevel(t *testing.T) {
+	now := time.Date(2026, 5, 22, 9, 0, 0, 0, time.UTC)
+	repository := &testRepository{
+		placements: []guildtowndomain.Placement{{
+			ID:           "placement_1",
+			GuildID:      "guild_go",
+			BuildingType: "tent",
+			Level:        1,
+			X:            12,
+			Y:            34,
+			Width:        210,
+			ZIndex:       0,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}},
+	}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testGuildRepository{
+		membership: testMembershipWithGuild("guild_go", "user_1", now),
+		ok:         true,
+	}, testIDGenerator{})
+	usecase.now = func() time.Time { return now }
+
+	_, err := usecase.UpgradeBuilding(context.Background(), "session-token", UpgradeBuildingCommand{
+		PlacementID: "placement_1",
+		NextLevel:   5,
+	})
+	if !errors.Is(err, ErrInvalidPlacementLevel) {
+		t.Fatalf("UpgradeBuilding() error = %v, 期待値 ErrInvalidPlacementLevel", err)
 	}
 }
 
