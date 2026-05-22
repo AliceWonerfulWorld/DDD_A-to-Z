@@ -1,17 +1,26 @@
 import Config
 
 if config_env() == :prod do
+  database_url = System.fetch_env!("DATABASE_URL")
+  database_host = URI.parse(database_url).host |> to_charlist()
+
   ssl_opts =
     case System.get_env("DB_CA_CERT_PATH") do
-      nil -> [verify: :verify_peer, cacerts: :public_key.cacerts_get()]
-      path -> [verify: :verify_peer, cacertfile: path]
+      nil -> [cacerts: :public_key.cacerts_get()]
+      path -> [cacertfile: path]
     end
+    |> Keyword.merge(
+      verify: :verify_peer,
+      server_name_indication: database_host,
+      customize_hostname_check: [
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+      ]
+    )
 
   config :chat, Chat.Repo,
-    url: System.fetch_env!("DATABASE_URL"),
+    url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5"),
-    ssl: true,
-    ssl_opts: ssl_opts
+    ssl: ssl_opts
 
   config :chat, Chat.Endpoint,
     http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "4000")],
