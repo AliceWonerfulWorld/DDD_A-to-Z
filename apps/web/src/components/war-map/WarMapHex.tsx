@@ -9,7 +9,12 @@ interface WarMapHexProps {
   onSelect: (guild: WarGuild) => void;
 }
 
-export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMapHexProps) {
+export function WarMapHex({
+  guild,
+  isCurrentGuild,
+  isSelected,
+  onSelect,
+}: WarMapHexProps) {
   return (
     <motion.button
       type="button"
@@ -64,9 +69,19 @@ export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMa
           MY GUILD
         </span>
       )}
-      <svg viewBox="0 0 100 112" aria-hidden="true" style={{ display: "block", width: "100%" }}>
+      <svg
+        viewBox="0 0 100 112"
+        aria-hidden="true"
+        style={{ display: "block", width: "100%" }}
+      >
         <defs>
-          <linearGradient id={`${guild.id}-hex-fill`} x1="0" x2="1" y1="0" y2="1">
+          <linearGradient
+            id={`${guild.id}-hex-fill`}
+            x1="0"
+            x2="1"
+            y1="0"
+            y2="1"
+          >
             <stop offset="0%" stopColor="rgba(4, 14, 30, 0.96)" />
             <stop offset="100%" stopColor="rgba(0, 0, 0, 0.78)" />
           </linearGradient>
@@ -87,8 +102,22 @@ export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMa
           strokeWidth="1.5"
           opacity="0.9"
         />
-        <line x1="50" x2="50" y1="18" y2="92" stroke={guild.color} strokeOpacity="0.22" />
-        <line x1="21" x2="79" y1="54" y2="54" stroke={guild.color} strokeOpacity="0.22" />
+        <line
+          x1="50"
+          x2="50"
+          y1="18"
+          y2="92"
+          stroke={guild.color}
+          strokeOpacity="0.22"
+        />
+        <line
+          x1="21"
+          x2="79"
+          y1="54"
+          y2="54"
+          stroke={guild.color}
+          strokeOpacity="0.22"
+        />
       </svg>
       <span
         style={{
@@ -99,11 +128,20 @@ export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMa
           color: guild.accent,
           fontSize: "clamp(0.58rem, 1.05vw, 0.84rem)",
           lineHeight: 1,
-          textShadow: `2px 2px 0 rgba(0,0,0,0.82), 0 0 12px ${guild.color}`,
+          overflow: "hidden",
         }}
       >
-        {guild.mark}
-      </span>
+        <img
+          src={`/guild-icons/${guild.mark === "HS" ? "λ" : guild.mark}.png`}
+          alt={`${guild.name} icon`}
+          style={{
+            width: "clamp(28px, 2.8vw, 44px)",
+            height: "clamp(28px, 2.8vw, 44px)",
+            objectFit: "cover",
+            imageRendering: "pixelated",
+          }}
+        />
+      </span>{" "}
       <span
         style={{
           position: "absolute",
