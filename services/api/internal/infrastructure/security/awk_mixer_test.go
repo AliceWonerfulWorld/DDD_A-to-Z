@@ -57,8 +57,26 @@ func TestMixWithAwkPreservesBackslashesInSalt(t *testing.T) {
 	}
 }
 
+func TestAwkTextMixerCachesScriptFile(t *testing.T) {
+	mixer := NewAwkTextMixer()
+
+	first, err := mixer.script()
+	if err != nil {
+		t.Fatalf("1回目の script() がエラーを返しました: %v", err)
+	}
+	second, err := mixer.script()
+	if err != nil {
+		t.Fatalf("2回目の script() がエラーを返しました: %v", err)
+	}
+
+	if first != second {
+		t.Fatalf("script path = %q, 期待値 %q", second, first)
+	}
+}
+
 func TestAwkTextMixerReturnsCommandError(t *testing.T) {
-	mixer := &AwkTextMixer{command: "missing-awk-command-for-test"}
+	mixer := NewAwkTextMixer()
+	mixer.command = "missing-awk-command-for-test"
 
 	if _, err := mixer.Mix(context.Background(), "abcdef", "SALT"); err == nil {
 		t.Fatal("Mix() のエラー = nil, 期待値 コマンド実行エラー")

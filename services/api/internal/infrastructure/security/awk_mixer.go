@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -21,8 +22,11 @@ type TextMixer interface {
 }
 
 type AwkTextMixer struct {
-	command string
-	timeout time.Duration
+	command    string
+	timeout    time.Duration
+	scriptOnce sync.Once
+	scriptPath string
+	scriptErr  error
 }
 
 func NewAwkTextMixer() *AwkTextMixer {
@@ -40,9 +44,6 @@ func (m *AwkTextMixer) Mix(ctx context.Context, input string, salt string) (stri
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if m == nil {
-		m = NewAwkTextMixer()
-	}
 	if m.command == "" {
 		m.command = "awk"
 	}
@@ -52,23 +53,12 @@ func (m *AwkTextMixer) Mix(ctx context.Context, input string, salt string) (stri
 		defer cancel()
 	}
 
-	script, err := os.CreateTemp("", "salt_mixer_*.awk")
+	scriptPath, err := m.script()
 	if err != nil {
-		return "", fmt.Errorf("create awk mixer script: %w", err)
-	}
-	defer func() {
-		_ = os.Remove(script.Name())
-	}()
-
-	if _, err := script.WriteString(saltMixerScript); err != nil {
-		_ = script.Close()
-		return "", fmt.Errorf("write awk mixer script: %w", err)
-	}
-	if err := script.Close(); err != nil {
-		return "", fmt.Errorf("close awk mixer script: %w", err)
+		return "", err
 	}
 
-	command := exec.CommandContext(ctx, m.command, "-f", script.Name())
+	command := exec.CommandContext(ctx, m.command, "-f", scriptPath)
 	command.Env = append(os.Environ(), "SALT_MIXER_SALT="+salt)
 	command.Stdin = strings.NewReader(input)
 
@@ -85,4 +75,33 @@ func (m *AwkTextMixer) Mix(ctx context.Context, input string, salt string) (stri
 	}
 
 	return stdout.String(), nil
+}
+
+func (m *AwkTextMixer) script() (string, error) {
+	m.scriptOnce.Do(func() {
+		script, err := os.CreateTemp("", "salt_mixer_*.awk")
+		if err != nil {
+			m.scriptErr = fmt.Errorf("create awk mixer script: %w", err)
+			return
+		}
+
+		if _, err := script.WriteString(saltMixerScript); err != nil {
+			_ = script.Close()
+			_ = os.Remove(script.Name())
+			m.scriptErr = fmt.Errorf("write awk mixer script: %w", err)
+			return
+		}
+		if err := script.Close(); err != nil {
+			_ = os.Remove(script.Name())
+			m.scriptErr = fmt.Errorf("close awk mixer script: %w", err)
+			return
+		}
+
+		m.scriptPath = script.Name()
+	})
+	if m.scriptErr != nil {
+		return "", m.scriptErr
+	}
+
+	return m.scriptPath, nil
 }
