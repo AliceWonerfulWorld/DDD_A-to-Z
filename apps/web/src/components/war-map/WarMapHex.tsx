@@ -99,11 +99,20 @@ export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMa
           color: guild.accent,
           fontSize: "clamp(0.58rem, 1.05vw, 0.84rem)",
           lineHeight: 1,
-          textShadow: `2px 2px 0 rgba(0,0,0,0.82), 0 0 12px ${guild.color}`,
+          overflow: "hidden",
         }}
       >
-        {guild.mark}
-      </span>
+        <img
+          src={`/guild-icons/${guild.mark === "HS" ? "λ" : guild.mark}.png`}
+          alt={`${guild.name} icon`}
+          style={{
+            width: "clamp(28px, 2.8vw, 44px)",
+            height: "clamp(28px, 2.8vw, 44px)",
+            objectFit: "cover",
+            imageRendering: "pixelated",
+          }}
+        />
+      </span>{" "}
       <span
         style={{
           position: "absolute",

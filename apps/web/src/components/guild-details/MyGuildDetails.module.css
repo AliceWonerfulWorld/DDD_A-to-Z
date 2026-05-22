@@ -110,6 +110,7 @@
     inset 0 0 22px rgba(0, 245, 255, 0.24);
   color: #ffd966;
   font-size: clamp(1.4rem, 4vw, 2.4rem);
+  overflow: hidden;
 }
 
 .eyebrow {

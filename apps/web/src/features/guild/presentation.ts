@@ -17,7 +17,7 @@ export function toDisplayGuild(guild: Guild): DisplayGuild {
     slug: guild.slug,
     name: guild.name,
     description: guild.description,
-    icon: guild.icon,
+    icon: master?.icon ?? guild.icon,
     color: guild.color,
     accent: master?.accent ?? fallbackGuildMeta.accent,
     sortOrder: master?.sortOrder ?? GUILD_MASTERS.length,

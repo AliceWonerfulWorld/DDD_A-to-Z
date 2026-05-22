@@ -217,7 +217,26 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
           >
             <div className={styles.identity}>
               <div className={styles.emblem} aria-hidden="true" style={{ color: guild?.color }}>
-                {isLoading ? "..." : (guild?.icon ?? "--")}
+                {isLoading
+                  ? "..."
+                  : (() => {
+                      const icon = guild?.icon ?? "--";
+                      const isValidIcon = /^[A-Z0-9λ]+$/.test(icon);
+                      return isValidIcon ? (
+                        <img
+                          src={`/guild-icons/${icon}.png`}
+                          alt="Guild icon"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            imageRendering: "pixelated",
+                          }}
+                        />
+                      ) : (
+                        <span>{icon}</span>
+                      );
+                    })()}
               </div>
               <div>
                 <span className={styles.eyebrow}>

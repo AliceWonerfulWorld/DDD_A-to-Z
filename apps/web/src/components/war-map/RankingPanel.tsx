@@ -110,7 +110,15 @@ export function RankingPanel({
                 {isLoaded ? "NO GUILD DATA" : "SYNCING GUILD DATA..."}
               </p>
             )}
-            <ol style={{ display: "grid", gap: "8px", listStyle: "none", margin: 0, padding: 0 }}>
+            <ol
+              style={{
+                display: "grid",
+                gap: "8px",
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+              }}
+            >
               {rankedGuilds.map((guild, index) => {
                 const rankColor = rankColors[index] ?? "rgba(255, 248, 215, 0.64)";
                 const isCurrentGuild = guild.id === currentGuildID;
@@ -145,16 +153,26 @@ export function RankingPanel({
                       style={{
                         display: "grid",
                         width: "38px",
-                        height: "34px",
+                        height: "38px",
                         placeItems: "center",
                         border: `2px solid ${guild.color}`,
-                        background: "rgba(0,0,0,0.42)",
+                        background: `radial-gradient(circle at 50% 20%, ${guild.color}36, rgba(0,0,0,0.78) 62%)`,
                         color: guild.accent,
                         fontSize: "0.58rem",
                         boxShadow: `0 0 10px ${guild.color}55`,
+                        overflow: "hidden",
                       }}
                     >
-                      {guild.mark}
+                      <img
+                        src={`/guild-icons/${guild.mark === "HS" ? "λ" : guild.mark}.png`}
+                        alt={`${guild.name} icon`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          imageRendering: "pixelated",
+                        }}
+                      />
                     </span>
                     <span style={{ minWidth: 0 }}>
                       <strong

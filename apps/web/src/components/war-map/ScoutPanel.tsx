@@ -95,16 +95,26 @@ export function ScoutPanel({ guild, isCurrentGuild = false, onClose }: ScoutPane
               style={{
                 display: "grid",
                 width: "72px",
-                height: "64px",
+                height: "72px",
                 placeItems: "center",
                 border: `2px solid ${guild.color}`,
-                background: "rgba(0,0,0,0.44)",
+                background: `radial-gradient(circle at 50% 20%, ${guild.color}36, rgba(0,0,0,0.78) 62%)`,
                 boxShadow: `inset 0 0 14px rgba(0,0,0,0.68), 0 0 12px ${guild.color}55`,
                 color: guild.accent,
                 fontSize: "0.9rem",
+                overflow: "hidden",
               }}
             >
-              {guild.mark}
+              <img
+                src={`/guild-icons/${guild.mark === "HS" ? "λ" : guild.mark}.png`}
+                alt={`${guild.name} icon`}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  imageRendering: "pixelated",
+                }}
+              />
             </div>
             <div style={{ minWidth: 0 }}>
               <h2

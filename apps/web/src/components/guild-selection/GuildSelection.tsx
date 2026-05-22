@@ -465,13 +465,14 @@ function GuildDetail({
 }
 
 function GuildMark({ guild, size }: { guild: GuildMaster; size: number }) {
+  const isValidIcon = /^[A-Z0-9λ]+$/.test(guild.icon);
   return (
     <span
       aria-hidden="true"
       style={{
         display: "grid",
         width: `${size}px`,
-        height: `${Math.max(44, Math.round(size * 0.88))}px`,
+        height: `${size}px`,
         placeItems: "center",
         border: `2px solid ${guild.color}`,
         background: `radial-gradient(circle at 50% 20%, ${guild.color}36, rgba(0,0,0,0.78) 62%)`,
@@ -480,9 +481,23 @@ function GuildMark({ guild, size }: { guild: GuildMaster; size: number }) {
         fontSize: `${Math.max(0.76, size / 44)}rem`,
         lineHeight: 1,
         textShadow: `0 0 12px ${guild.color}`,
+        overflow: "hidden",
       }}
     >
-      {guild.icon}
+      {isValidIcon ? (
+        <img
+          src={`/guild-icons/${guild.icon}.png`}
+          alt={`${guild.name} icon`}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            imageRendering: "pixelated",
+          }}
+        />
+      ) : (
+        <span>{guild.icon}</span>
+      )}
     </span>
   );
 }

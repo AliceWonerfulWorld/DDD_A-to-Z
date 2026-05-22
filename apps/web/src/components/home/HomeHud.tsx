@@ -171,6 +171,7 @@ function TitleButton({ onClick }: { onClick: () => void }) {
 }
 
 function GuildEmblem({ accent, icon }: { accent: string; icon: string }) {
+  const isValidIcon = /^[A-Z0-9λ]+$/.test(icon);
   return (
     <div
       aria-hidden="true"
@@ -190,9 +191,23 @@ function GuildEmblem({ accent, icon }: { accent: string; icon: string }) {
         fontSize: "1rem",
         lineHeight: 1,
         textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+        overflow: "hidden",
       }}
     >
-      {icon}
+      {isValidIcon ? (
+        <img
+          src={`/guild-icons/${icon}.png`}
+          alt="Guild icon"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            imageRendering: "pixelated",
+          }}
+        />
+      ) : (
+        <span>{icon}</span>
+      )}
     </div>
   );
 }
