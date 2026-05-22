@@ -20,6 +20,8 @@
             pkgs.buf
             pkgs.docker
             pkgs.docker-compose
+            pkgs.elixir
+            pkgs.erlang
             pkgs.git
             pkgs.golangci-lint
             pkgs.nodejs_24

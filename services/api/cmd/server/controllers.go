@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	authapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/auth"
+	chatapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/chat"
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	githubapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/github"
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
@@ -36,6 +37,7 @@ type controllerSet struct {
 	analysis   *httpapi.AnalysisController
 	home       *httpapi.HomeController
 	sp         *httpapi.SPController
+	chat       *httpapi.ChatController
 }
 
 func (c controllerSet) registrars() []httpapi.RouteRegistrar {
@@ -49,6 +51,7 @@ func (c controllerSet) registrars() []httpapi.RouteRegistrar {
 		c.analysis,
 		c.home,
 		c.sp,
+		c.chat,
 	}
 }
 
@@ -76,6 +79,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		return controllerSet{}, connectHandlerSet{}, err
 	}
 	guildTownStore := postgres.NewGuildTownStore(db)
+	chatStore := postgres.NewChatStore(db, guildStore)
 
 	authUseCase := authapp.NewUseCase(
 		oauthClient,
@@ -136,6 +140,12 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		cpManager,
 		cpManager,
 	)
+	chatUseCase := chatapp.NewUseCase(
+		authStore,
+		chatStore,
+		security.NewSecureTokenGenerator(),
+		security.NewSHA256Hasher(),
+	)
 
 	return controllerSet{
 			auth: httpapi.NewAuthController(
@@ -153,6 +163,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 			analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), logger),
 			home:       httpapi.NewHomeController(homeUseCase, logger),
 			sp:         httpapi.NewSPController(spUseCase, logger),
+			chat:       httpapi.NewChatController(chatUseCase, logger),
 		},
 		connectHandlerSet{
 			home: connectapi.NewHomeHandler(homeUseCase),

@@ -1,17 +1,25 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { steppedEase } from "../../lib/animationUtils";
+import type { Channel } from "phoenix";
+import type { GuildChatMessage } from "../api";
+import { steppedEase } from "../../../lib/animationUtils";
 import { ChatComposer } from "./ChatComposer";
 import { ChatMessageList } from "./ChatMessageList";
-import type { GuildChatMessage } from "./chatData";
 
 interface GuildChatOverlayProps {
   isOpen: boolean;
   messages: GuildChatMessage[];
+  channel: Channel | null;
   onExpand: () => void;
   onClose: () => void;
 }
 
-export function GuildChatOverlay({ isOpen, messages, onExpand, onClose }: GuildChatOverlayProps) {
+export function GuildChatOverlay({
+  isOpen,
+  messages,
+  channel,
+  onExpand,
+  onClose,
+}: GuildChatOverlayProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -105,7 +113,7 @@ export function GuildChatOverlay({ isOpen, messages, onExpand, onClose }: GuildC
           </header>
 
           <ChatMessageList messages={messages} dense />
-          <ChatComposer />
+          <ChatComposer channel={channel} />
         </motion.aside>
       )}
     </AnimatePresence>

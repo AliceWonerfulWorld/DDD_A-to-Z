@@ -25,6 +25,12 @@
       "skillPath": "skills/cloud/cloud-sql-basics/SKILL.md",
       "computedHash": "09cfa905a960ef0c416d57fb7830cafeec554d8093341861abbdf2f9f36c440c"
     },
+    "elixir": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "elixir/SKILL.md",
+      "computedHash": "b8f9a58fc110ab05a805a1c4a82d3aeddaa8a739acee267bf0b7ec6f75002e8b"
+    },
     "firebase-basics": {
       "source": "google/skills",
       "sourceType": "github",

@@ -7,18 +7,28 @@ import {
   fetchMyGuild,
   type GuildActivityLog,
 } from "../../features/guild/api";
-import { toDisplayGuild, type DisplayGuild } from "../../features/guild/presentation";
-import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
+import { connectChat, type GuildChatMessage } from "../../features/chat/api";
+import type { ChatConnection } from "../../features/chat/api";
+import {
+  toDisplayGuild,
+  type DisplayGuild,
+} from "../../features/guild/presentation";
+import {
+  BACK_NAVIGATION_SE_SRC,
+  useBackNavigationSe,
+} from "../../hooks/useBackNavigationSe";
 import { steppedEase } from "../../lib/animationUtils";
 import { PATHS } from "../../constants/paths";
-import { GUILD_CHAT_MESSAGES } from "./chatData";
-import { GuildChatExpandedModal } from "./GuildChatExpandedModal";
-import { GuildChatOverlay } from "./GuildChatOverlay";
+import { GuildChatExpandedModal } from "../../features/chat/components/GuildChatExpandedModal";
+import { GuildChatOverlay } from "../../features/chat/components/GuildChatOverlay";
 import { DashboardMonitor } from "./DashboardMonitor";
 import { GUILD_TABS, INITIAL_LOGS } from "./data";
 import { GuildBadge } from "./GuildBadge";
 import { GuildNavigation } from "./GuildNavigation";
 import type { ActivityLog, GuildTab } from "./types";
+
+const CHAT_SERVICE_URL =
+  import.meta.env.VITE_CHAT_SERVICE_URL ?? "ws://localhost:4000";
 
 interface GuildDashboardProps {
   onNavigate: (path: string) => void;
@@ -50,7 +60,10 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
   );
   const [currentGuild, setCurrentGuild] = useState<DisplayGuild | null>(null);
   const [isCurrentGuildLoaded, setIsCurrentGuildLoaded] = useState(false);
-  const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
+  const [chatMessages, setChatMessages] = useState<GuildChatMessage[]>([]);
+  const chatConnectionRef = useRef<ChatConnection | null>(null);
+  const { backNavigationSeRef, navigateBackWithSe } =
+    useBackNavigationSe(onNavigate);
   const tabSwitchSeRef = useRef<HTMLAudioElement | null>(null);
 
   const playTabSwitchSe = useCallback(() => {
@@ -59,7 +72,10 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
       return;
     }
 
-    if (audio.preload === "none" && audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+    if (
+      audio.preload === "none" &&
+      audio.readyState === HTMLMediaElement.HAVE_NOTHING
+    ) {
       audio.load();
     }
 
@@ -114,11 +130,56 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
   }, [onNavigate]);
 
   useEffect(() => {
-    // DEV環境ではAPIを叩かずINITIAL_LOGSをそのまま表示する
-    if (import.meta.env.DEV) {
+    if (!currentGuild) {
       return;
     }
 
+    let isMounted = true;
+
+    const startChat = async () => {
+      try {
+        const connection = await connectChat(
+          currentGuild.id,
+          CHAT_SERVICE_URL,
+          (msg) => {
+            if (isMounted) {
+              setChatMessages((prev) => [...prev, msg]);
+            }
+          },
+          (msgs) => {
+            if (isMounted) {
+              setChatMessages(msgs);
+            }
+          },
+          (reason) => {
+            if (isMounted) {
+              console.error("chat join error", reason);
+            }
+          },
+        );
+        if (isMounted) {
+          chatConnectionRef.current = connection;
+        } else {
+          connection.disconnect();
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("failed to connect to chat", error);
+        }
+      }
+    };
+
+    void startChat();
+
+    return () => {
+      isMounted = false;
+      chatConnectionRef.current?.disconnect();
+      chatConnectionRef.current = null;
+      setChatMessages([]);
+    };
+  }, [currentGuild]);
+
+  useEffect(() => {
     if (!currentGuild || activeTab !== "activity") {
       return;
     }
@@ -154,7 +215,6 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
       }
     };
   }, [activeTab, currentGuild]);
-
 
   return (
     <main
@@ -224,10 +284,16 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
         transition={{ delay: 0.14, duration: 0.28, ease: steppedEase(5) }}
         whileHover={{ y: -2, scale: 1.02 }}
         whileTap={{ y: 1, scale: 0.98 }}
-        onClick={() => setChatView((current) => (current === "closed" ? "compact" : "closed"))}
+        onClick={() =>
+          setChatView((current) =>
+            current === "closed" ? "compact" : "closed",
+          )
+        }
         aria-expanded={chatView !== "closed"}
         aria-controls={
-          chatView === "expanded" ? "guild-chat-expanded-title" : "guild-chat-overlay-title"
+          chatView === "expanded"
+            ? "guild-chat-expanded-title"
+            : "guild-chat-overlay-title"
         }
         style={{
           position: "fixed",
@@ -254,13 +320,15 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
       </motion.button>
       <GuildChatOverlay
         isOpen={chatView === "compact"}
-        messages={GUILD_CHAT_MESSAGES.slice(-4)}
+        messages={chatMessages.slice(-4)}
+        channel={chatConnectionRef.current?.channel ?? null}
         onExpand={() => setChatView("expanded")}
         onClose={() => setChatView("closed")}
       />
       <GuildChatExpandedModal
         isOpen={chatView === "expanded"}
-        messages={GUILD_CHAT_MESSAGES}
+        messages={chatMessages}
+        channel={chatConnectionRef.current?.channel ?? null}
         onMinimize={() => setChatView("compact")}
         onClose={() => setChatView("closed")}
       />

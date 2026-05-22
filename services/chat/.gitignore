@@ -1,0 +1,7 @@
+/_build/
+/deps/
+/.elixir_ls/
+*.ez
+erl_crash.dump
+.env
+dev-chat-test.js

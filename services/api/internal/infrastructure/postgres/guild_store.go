@@ -169,6 +169,60 @@ func (s *GuildStore) FindActiveMembershipByUserID(ctx context.Context, userID us
 	return membership, true, nil
 }
 
+func (s *GuildStore) FindMembershipByUserAndGuild(ctx context.Context, userID user.ID, guildID guilddomain.ID) (guilddomain.MembershipWithGuild, bool, error) {
+	var record guildMembershipWithGuildRecord
+	result := s.db.WithContext(ctx).Raw(`
+		SELECT
+			gm.id AS membership_id,
+			gm.user_id,
+			gm.guild_id,
+			gm.joined_at,
+			gm.left_at,
+			gm.created_at AS membership_created_at,
+			gm.updated_at AS membership_updated_at,
+			g.id,
+			g.slug,
+			g.name,
+			g.description,
+			g.icon,
+			g.color,
+			g.sort_order,
+			g.created_at,
+			g.updated_at,
+			COALESCE(active_gm.member_count, 0) AS member_count,
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
+		FROM guild_memberships gm
+		JOIN guilds g ON g.id = gm.guild_id
+		LEFT JOIN (
+			SELECT guild_id, COUNT(*) AS member_count
+			FROM guild_memberships
+			WHERE left_at IS NULL
+			GROUP BY guild_id
+		) active_gm ON active_gm.guild_id = g.id
+		LEFT JOIN (
+			SELECT guild_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id
+		) gcc ON gcc.guild_id = g.id
+		WHERE gm.user_id = ?
+			AND gm.guild_id = ?
+			AND gm.left_at IS NULL
+	`, userID, guildID).Scan(&record)
+	if result.Error != nil {
+		return guilddomain.MembershipWithGuild{}, false, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return guilddomain.MembershipWithGuild{}, false, nil
+	}
+
+	membership, err := record.toDomain()
+	if err != nil {
+		return guilddomain.MembershipWithGuild{}, false, err
+	}
+
+	return membership, true, nil
+}
+
 func (s *GuildStore) ListActiveMembersByGuild(ctx context.Context, guildID guilddomain.ID) ([]guilddomain.MemberContribution, error) {
 	var records []guildMemberContributionRecord
 	if err := s.db.WithContext(ctx).Raw(`
