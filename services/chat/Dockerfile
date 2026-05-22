@@ -13,8 +13,10 @@ RUN MIX_ENV=prod mix compile && MIX_ENV=prod mix release
 FROM debian:bullseye-slim AS runtime
 
 RUN apt-get update && \
-    apt-get install -y libstdc++6 openssl libncurses5 locales && \
+    apt-get install -y ca-certificates libstdc++6 openssl libncurses5 locales && \
     rm -rf /var/lib/apt/lists/*
+
+ENV LANG=C.UTF-8
 
 WORKDIR /app
 
