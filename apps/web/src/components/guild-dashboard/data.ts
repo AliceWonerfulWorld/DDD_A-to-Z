@@ -68,6 +68,35 @@ export const GUILD_TABS: { id: GuildTab; label: string }[] = [
   { id: "rankings", label: "RANKINGS" },
 ];
 
+const PLAYERS = [
+  "UO!",
+  "TypeSmith",
+  "PixelNinja",
+  "NullMage",
+  "LoopKnight",
+  "AsyncRogue",
+  "CacheWizard",
+  "BugSlayer",
+];
+
+const LOG_ACTIONS = [
+  {
+    action: "Commit: 新機能を実装しました",
+    cp: 100,
+    tone: "#ffd966",
+  },
+  {
+    action: "PR: 機能を改善しました",
+    cp: 150,
+    tone: "#74f7a1",
+  },
+  {
+    action: "Commit: バグを修正しました",
+    cp: 80,
+    tone: "#ff9b9b",
+  },
+];
+
 export function createLog(id: number): ActivityLog {
   const player = PLAYERS[Math.floor(Math.random() * PLAYERS.length)];
   const log = LOG_ACTIONS[Math.floor(Math.random() * LOG_ACTIONS.length)];

@@ -167,6 +167,11 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
   }, [currentGuild]);
 
   useEffect(() => {
+    // DEV環境ではAPIを叩かずINITIAL_LOGSをそのまま表示する
+    if (import.meta.env.DEV) {
+      return;
+    }
+
     if (!currentGuild || activeTab !== "activity") {
       return;
     }
