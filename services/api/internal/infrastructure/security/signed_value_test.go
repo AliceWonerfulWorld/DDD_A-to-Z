@@ -3,7 +3,6 @@ package security
 import (
 	"context"
 	"errors"
-	"os/exec"
 	"testing"
 	"time"
 )
@@ -29,8 +28,6 @@ func (m contextCheckingTextMixer) Mix(ctx context.Context, input string, _ strin
 }
 
 func TestSignedValueCodecVerify(t *testing.T) {
-	requireAwkCommand(t)
-
 	t.Run("署名付き値を検証できる", func(t *testing.T) {
 		codec := NewSignedValueCodec("test-secret")
 		expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
@@ -51,8 +48,6 @@ func TestSignedValueCodecVerify(t *testing.T) {
 }
 
 func TestSignedValueCodecRejectsExpiredValue(t *testing.T) {
-	requireAwkCommand(t)
-
 	t.Run("期限切れの署名付き値を拒否する", func(t *testing.T) {
 		codec := NewSignedValueCodec("test-secret")
 		expiresAt := time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC)
@@ -83,21 +78,38 @@ func TestSignedValueCodecPassesContextToMixer(t *testing.T) {
 	}
 }
 
-func TestSignedValueCodecVerifiesLegacySignature(t *testing.T) {
-	requireAwkCommand(t)
-
-	legacyCodec := NewSignedValueCodecWithMixer("test-secret", nil)
-	codec := NewSignedValueCodec("test-secret")
+func TestSignedValueCodecWithMixerVerifiesDefaultSignature(t *testing.T) {
+	defaultCodec := NewSignedValueCodec("test-secret")
+	mixedCodec := NewSignedValueCodecWithMixer("test-secret", contextCheckingTextMixer{want: context.Background()})
 	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
 
-	signedValue, err := legacyCodec.Sign("state-token", expiresAt)
+	signedValue, err := defaultCodec.Sign("state-token", expiresAt)
 	if err != nil {
-		t.Fatalf("legacy Sign がエラーを返しました: %v", err)
+		t.Fatalf("default Sign がエラーを返しました: %v", err)
+	}
+
+	got, err := mixedCodec.Verify(signedValue, time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Verify が default signature でエラーを返しました: %v", err)
+	}
+	if got != "state-token" {
+		t.Fatalf("Verify の戻り値 = %q, 期待値 state-token", got)
+	}
+}
+
+func TestSignedValueCodecVerifiesMixedSignature(t *testing.T) {
+	mixer := contextCheckingTextMixer{want: context.Background()}
+	codec := NewSignedValueCodecWithMixer("test-secret", mixer)
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	signedValue, err := codec.Sign("state-token", expiresAt)
+	if err != nil {
+		t.Fatalf("Sign がエラーを返しました: %v", err)
 	}
 
 	got, err := codec.Verify(signedValue, time.Date(2026, 5, 12, 12, 0, 0, 0, time.UTC))
 	if err != nil {
-		t.Fatalf("Verify が legacy signature でエラーを返しました: %v", err)
+		t.Fatalf("Verify が mixed signature でエラーを返しました: %v", err)
 	}
 	if got != "state-token" {
 		t.Fatalf("Verify の戻り値 = %q, 期待値 state-token", got)
@@ -105,7 +117,7 @@ func TestSignedValueCodecVerifiesLegacySignature(t *testing.T) {
 }
 
 func TestSignedValueCodecVerifiesLegacySignatureWhenMixerFails(t *testing.T) {
-	legacyCodec := NewSignedValueCodecWithMixer("test-secret", nil)
+	legacyCodec := NewSignedValueCodec("test-secret")
 	codec := NewSignedValueCodecWithMixer("test-secret", failingTextMixer{})
 	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
 
@@ -129,13 +141,5 @@ func TestSignedValueCodecReturnsMixerError(t *testing.T) {
 
 	if _, err := codec.Sign("state-token", expiresAt); err == nil {
 		t.Fatal("Sign のエラー = nil, 期待値 mixer error")
-	}
-}
-
-func requireAwkCommand(t *testing.T) {
-	t.Helper()
-
-	if _, err := exec.LookPath("awk"); err != nil {
-		t.Skip("awk command is not available")
 	}
 }

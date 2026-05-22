@@ -24,7 +24,7 @@ type signedValuePayload struct {
 }
 
 func NewSignedValueCodec(secret string) *SignedValueCodec {
-	return NewSignedValueCodecWithMixer(secret, NewAwkTextMixer())
+	return NewSignedValueCodecWithMixer(secret, nil)
 }
 
 func NewSignedValueCodecWithMixer(secret string, mixer TextMixer) *SignedValueCodec {
