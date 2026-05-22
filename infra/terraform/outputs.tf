@@ -35,7 +35,17 @@ output "cloud_run_url" {
   value       = google_cloud_run_v2_service.api.uri
 }
 
+output "chat_service_url" {
+  description = "デプロイ後の Chat Service エンドポイント URL"
+  value       = google_cloud_run_v2_service.chat_service.uri
+}
+
 output "artifact_registry_repo" {
   description = "docker push の宛先（タグなし）"
   value       = "${var.region}-docker.pkg.dev/${var.project_id}/lang-war/api"
+}
+
+output "chat_artifact_registry_repo" {
+  description = "chat-service docker push の宛先（タグなし）"
+  value       = "${var.region}-docker.pkg.dev/${var.project_id}/lang-war/chat-service"
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # GCP Secret Manager にシークレットを登録するスクリプト
 # terraform apply でリソースのセットアップが済んでいることが前提
+# シークレットは課金を防ぐために6つに絞ってください
 #
 # 設定値はプロジェクトルートの .env.prod から読み込む。必須変数:
 #   GCP_PROJECT_ID          — GCP プロジェクト ID
@@ -8,7 +9,7 @@
 #   GITHUB_CLIENT_ID        — GitHub OAuth App Client ID
 #   GITHUB_CLIENT_SECRET    — GitHub OAuth App Client Secret
 #   GITHUB_REDIRECT_URL     — GitHub OAuth callback URL
-#   AUTH_COOKIE_SECRET      — OAuth state cookie 署名用 secret
+#   AUTH_COOKIE_SECRET      — OAuth state cookie 署名用 secret（Chat Service の SECRET_KEY_BASE としても使うため64 bytes以上）
 #   GITHUB_TOKEN_ENCRYPTION_SECRET — GitHub token 暗号化用 secret
 #
 # 使い方:
@@ -66,6 +67,13 @@ missing=""
 if [ -n "${missing}" ]; then
   echo "Error: ${ENV_FILE} に以下の変数が設定されていません:"
   printf '%b' "${missing}"
+  exit 1
+fi
+
+auth_cookie_secret_bytes="$(printf '%s' "${AUTH_COOKIE_SECRET}" | wc -c | tr -d ' ')"
+if [ "${auth_cookie_secret_bytes}" -lt 64 ]; then
+  echo "Error: AUTH_COOKIE_SECRET は64 bytes以上にしてください。現在: ${auth_cookie_secret_bytes} bytes"
+  echo "Chat Service の SECRET_KEY_BASE としても使うため、例: openssl rand -base64 64"
   exit 1
 fi
 
@@ -157,5 +165,5 @@ echo ""
 gcloud secrets list --project="${PROJECT_ID}" --filter="name:lang-war-" --format="table(name,createTime)"
 echo ""
 echo "Cloud Run は --set-secrets フラグでこれらを参照します。"
-echo "deploy.yml の設定は変更不要です。"
+echo "deploy.yml は Secret Manager の latest version を参照します。"
 echo ""

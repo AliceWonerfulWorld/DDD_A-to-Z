@@ -31,3 +31,9 @@ variable "github_repo" {
   type        = string
   # Workload Identity Federation でこのリポジトリからのみ GCP 操作を許可するために使う
 }
+
+variable "chat_allowed_origin" {
+  description = "Chat Service の WebSocket 接続を許可する frontend origin"
+  type        = string
+  default     = "https://ddd-a-to-z-web.vercel.app"
+}

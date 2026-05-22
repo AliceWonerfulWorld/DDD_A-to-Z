@@ -67,8 +67,11 @@ cp .env.prod.example .env.prod
 | `GITHUB_CLIENT_ID` | GitHub OAuth App の Client ID |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth App の Client Secret |
 | `GITHUB_REDIRECT_URL` | GitHub OAuth callback URL |
-| `AUTH_COOKIE_SECRET` | OAuth state cookie 署名用 secret |
+| `AUTH_COOKIE_SECRET` | OAuth state cookie 署名用 secret。Chat Service の `SECRET_KEY_BASE` としても使うため64 bytes以上 |
 | `GITHUB_TOKEN_ENCRYPTION_SECRET` | GitHub token 暗号化用 secret |
+
+Chat Service の `SECRET_KEY_BASE` は Secret Manager の数を増やさないため、既存の `AUTH_COOKIE_SECRET` を流用する。Phoenix の本番起動要件に合わせて、`AUTH_COOKIE_SECRET` は64 bytes以上にする。
+`CHAT_ALLOWED_ORIGIN` は秘密情報ではないため、Terraform 変数 `chat_allowed_origin` と deploy workflow の通常環境変数で管理する。
 
 ### 手順
 
@@ -100,7 +103,9 @@ Outputs:
 workload_identity_provider = "projects/123.../providers/github-actions-provider"
 service_account_email      = "lang-war-deploy@PROJECT_ID.iam.gserviceaccount.com"
 cloud_run_url              = "https://lang-war-api-xxxx-an.a.run.app"
+chat_service_url           = "https://chat-service-xxxx-an.a.run.app"
 artifact_registry_repo     = "asia-northeast1-docker.pkg.dev/PROJECT_ID/lang-war/api"
+chat_artifact_registry_repo = "asia-northeast1-docker.pkg.dev/PROJECT_ID/lang-war/chat-service"
 ```
 
 **3. GitHub にシークレットと変数を登録**

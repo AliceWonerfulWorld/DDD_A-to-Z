@@ -32,8 +32,33 @@ locals {
   # 初回 tofu apply 時はまだ Artifact Registry にイメージがないため placeholder を使う。
   # main に push した時に deploy.yml が実際のイメージに差し替える。
   image = "us-docker.pkg.dev/cloudrun/container/hello:latest"
+
+  # 環境変数の定義。キーがアプリ内での環境変数名、値が Secret Manager のシークレット名。
+  api_secret_envs = {
+    DATABASE_URL                   = "lang-war-database-url"
+    GITHUB_CLIENT_ID               = "lang-war-github-client-id"
+    GITHUB_CLIENT_SECRET           = "lang-war-github-client-secret"
+    GITHUB_REDIRECT_URL            = "lang-war-github-redirect-url"
+    AUTH_COOKIE_SECRET             = "lang-war-auth-cookie-secret"
+    GITHUB_TOKEN_ENCRYPTION_SECRET = "lang-war-github-token-encryption-secret"
+  }
+
+  api_plain_envs = {
+    AUTH_COOKIE_SECURE = "true"
+    FRONTEND_URL       = "https://ddd-a-to-z-web.vercel.app/"
+  }
+
+  chat_secret_envs = {
+    DATABASE_URL    = "lang-war-database-url"
+    SECRET_KEY_BASE = "lang-war-auth-cookie-secret"
+  }
+
+  chat_plain_envs = {
+    ALLOWED_ORIGIN = var.chat_allowed_origin
+  }
 }
 
+# Go API サービス
 resource "google_cloud_run_v2_service" "api" {
   project  = var.project_id
   name     = "lang-war-api"
@@ -70,63 +95,27 @@ resource "google_cloud_run_v2_service" "api" {
       # 値は起動時に Secret Manager から自動取得されるため、
       # コードや設定ファイルに平文で書く必要がない
 
-      env {
-        name = "DATABASE_URL"
-        value_source {
-          secret_key_ref {
-            secret  = "lang-war-database-url"
-            version = "latest" # 常に最新バージョンを参照
+      dynamic "env" {
+        for_each = local.api_secret_envs
+
+        content {
+          name = env.key
+
+          value_source {
+            secret_key_ref {
+              secret  = env.value
+              version = "latest"
+            }
           }
         }
       }
 
-      env {
-        name = "GITHUB_CLIENT_ID"
-        value_source {
-          secret_key_ref {
-            secret  = "lang-war-github-client-id"
-            version = "latest"
-          }
-        }
-      }
+      dynamic "env" {
+        for_each = local.api_plain_envs
 
-      env {
-        name = "GITHUB_CLIENT_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = "lang-war-github-client-secret"
-            version = "latest"
-          }
-        }
-      }
-
-      env {
-        name = "GITHUB_REDIRECT_URL"
-        value_source {
-          secret_key_ref {
-            secret  = "lang-war-github-redirect-url"
-            version = "latest"
-          }
-        }
-      }
-
-      env {
-        name = "AUTH_COOKIE_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = "lang-war-auth-cookie-secret"
-            version = "latest"
-          }
-        }
-      }
-
-      env {
-        name = "GITHUB_TOKEN_ENCRYPTION_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = "lang-war-github-token-encryption-secret"
-            version = "latest"
-          }
+        content {
+          name  = env.key
+          value = env.value
         }
       }
     }
@@ -161,6 +150,86 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.api.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+# Elixir チャットサービス
+resource "google_cloud_run_v2_service" "chat_service" {
+  project  = var.project_id
+  name     = "chat-service"
+  location = var.region
+
+  deletion_protection = false
+
+  template {
+    service_account = google_service_account.cloud_run.email
+
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 1
+    }
+
+    containers {
+      image = local.image
+
+      ports {
+        container_port = 4000 # Phoenix が listen するポート
+      }
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = "512Mi"
+        }
+      }
+
+      dynamic "env" {
+        for_each = local.chat_secret_envs
+
+        content {
+          name = env.key
+
+          value_source {
+            secret_key_ref {
+              secret  = env.value
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      dynamic "env" {
+        for_each = local.chat_plain_envs
+
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+    }
+
+    # WebSocket 接続も Cloud Run では request として扱われるため、最大値まで伸ばす。
+    timeout = "3600s"
+  }
+
+  depends_on = [
+    google_artifact_registry_repository.api,
+    google_secret_manager_secret.secrets,
+  ]
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      scaling,
+    ]
+  }
+}
+
+resource "google_cloud_run_v2_service_iam_member" "chat_service_public" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.chat_service.name
   role     = "roles/run.invoker"
   member   = "allUsers"
 }

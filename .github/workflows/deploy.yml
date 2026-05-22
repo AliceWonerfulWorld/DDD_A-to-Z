@@ -12,6 +12,7 @@ on:
     paths:
       - ".github/workflows/deploy.yml"
       - "services/api/**"
+      - "services/chat/**"
       - "proto/**"
       - "gen/go/**"
       - "db/**"
@@ -21,8 +22,12 @@ on:
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   GCP_REGION: asia-northeast1
+  FRONTEND_URL: https://ddd-a-to-z-web.vercel.app/
   CLOUD_RUN_SERVICE: lang-war-api
   IMAGE: asia-northeast1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/lang-war/api
+  CHAT_CLOUD_RUN_SERVICE: chat-service
+  CHAT_IMAGE: asia-northeast1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/lang-war/chat-service
+  CHAT_ALLOWED_ORIGIN: https://ddd-a-to-z-web.vercel.app
 
 jobs:
   deploy:
@@ -65,6 +70,29 @@ jobs:
           docker push ${{ env.IMAGE }}:${{ github.sha }}
           docker push ${{ env.IMAGE }}:latest
 
+      - name: Build and push Chat Service Docker image
+        run: |
+          docker build \
+            -f services/chat/Dockerfile \
+            -t ${{ env.CHAT_IMAGE }}:${{ github.sha }} \
+            -t ${{ env.CHAT_IMAGE }}:latest \
+            services/chat
+
+          docker push ${{ env.CHAT_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.CHAT_IMAGE }}:latest
+
+      - name: Validate Chat Service secret length
+        run: |
+          secret_bytes="$(gcloud secrets versions access latest \
+            --secret=lang-war-auth-cookie-secret \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            | wc -c | tr -d ' ')"
+
+          if [ "${secret_bytes}" -lt 64 ]; then
+            echo "lang-war-auth-cookie-secret must be at least 64 bytes because Chat Service uses it as SECRET_KEY_BASE. Current: ${secret_bytes} bytes"
+            exit 1
+          fi
+
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
@@ -73,10 +101,26 @@ jobs:
             --platform=managed \
             --allow-unauthenticated \
             --set-secrets="DATABASE_URL=lang-war-database-url:latest,GITHUB_CLIENT_ID=lang-war-github-client-id:latest,GITHUB_CLIENT_SECRET=lang-war-github-client-secret:latest,GITHUB_REDIRECT_URL=lang-war-github-redirect-url:latest,AUTH_COOKIE_SECRET=lang-war-auth-cookie-secret:latest,GITHUB_TOKEN_ENCRYPTION_SECRET=lang-war-github-token-encryption-secret:latest" \
-            --set-env-vars="FRONTEND_URL=https://ddd-a-to-z-web.vercel.app,AUTH_COOKIE_SECURE=true" \
+            --set-env-vars="FRONTEND_URL=${{ env.FRONTEND_URL }},AUTH_COOKIE_SECURE=true" \
             --port=8080 \
             --min-instances=0 \
             --max-instances=10 \
             --memory=512Mi \
             --cpu=1 \
             --timeout=30
+
+      - name: Deploy Chat Service to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.CHAT_CLOUD_RUN_SERVICE }} \
+            --image=${{ env.CHAT_IMAGE }}:${{ github.sha }} \
+            --region=${{ env.GCP_REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --set-secrets="DATABASE_URL=lang-war-database-url:latest,SECRET_KEY_BASE=lang-war-auth-cookie-secret:latest" \
+            --set-env-vars="ALLOWED_ORIGIN=${{ env.CHAT_ALLOWED_ORIGIN }}" \
+            --port=4000 \
+            --min-instances=0 \
+            --max-instances=1 \
+            --memory=512Mi \
+            --cpu=1 \
+            --timeout=3600
