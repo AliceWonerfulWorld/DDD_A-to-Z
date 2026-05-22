@@ -8,8 +8,11 @@ interface GuildBadgeProps {
 }
 
 export function GuildBadge({ guild, isLoading }: GuildBadgeProps) {
-  const icon = isLoading ? "..." : (guild?.icon ?? "--");
-  const name = isLoading ? "SYNCING..." : guild ? `${guild.name} Guild` : "NO GUILD";
+  const name = isLoading
+    ? "SYNCING..."
+    : guild
+      ? `${guild.name} Guild`
+      : "NO GUILD";
   const accent = guild?.accent ?? "#9be7ff";
   const color = guild?.color ?? "#00f5ff";
 
@@ -52,13 +55,36 @@ export function GuildBadge({ guild, isLoading }: GuildBadgeProps) {
           borderRightColor: "#035a72",
           background:
             "linear-gradient(135deg, rgba(0,245,255,0.28), rgba(255,217,102,0.16)), #061326",
-          boxShadow: "inset 0 0 16px rgba(0,245,255,0.22), 3px 3px 0 rgba(0,0,0,0.42)",
+          boxShadow:
+            "inset 0 0 16px rgba(0,245,255,0.22), 3px 3px 0 rgba(0,0,0,0.42)",
           color: accent,
           fontSize: "1.55rem",
           lineHeight: 1,
+          overflow: "hidden",
         }}
       >
-        {icon}
+        {isLoading ? (
+          <span>...</span>
+        ) : guild?.icon && /^[A-Z0-9λ]+$/.test(guild.icon) ? (
+          <img
+            src={`/guild-icons/${guild.icon}.png`}
+            alt={`${guild.name} icon`}
+            onError={(e) => {
+              console.error(
+                `Failed to load guild icon: /guild-icons/${guild.icon}.png`,
+              );
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              imageRendering: "pixelated",
+            }}
+          />
+        ) : (
+          <span>--</span>
+        )}
       </div>
       <div style={{ minWidth: 0 }}>
         <span

@@ -1,14 +1,5 @@
 import { motion } from "framer-motion";
-
-const GUILDS = [
-  { name: "Rust", color: "#ff6b35", icon: "🦀" },
-  { name: "Python", color: "#3776ab", icon: "🐍" },
-  { name: "Go", color: "#00acd7", icon: "🐹" },
-  { name: "TypeScript", color: "#3178c6", icon: "📘" },
-  { name: "Java", color: "#f89820", icon: "☕" },
-  { name: "Haskell", color: "#5d4f85", icon: "λ" },
-  { name: "Zig", color: "#f7a41d", icon: "⚡" },
-] as const;
+import { GUILD_MASTERS } from "../../features/guild/guildMaster";
 
 export function GuildPreviewList() {
   return (
@@ -20,9 +11,9 @@ export function GuildPreviewList() {
         justifyContent: "center",
       }}
     >
-      {GUILDS.map((guild, i) => (
+      {GUILD_MASTERS.map((guild, i) => (
         <motion.div
-          key={guild.name}
+          key={guild.id}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.8 + i * 0.08, duration: 0.4 }}
@@ -57,17 +48,33 @@ export function GuildPreviewList() {
               boxShadow: `0 0 10px ${guild.color}`,
             }}
           />
-          <span
-            style={{
-              position: "relative",
-              zIndex: 1,
-              fontSize: "2rem",
-              lineHeight: 1,
-              filter: `drop-shadow(0 2px 0 rgba(0,0,0,0.9)) drop-shadow(0 0 10px ${guild.color}55)`,
-            }}
-          >
-            {guild.icon}
-          </span>
+          {/^[A-Z0-9λ]+$/.test(guild.icon) ? (
+            <img
+              src={`/guild-icons/${guild.icon}.png`}
+              alt={`${guild.name} guild icon`}
+              style={{
+                position: "relative",
+                zIndex: 1,
+                width: "2rem",
+                height: "2rem",
+                objectFit: "cover",
+                imageRendering: "pixelated",
+                filter: `drop-shadow(0 2px 0 rgba(0,0,0,0.9)) drop-shadow(0 0 10px ${guild.color}55)`,
+              }}
+            />
+          ) : (
+            <span
+              style={{
+                position: "relative",
+                zIndex: 1,
+                fontSize: "2rem",
+                lineHeight: 1,
+                filter: `drop-shadow(0 2px 0 rgba(0,0,0,0.9)) drop-shadow(0 0 10px ${guild.color}55)`,
+              }}
+            >
+              {guild.icon}
+            </span>
+          )}
           <span
             style={{
               position: "relative",

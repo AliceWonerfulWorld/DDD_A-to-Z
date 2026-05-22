@@ -31,7 +31,13 @@ const panelVariants: Variants = {
   },
 };
 
-function HudPanel({ align = "left", children }: { align?: "left" | "right"; children: ReactNode }) {
+function HudPanel({
+  align = "left",
+  children,
+}: {
+  align?: "left" | "right";
+  children: ReactNode;
+}) {
   return (
     <motion.section
       variants={panelVariants}
@@ -55,7 +61,13 @@ function HudPanel({ align = "left", children }: { align?: "left" | "right"; chil
   );
 }
 
-function LabelValue({ label, value }: { label: string; value: string | number }) {
+function LabelValue({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
   return (
     <div
       style={{
@@ -91,7 +103,10 @@ function LabelValue({ label, value }: { label: string; value: string | number })
 
 function ExpBar({ player }: { player: PlayerSummary }) {
   const levelRange = Math.max(1, player.nextLevelTotalCp - player.levelTotalCp);
-  const earnedInLevel = Math.max(0, player.lifetimeTotalEarnedCp - player.levelTotalCp);
+  const earnedInLevel = Math.max(
+    0,
+    player.lifetimeTotalEarnedCp - player.levelTotalCp,
+  );
   const pct = Math.min(100, Math.max(0, (earnedInLevel / levelRange) * 100));
 
   return (
@@ -171,6 +186,7 @@ function TitleButton({ onClick }: { onClick: () => void }) {
 }
 
 function GuildEmblem({ accent, icon }: { accent: string; icon: string }) {
+  const isValidIcon = /^[A-Z0-9λ]+$/.test(icon);
   return (
     <div
       aria-hidden="true"
@@ -190,14 +206,32 @@ function GuildEmblem({ accent, icon }: { accent: string; icon: string }) {
         fontSize: "1rem",
         lineHeight: 1,
         textShadow: "2px 2px 0 rgba(0,0,0,0.72)",
+        overflow: "hidden",
       }}
     >
-      {icon}
+      {isValidIcon ? (
+        <img
+          src={`/guild-icons/${icon}.png`}
+          alt="Guild icon"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            imageRendering: "pixelated",
+          }}
+        />
+      ) : (
+        <span>{icon}</span>
+      )}
     </div>
   );
 }
 
-function GuildMembership({ guild }: { guild: GuildSummary | null | undefined }) {
+function GuildMembership({
+  guild,
+}: {
+  guild: GuildSummary | null | undefined;
+}) {
   const accent = guild?.accent ?? "#f4ecd0";
   const icon = guild?.icon ?? "--";
   const name = guild === undefined ? "確認中" : (guild?.name ?? "未所属");
@@ -320,8 +354,14 @@ export function HomeHud({
           CONTRIBUTION POINT
         </div>
         <div style={{ display: "grid", gap: "6px" }}>
-          <LabelValue label="TOTAL CP" value={player.totalCp.toLocaleString()} />
-          <LabelValue label="TODAY CP" value={`+${player.todayCp.toLocaleString()}`} />
+          <LabelValue
+            label="TOTAL CP"
+            value={player.totalCp.toLocaleString()}
+          />
+          <LabelValue
+            label="TODAY CP"
+            value={`+${player.todayCp.toLocaleString()}`}
+          />
           <LabelValue
             label="EXP"
             value={`${player.lifetimeTotalEarnedCp.toLocaleString()} / ${player.nextLevelTotalCp.toLocaleString()}`}

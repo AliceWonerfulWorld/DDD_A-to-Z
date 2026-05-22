@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { PATHS } from "../../constants/paths";
-import { GUILD_MASTERS, type GuildMaster } from "../../features/guild/guildMaster";
-import { fetchGuilds, joinGuild as joinGuildAPI } from "../../features/guild/api";
+import {
+  GUILD_MASTERS,
+  type GuildMaster,
+} from "../../features/guild/guildMaster";
+import {
+  fetchGuilds,
+  joinGuild as joinGuildAPI,
+} from "../../features/guild/api";
 import { hasEverJoinedGuild } from "../../features/guild/membership";
 import { toDisplayGuilds } from "../../features/guild/presentation";
 import { ApiError } from "../../lib/api/client";
@@ -14,7 +20,9 @@ interface GuildSelectionProps {
 
 export function GuildSelection({ onNavigate }: GuildSelectionProps) {
   const [guilds, setGuilds] = useState<GuildMaster[]>(GUILD_MASTERS);
-  const [selectedGuild, setSelectedGuild] = useState<GuildMaster>(GUILD_MASTERS[0]);
+  const [selectedGuild, setSelectedGuild] = useState<GuildMaster>(
+    GUILD_MASTERS[0],
+  );
   const [isJoining, setIsJoining] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const systemMessage = hasEverJoinedGuild()
@@ -40,7 +48,9 @@ export function GuildSelection({ onNavigate }: GuildSelectionProps) {
         }
 
         console.error("failed to fetch guilds", error);
-        setStatusMessage("ギルド一覧を取得できませんでした。表示中の候補から再試行してください。");
+        setStatusMessage(
+          "ギルド一覧を取得できませんでした。表示中の候補から再試行してください。",
+        );
       });
 
     return () => {
@@ -65,7 +75,9 @@ export function GuildSelection({ onNavigate }: GuildSelectionProps) {
       }
 
       console.error("failed to join guild", error);
-      setStatusMessage("ギルド参加に失敗しました。少し時間を置いて再度お試しください。");
+      setStatusMessage(
+        "ギルド参加に失敗しました。少し時間を置いて再度お試しください。",
+      );
     } finally {
       setIsJoining(false);
     }
@@ -164,12 +176,17 @@ export function GuildSelection({ onNavigate }: GuildSelectionProps) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
             gap: "18px",
             alignItems: "stretch",
           }}
         >
-          <GuildList guilds={guilds} selectedGuild={selectedGuild} onSelect={setSelectedGuild} />
+          <GuildList
+            guilds={guilds}
+            selectedGuild={selectedGuild}
+            onSelect={setSelectedGuild}
+          />
           <GuildDetail
             guild={selectedGuild}
             isJoining={isJoining}
@@ -334,7 +351,8 @@ function GuildDetail({
         border: `3px solid ${guild.color}`,
         borderBottomColor: "rgba(20, 18, 12, 0.98)",
         borderRightColor: "rgba(20, 18, 12, 0.98)",
-        background: "linear-gradient(180deg, rgba(4, 10, 22, 0.94), rgba(0,0,0,0.88))",
+        background:
+          "linear-gradient(180deg, rgba(4, 10, 22, 0.94), rgba(0,0,0,0.88))",
         boxShadow: `0 0 0 2px rgba(0,0,0,0.76), 8px 8px 0 rgba(0,0,0,0.4), inset 0 0 30px ${guild.color}22`,
         padding: "clamp(16px, 3vw, 26px)",
         overflow: "hidden",
@@ -409,13 +427,21 @@ function GuildDetail({
           margin: "24px 0",
         }}
       >
-        <Stat label="MEMBERS" value={guild.memberCount.toLocaleString()} color={guild.color} />
+        <Stat
+          label="MEMBERS"
+          value={guild.memberCount.toLocaleString()}
+          color={guild.color}
+        />
         <Stat
           label="LAST SEASON CP"
           value={guild.previousSeasonCp.toLocaleString()}
           color={guild.color}
         />
-        <Stat label="GUILD CODE" value={guild.slug.toUpperCase()} color={guild.color} />
+        <Stat
+          label="GUILD CODE"
+          value={guild.slug.toUpperCase()}
+          color={guild.color}
+        />
       </dl>
 
       <motion.button
@@ -465,13 +491,14 @@ function GuildDetail({
 }
 
 function GuildMark({ guild, size }: { guild: GuildMaster; size: number }) {
+  const isValidIcon = /^[A-Z0-9λ]+$/.test(guild.icon);
   return (
     <span
       aria-hidden="true"
       style={{
         display: "grid",
         width: `${size}px`,
-        height: `${Math.max(44, Math.round(size * 0.88))}px`,
+        height: `${size}px`,
         placeItems: "center",
         border: `2px solid ${guild.color}`,
         background: `radial-gradient(circle at 50% 20%, ${guild.color}36, rgba(0,0,0,0.78) 62%)`,
@@ -480,14 +507,36 @@ function GuildMark({ guild, size }: { guild: GuildMaster; size: number }) {
         fontSize: `${Math.max(0.76, size / 44)}rem`,
         lineHeight: 1,
         textShadow: `0 0 12px ${guild.color}`,
+        overflow: "hidden",
       }}
     >
-      {guild.icon}
+      {isValidIcon ? (
+        <img
+          src={`/guild-icons/${guild.icon}.png`}
+          alt={`${guild.name} icon`}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            imageRendering: "pixelated",
+          }}
+        />
+      ) : (
+        <span>{guild.icon}</span>
+      )}
     </span>
   );
 }
 
-function Stat({ label, value, color }: { label: string; value: string; color: string }) {
+function Stat({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color: string;
+}) {
   return (
     <div
       style={{

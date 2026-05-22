@@ -1,5 +1,9 @@
 import type { Guild } from "./api";
-import { findGuildBySlug, GUILD_MASTERS, type GuildMaster } from "./guildMaster";
+import {
+  findGuildBySlug,
+  GUILD_MASTERS,
+  type GuildMaster,
+} from "./guildMaster";
 
 const fallbackGuildMeta = {
   accent: "#fff8d7",
@@ -17,22 +21,28 @@ export function toDisplayGuild(guild: Guild): DisplayGuild {
     slug: guild.slug,
     name: guild.name,
     description: guild.description,
-    icon: guild.icon,
+    icon: master?.icon ?? guild.icon,
     color: guild.color,
     accent: master?.accent ?? fallbackGuildMeta.accent,
     sortOrder: master?.sortOrder ?? GUILD_MASTERS.length,
     memberCount: guild.member_count,
-    previousSeasonCp: master?.previousSeasonCp ?? fallbackGuildMeta.previousSeasonCp,
+    previousSeasonCp:
+      master?.previousSeasonCp ?? fallbackGuildMeta.previousSeasonCp,
     oath: master?.oath ?? fallbackGuildMeta.oath,
-    guildExperience: guild.currentExp ?? guild.current_exp ?? guild.guild_experience ?? 0,
+    guildExperience:
+      guild.currentExp ?? guild.current_exp ?? guild.guild_experience ?? 0,
     guildLevel: guild.guildLevel ?? guild.guild_level ?? 1,
     currentGuildLevelExperience: guild.current_guild_level_experience ?? 0,
     nextGuildLevelExperience:
-      guild.next_guild_level_experience === undefined ? 5000 : guild.next_guild_level_experience,
+      guild.next_guild_level_experience === undefined
+        ? 5000
+        : guild.next_guild_level_experience,
     isMaxLevel: guild.isMaxLevel ?? guild.is_max_level ?? false,
   };
 }
 
 export function toDisplayGuilds(guilds: Guild[]): DisplayGuild[] {
-  return guilds.map(toDisplayGuild).sort((left, right) => left.sortOrder - right.sortOrder);
+  return guilds
+    .map(toDisplayGuild)
+    .sort((left, right) => left.sortOrder - right.sortOrder);
 }
