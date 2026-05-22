@@ -133,7 +133,7 @@ export function DashboardMonitor({
           <span style={{ color: "#f4ecd0", whiteSpace: "nowrap" }}>
             {isMaxGuildLevel
               ? "MAX"
-              : `${guildExperience.toLocaleString()} / ${(nextLevelExperience ?? 5000).toLocaleString()}`}
+              : `${progressInLevel.toLocaleString()} / ${levelRange.toLocaleString()}`}
           </span>
         </div>
 
