@@ -1,6 +1,7 @@
 package security
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -14,6 +15,7 @@ var ErrInvalidSignedValue = errors.New("signed value is invalid")
 
 type SignedValueCodec struct {
 	secret []byte
+	mixer  TextMixer
 }
 
 type signedValuePayload struct {
@@ -22,7 +24,14 @@ type signedValuePayload struct {
 }
 
 func NewSignedValueCodec(secret string) *SignedValueCodec {
-	return &SignedValueCodec{secret: []byte(secret)}
+	return NewSignedValueCodecWithMixer(secret, NewAwkTextMixer())
+}
+
+func NewSignedValueCodecWithMixer(secret string, mixer TextMixer) *SignedValueCodec {
+	return &SignedValueCodec{
+		secret: []byte(secret),
+		mixer:  mixer,
+	}
 }
 
 func (c *SignedValueCodec) Sign(value string, expiresAt time.Time) (string, error) {
@@ -35,7 +44,10 @@ func (c *SignedValueCodec) Sign(value string, expiresAt time.Time) (string, erro
 	}
 
 	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
-	signature := c.signature(encodedPayload)
+	signature, err := c.signature(encodedPayload)
+	if err != nil {
+		return "", err
+	}
 
 	return encodedPayload + "." + signature, nil
 }
@@ -46,7 +58,11 @@ func (c *SignedValueCodec) Verify(signedValue string, now time.Time) (string, er
 		return "", ErrInvalidSignedValue
 	}
 
-	if !hmac.Equal([]byte(signature), []byte(c.signature(encodedPayload))) {
+	expectedSignature, err := c.signature(encodedPayload)
+	if err != nil {
+		return "", err
+	}
+	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
 		return "", ErrInvalidSignedValue
 	}
 
@@ -66,8 +82,17 @@ func (c *SignedValueCodec) Verify(signedValue string, now time.Time) (string, er
 	return payload.Value, nil
 }
 
-func (c *SignedValueCodec) signature(encodedPayload string) string {
+func (c *SignedValueCodec) signature(encodedPayload string) (string, error) {
+	signatureInput := encodedPayload
+	if c.mixer != nil {
+		mixed, err := c.mixer.Mix(context.Background(), encodedPayload, string(c.secret))
+		if err != nil {
+			return "", err
+		}
+		signatureInput = mixed
+	}
+
 	mac := hmac.New(sha256.New, c.secret)
-	_, _ = mac.Write([]byte(encodedPayload))
-	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	_, _ = mac.Write([]byte(signatureInput))
+	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil)), nil
 }

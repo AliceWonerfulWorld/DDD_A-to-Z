@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o server ./services/api/cmd/server
 FROM alpine:3.21
 
 RUN addgroup -S app && adduser -S -G app app \
-  && apk --no-cache add ca-certificates tzdata
+  && apk --no-cache add ca-certificates tzdata gawk
 
 WORKDIR /app
 

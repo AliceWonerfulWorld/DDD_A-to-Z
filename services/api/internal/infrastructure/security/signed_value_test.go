@@ -1,9 +1,17 @@
 package security
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 )
+
+type failingTextMixer struct{}
+
+func (failingTextMixer) Mix(context.Context, string, string) (string, error) {
+	return "", errors.New("mixer failed")
+}
 
 func TestSignedValueCodecVerify(t *testing.T) {
 	t.Run("署名付き値を検証できる", func(t *testing.T) {
@@ -39,4 +47,13 @@ func TestSignedValueCodecRejectsExpiredValue(t *testing.T) {
 			t.Fatalf("Verify のエラー = %v, 期待値 ErrInvalidSignedValue", err)
 		}
 	})
+}
+
+func TestSignedValueCodecReturnsMixerError(t *testing.T) {
+	codec := NewSignedValueCodecWithMixer("test-secret", failingTextMixer{})
+	expiresAt := time.Date(2026, 5, 12, 12, 10, 0, 0, time.UTC)
+
+	if _, err := codec.Sign("state-token", expiresAt); err == nil {
+		t.Fatal("Sign のエラー = nil, 期待値 mixer error")
+	}
 }
