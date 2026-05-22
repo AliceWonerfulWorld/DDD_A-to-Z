@@ -16,7 +16,7 @@ import { PATHS } from "../../constants/paths";
 import { GuildChatExpandedModal } from "../../features/chat/components/GuildChatExpandedModal";
 import { GuildChatOverlay } from "../../features/chat/components/GuildChatOverlay";
 import { DashboardMonitor } from "./DashboardMonitor";
-import { GUILD_TABS } from "./data";
+import { GUILD_TABS, INITIAL_LOGS } from "./data";
 import { GuildBadge } from "./GuildBadge";
 import { GuildNavigation } from "./GuildNavigation";
 import type { ActivityLog, GuildTab } from "./types";
@@ -48,7 +48,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
   const { isSeEnabled } = useAudioSettings();
   const [activeTab, setActiveTab] = useState<GuildTab>("activity");
   const [chatView, setChatView] = useState<ChatView>("closed");
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [logs, setLogs] = useState<ActivityLog[]>(import.meta.env.DEV ? INITIAL_LOGS : []);
   const [currentGuild, setCurrentGuild] = useState<DisplayGuild | null>(null);
   const [isCurrentGuildLoaded, setIsCurrentGuildLoaded] = useState(false);
   const [chatMessages, setChatMessages] = useState<GuildChatMessage[]>([]);

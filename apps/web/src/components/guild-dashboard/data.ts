@@ -1,60 +1,45 @@
 import type { ActivityLog, GuildTab, RankingMember } from "./types";
 
-const PLAYERS = [
-  "AkiByte",
-  "NullMage",
-  "PixelNinja",
-  "LoopKnight",
-  "TypeSmith",
-  "AsyncRogue",
-  "BugSlayer",
-  "CacheWizard",
-];
-
-const LOG_ACTIONS = [
-  { action: "merged a pull request", cp: 420, tone: "#74f7a1" },
-  { action: "reviewed 3 files", cp: 180, tone: "#9be7ff" },
-  { action: "fixed a flaky test", cp: 260, tone: "#ffd966" },
-  { action: "shipped guild docs", cp: 150, tone: "#d9b8ff" },
-  { action: "closed a critical issue", cp: 540, tone: "#ff9b9b" },
-  { action: "refactored a use case", cp: 310, tone: "#74f7a1" },
-];
-
 export const INITIAL_LOGS: ActivityLog[] = [
   {
     id: "mock-1005",
-    player: "TypeSmith",
-    action: "merged a pull request",
-    cp: 420,
-    tone: "#74f7a1",
-  },
-  {
-    id: "mock-1004",
-    player: "PixelNinja",
-    action: "fixed a flaky test",
-    cp: 260,
+    player: "UO!",
+    action:
+      "Commit: feat: ログインユーザーのSP取得API(GET /me/sp)を追加 (#141) * feat: SPシステムを実装し、point_typesをcode+language複合PKに再設計 (#101) - point_typesを(code, language)複合PKに変更し、40以上の言語SPをINSERTのみで管理可能にする - PointType型をstringから{Code, Language}構造体に変更し、SPType(language)コンストラクタを追加 - リポジトリ分析でCP付与と同時に言語別SPを付与するSPEarnerインターフェースを実装 - point_types未登録言語はErrUnsupportedPointTypeで静かにスキップする",
+    cp: 840,
     tone: "#ffd966",
   },
   {
+    id: "mock-1004",
+    player: "TypeSmith",
+    action:
+      "PR: feat: GuildDashboardにリアルタイムアクティビティストリームを追加 - 10秒ポーリング・AnimatePresenceアニメーション・ActivityLogPanelコンポーネント実装 (#133)",
+    cp: 560,
+    tone: "#74f7a1",
+  },
+  {
     id: "mock-1003",
-    player: "LoopKnight",
-    action: "reviewed 3 files",
-    cp: 180,
-    tone: "#9be7ff",
+    player: "PixelNinja",
+    action:
+      "Commit: fix: ブラウザズーム時にログ行が重なるバグを修正 - alignItemsをbaselineからstartに変更、グリッドセルにminWidth:0を追加 (#144)",
+    cp: 230,
+    tone: "#ff9b9b",
   },
   {
     id: "mock-1002",
     player: "NullMage",
-    action: "closed a critical issue",
-    cp: 540,
-    tone: "#ff9b9b",
+    action:
+      "PR: refactor: NewUseCaseでspフィールドを追加し、言語貢献エンティティにSPBalanceを結合、フロントエンド表示コンポーネントを更新 (#138)",
+    cp: 620,
+    tone: "#74f7a1",
   },
   {
     id: "mock-1001",
-    player: "AkiByte",
-    action: "refactored a use case",
-    cp: 310,
-    tone: "#74f7a1",
+    player: "LoopKnight",
+    action:
+      "Commit: chore: buf.shのパーミッション修正とprotobufスキーマをモジュール化 - generate.shとlint.shに分割してCIワークフローを簡潔化 (#120)",
+    cp: 160,
+    tone: "#9be7ff",
   },
 ];
 
@@ -62,10 +47,20 @@ export const RANKINGS: RankingMember[] = [
   { name: "TypeSmith", title: "Generic Hero", cp: 35420, color: "#ffd966" },
   { name: "NullMage", title: "Void Debugger", cp: 31980, color: "#d9b8ff" },
   { name: "PixelNinja", title: "UI Shinobi", cp: 28640, color: "#9be7ff" },
-  { name: "LoopKnight", title: "Iteration Paladin", cp: 25110, color: "#74f7a1" },
+  {
+    name: "LoopKnight",
+    title: "Iteration Paladin",
+    cp: 25110,
+    color: "#74f7a1",
+  },
   { name: "AsyncRogue", title: "Promise Runner", cp: 22470, color: "#ff9b9b" },
   { name: "CacheWizard", title: "Memo Sage", cp: 19860, color: "#f4ecd0" },
-  { name: "BugSlayer", title: "Regression Breaker", cp: 17420, color: "#f6a6ff" },
+  {
+    name: "BugSlayer",
+    title: "Regression Breaker",
+    cp: 17420,
+    color: "#f6a6ff",
+  },
 ];
 
 export const GUILD_TABS: { id: GuildTab; label: string }[] = [
