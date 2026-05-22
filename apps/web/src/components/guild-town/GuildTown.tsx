@@ -26,7 +26,6 @@ import { BackButton } from "./BackButton";
 import { BuildInventory } from "./BuildInventory";
 import { BuildingInfoPanel } from "./BuildingInfoPanel";
 import { TownMap, type DeploymentPreview } from "./TownMap";
-import { TownStatusHeader } from "./TownStatusHeader";
 import { steppedEase } from "../../lib/animationUtils";
 import { BUILDING_MASTERS, MAX_SCALE, MIN_SCALE, STORE_ANIMATION_MS } from "./townData";
 import { clampValue, isPointInsideRect } from "./townMath";
@@ -46,7 +45,6 @@ interface GuildTownProps {
   onNavigate: (path: string) => void;
   townLevel?: number;
   currentCp?: number;
-  nextLevelCp?: number;
   baseSrc?: string;
   mainStructureSrc?: string;
   bonfireSrc?: string;
@@ -61,7 +59,6 @@ export function GuildTown({
   onNavigate,
   townLevel = 1,
   currentCp: initialCurrentCp = 2500,
-  nextLevelCp: initialNextLevelCp = 10000,
   baseSrc = "/town/glassfield.png",
 }: GuildTownProps) {
   const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height: 0 });
@@ -79,9 +76,6 @@ export function GuildTown({
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
   const [isTownLoading, setIsTownLoading] = useState(true);
   const [userCp, setUserCp] = useState(initialCurrentCp);
-  const [guildExperience, setGuildExperience] = useState(initialCurrentCp);
-  const [currentGuildLevelExperience, setCurrentGuildLevelExperience] = useState(0);
-  const [townNextLevelCp, setTownNextLevelCp] = useState(initialNextLevelCp);
   const [currentGuildLevel, setCurrentGuildLevel] = useState(townLevel);
   const [currentGuildLanguage, setCurrentGuildLanguage] = useState<GuildSpLanguage>(() =>
     getCurrentGuildLanguage(),
@@ -96,17 +90,6 @@ export function GuildTown({
   const previousGuildLevelRef = useRef(currentGuildLevel);
   const mapX = useMotionValue(0);
   const mapY = useMotionValue(0);
-  const guildLevelExperienceRange = Math.max(1, townNextLevelCp - currentGuildLevelExperience);
-  const progress =
-    townNextLevelCp <= currentGuildLevelExperience
-      ? 100
-      : Math.min(
-          100,
-          Math.max(
-            0,
-            ((guildExperience - currentGuildLevelExperience) / guildLevelExperienceRange) * 100,
-          ),
-        );
   const selectedPlacedItem =
     placedItems.find((placedItem) => placedItem.id === selectedPlacedItemId) ?? null;
   const userGuildSp = useMemo(
@@ -619,10 +602,7 @@ export function GuildTown({
 
     setAvailableItems(status.availableItems);
     setCurrentGuildLevel(status.guildLevel);
-    setCurrentGuildLevelExperience(status.currentGuildLevelExperience);
-    setGuildExperience(status.guildExperience);
     setPlacedItems(status.placedItems);
-    setTownNextLevelCp(status.nextLevelCp);
     setUserCp(status.currentCp);
     setUserInventory(status.userInventory);
     setUserSpMap(status.userSpMap);
@@ -678,12 +658,6 @@ export function GuildTown({
         storingPlacedItemIds={storingPlacedItemIds}
       />
 
-      <TownStatusHeader
-        currentCp={guildExperience}
-        nextLevelCp={townNextLevelCp}
-        progress={progress}
-        guildLevel={currentGuildLevel}
-      />
       <BackButton onNavigate={onNavigate} />
       <BuildInventory
         currentGuildLevel={currentGuildLevel}

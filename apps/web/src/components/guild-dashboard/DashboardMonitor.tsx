@@ -26,7 +26,7 @@ export function DashboardMonitor({
   const guildLevel = guild?.guildLevel ?? 1;
   const guildExperience = guild?.guildExperience ?? 0;
   const currentLevelExperience = guild?.currentGuildLevelExperience ?? 0;
-  const nextLevelExperience = guild?.nextGuildLevelExperience ?? 1000;
+  const nextLevelExperience = guild?.nextGuildLevelExperience ?? 5000;
   const isMaxGuildLevel = guildLevel >= 5 && nextLevelExperience <= currentLevelExperience;
   const progressRange = Math.max(1, nextLevelExperience - currentLevelExperience);
   const progressValue = isMaxGuildLevel
@@ -67,7 +67,7 @@ export function DashboardMonitor({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr auto auto",
+            gridTemplateColumns: "1fr auto",
             alignItems: "center",
             gap: "clamp(8px, 1.5vw, 18px)",
             color: "#fff8d7",
