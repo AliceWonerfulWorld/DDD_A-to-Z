@@ -23,14 +23,18 @@ defmodule Chat.TokenCleaner do
   defp schedule, do: Process.send_after(self(), :clean, @interval_ms)
 
   defp clean do
-    {:ok, result} =
-      Chat.Repo.query(
-        "DELETE FROM chat_tokens WHERE expires_at < NOW() - interval '#{@retention_after_expiry}'"
-      )
+    case Chat.Repo.query(
+           "DELETE FROM chat_tokens WHERE expires_at < NOW() - interval '#{@retention_after_expiry}'"
+         ) do
+      {:ok, result} ->
+        if result.num_rows > 0 do
+          require Logger
+          Logger.info("TokenCleaner: deleted #{result.num_rows} expired chat tokens")
+        end
 
-    if result.num_rows > 0 do
-      require Logger
-      Logger.info("TokenCleaner: deleted #{result.num_rows} expired chat tokens")
+      {:error, reason} ->
+        require Logger
+        Logger.error("TokenCleaner: failed to delete expired chat tokens: #{inspect(reason)}")
     end
   end
 end

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
 	chatapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/chat"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
@@ -15,6 +16,12 @@ type ChatStore struct {
 }
 
 func NewChatStore(db *gorm.DB, guild *GuildStore) *ChatStore {
+	if db == nil {
+		panic(errors.New("NewChatStore: nil db"))
+	}
+	if guild == nil {
+		panic(errors.New("NewChatStore: nil guild store"))
+	}
 	return &ChatStore{db: db, guild: guild}
 }
 

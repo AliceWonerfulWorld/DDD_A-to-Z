@@ -40,6 +40,11 @@ defmodule Chat.GuildChannel do
     end
   end
 
+  @impl true
+  def handle_in("new_message", _payload, socket) do
+    {:reply, {:error, %{reason: "invalid_payload"}}, socket}
+  end
+
   defp active_member?(user_id, guild_id) do
     query =
       from(m in "guild_memberships",

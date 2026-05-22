@@ -57,7 +57,8 @@ func NewUseCase(current CurrentUserRepository, repo Repository, tokens TokenGene
 }
 
 func (u *UseCase) IssueGuildChatToken(ctx context.Context, sessionToken string, guildID guilddomain.ID) (ChatToken, error) {
-	if strings.TrimSpace(sessionToken) == "" {
+	normalizedSessionToken := strings.TrimSpace(sessionToken)
+	if normalizedSessionToken == "" {
 		return ChatToken{}, ErrUnauthenticated
 	}
 	if strings.TrimSpace(string(guildID)) == "" {
@@ -65,7 +66,7 @@ func (u *UseCase) IssueGuildChatToken(ctx context.Context, sessionToken string, 
 	}
 
 	now := u.now()
-	appUser, ok, err := u.current.FindUserBySessionToken(ctx, sessionToken, now)
+	appUser, ok, err := u.current.FindUserBySessionToken(ctx, normalizedSessionToken, now)
 	if err != nil {
 		return ChatToken{}, err
 	}

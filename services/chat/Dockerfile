@@ -20,4 +20,9 @@ WORKDIR /app
 
 COPY --from=build /app/_build/prod/rel/chat ./
 
+RUN groupadd -r chat && useradd -r -g chat chat && \
+    chown -R chat:chat /app
+
+USER chat
+
 CMD ["./bin/chat", "start"]
