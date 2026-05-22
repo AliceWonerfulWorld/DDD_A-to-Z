@@ -1,0 +1,48 @@
+name: CI Loadtest D
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-loadtest-d.yml"
+      - "services/loadtest-d/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - "flake.lock"
+      - "flake.nix"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ci-loadtest-d.yml"
+      - "services/loadtest-d/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - "flake.lock"
+      - "flake.nix"
+
+jobs:
+  loadtest-d:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@21a544727d0c62386e78b4befe52d19ad12692e3
+
+      - name: Install dependencies
+        run: nix develop -c pnpm install --frozen-lockfile
+
+      - name: Test
+        run: nix develop -c pnpm --filter @lang-war/loadtest-d test
+
+      - name: Build
+        run: nix develop -c pnpm --filter @lang-war/loadtest-d build
