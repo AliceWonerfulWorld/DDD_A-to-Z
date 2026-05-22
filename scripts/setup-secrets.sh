@@ -116,6 +116,32 @@ add_secret_version() {
         --data-file=- \
         --project="${PROJECT_ID}"
   echo "  登録しました。"
+
+  disable_old_versions "${name}"
+}
+
+# 最新バージョン以外の enabled version を disable して active version 数を1に保つ
+disable_old_versions() {
+  local name="$1"
+  local latest
+  latest="$(gcloud secrets versions list "${name}" \
+    --project="${PROJECT_ID}" \
+    --filter="state=ENABLED" \
+    --format="value(name)" \
+    --sort-by="~name" | head -1)"
+
+  gcloud secrets versions list "${name}" \
+    --project="${PROJECT_ID}" \
+    --filter="state=ENABLED" \
+    --format="value(name)" \
+  | grep -v "^${latest}$" \
+  | while read -r version; do
+    gcloud secrets versions disable "${version}" \
+      --secret="${name}" \
+      --project="${PROJECT_ID}" \
+      --quiet
+    echo "  古いバージョン ${version} を disabled にしました。"
+  done
 }
 
 # ── 開始 ─────────────────────────────────────────────────────

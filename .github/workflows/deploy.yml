@@ -124,3 +124,30 @@ jobs:
             --memory=512Mi \
             --cpu=1 \
             --timeout=3600
+
+      - name: Disable old Secret Manager versions
+        run: |
+          for secret in \
+            lang-war-database-url \
+            lang-war-github-client-id \
+            lang-war-github-client-secret \
+            lang-war-github-redirect-url \
+            lang-war-auth-cookie-secret \
+            lang-war-github-token-encryption-secret; do
+            latest="$(gcloud secrets versions list "${secret}" \
+              --project="${GCP_PROJECT_ID}" \
+              --filter="state=ENABLED" \
+              --format="value(name)" \
+              --sort-by="~name" | head -1)"
+            gcloud secrets versions list "${secret}" \
+              --project="${GCP_PROJECT_ID}" \
+              --filter="state=ENABLED" \
+              --format="value(name)" \
+            | grep -v "^${latest}$" \
+            | while read -r version; do
+              gcloud secrets versions disable "${version}" \
+                --secret="${secret}" \
+                --project="${GCP_PROJECT_ID}" \
+                --quiet
+            done
+          done
