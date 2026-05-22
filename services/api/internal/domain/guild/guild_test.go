@@ -92,11 +92,11 @@ func TestGuildLevelProgressFromExperience(t *testing.T) {
 		wantCurrent int64
 		wantNext    int64
 	}{
-		{name: "0 exp is level 1", experience: 0, wantLevel: 1, wantCurrent: 0, wantNext: 1000},
-		{name: "threshold reaches level 2", experience: 1000, wantLevel: 2, wantCurrent: 1000, wantNext: 3000},
-		{name: "between thresholds stays level 3", experience: 4500, wantLevel: 3, wantCurrent: 3000, wantNext: 7000},
-		{name: "max level caps at level 5", experience: 25000, wantLevel: 5, wantCurrent: 15000, wantNext: 15000},
-		{name: "negative exp is treated as zero", experience: -10, wantLevel: 1, wantCurrent: 0, wantNext: 1000},
+		{name: "0 exp is level 1", experience: 0, wantLevel: 1, wantCurrent: 0, wantNext: 5000},
+		{name: "threshold reaches level 2", experience: 5000, wantLevel: 2, wantCurrent: 5000, wantNext: 20000},
+		{name: "between thresholds stays level 3", experience: 45000, wantLevel: 3, wantCurrent: 20000, wantNext: 60000},
+		{name: "max level caps at level 5", experience: 250000, wantLevel: 5, wantCurrent: 150000, wantNext: 150000},
+		{name: "negative exp is treated as zero", experience: -10, wantLevel: 1, wantCurrent: 0, wantNext: 5000},
 	}
 
 	for _, tt := range tests {
@@ -145,7 +145,7 @@ func TestGuildAddExperienceLevelsUpPersistently(t *testing.T) {
 		Icon:            "GO",
 		Color:           "#00acd7",
 		SortOrder:       1,
-		GuildExperience: 900,
+		GuildExperience: 4900,
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Hour),
 	})
@@ -157,8 +157,8 @@ func TestGuildAddExperienceLevelsUpPersistently(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AddExperience() がエラーを返しました: %v", err)
 	}
-	if updated.GuildExperience != 1200 {
-		t.Fatalf("GuildExperience = %d, 期待値 1200", updated.GuildExperience)
+	if updated.GuildExperience != 5200 {
+		t.Fatalf("GuildExperience = %d, 期待値 5200", updated.GuildExperience)
 	}
 	if updated.GuildLevel != 2 {
 		t.Fatalf("GuildLevel = %d, 期待値 2", updated.GuildLevel)

@@ -87,7 +87,7 @@ func (r guildTownTestGuildRepository) FindActiveMembershipByUserID(ctx context.C
 			CreatedAt: now,
 			UpdatedAt: now,
 		},
-		Guild: guilddomain.Guild{ID: guilddomain.ID("guild_go"), GuildExperience: 1200},
+		Guild: guilddomain.Guild{ID: guilddomain.ID("guild_go"), GuildExperience: 5200},
 	}, true, nil
 }
 
@@ -159,14 +159,14 @@ func TestGuildTownControllerGetTownReturnsGuildLevel(t *testing.T) {
 	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
 		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
 	}
-	if body.GuildExperience != 1200 {
-		t.Fatalf("guild_experience = %d, 期待値 1200", body.GuildExperience)
+	if body.GuildExperience != 5200 {
+		t.Fatalf("guild_experience = %d, 期待値 5200", body.GuildExperience)
 	}
 	if body.GuildLevel != 2 {
 		t.Fatalf("guild_level = %d, 期待値 2", body.GuildLevel)
 	}
-	if body.NextLevelExp != 3000 {
-		t.Fatalf("next_guild_level_experience = %d, 期待値 3000", body.NextLevelExp)
+	if body.NextLevelExp != 20000 {
+		t.Fatalf("next_guild_level_experience = %d, 期待値 20000", body.NextLevelExp)
 	}
 }
 

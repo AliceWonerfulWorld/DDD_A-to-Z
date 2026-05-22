@@ -169,7 +169,7 @@ func TestGuildControllerListGuilds(t *testing.T) {
 			SortOrder:          5,
 			MemberCount:        12,
 			TotalContributedCP: 120,
-			GuildExperience:    3200,
+			GuildExperience:    45000,
 			CreatedAt:          now,
 			UpdatedAt:          now,
 		}},
@@ -215,14 +215,14 @@ func TestGuildControllerListGuilds(t *testing.T) {
 	if body.Guilds[0].TotalContributedCP != 120 {
 		t.Fatalf("total_contributed_cp = %d, 期待値 120", body.Guilds[0].TotalContributedCP)
 	}
-	if body.Guilds[0].GuildExperience != 3200 {
-		t.Fatalf("guild_experience = %d, 期待値 3200", body.Guilds[0].GuildExperience)
+	if body.Guilds[0].GuildExperience != 45000 {
+		t.Fatalf("guild_experience = %d, 期待値 45000", body.Guilds[0].GuildExperience)
 	}
 	if body.Guilds[0].GuildLevel != 3 {
 		t.Fatalf("guild_level = %d, 期待値 3", body.Guilds[0].GuildLevel)
 	}
-	if body.Guilds[0].NextLevelExp != 7000 {
-		t.Fatalf("next_guild_level_experience = %d, 期待値 7000", body.Guilds[0].NextLevelExp)
+	if body.Guilds[0].NextLevelExp != 60000 {
+		t.Fatalf("next_guild_level_experience = %d, 期待値 60000", body.Guilds[0].NextLevelExp)
 	}
 }
 

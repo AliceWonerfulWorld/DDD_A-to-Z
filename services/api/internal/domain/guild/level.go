@@ -9,7 +9,7 @@ const (
 	GuildTownUpgradeLevel5Exp = 500
 )
 
-var guildLevelExperienceThresholds = []int64{0, 1000, 3000, 7000, 15000}
+var guildLevelExperienceThresholds = []int64{0, 5000, 20000, 60000, 150000}
 
 type LevelProgress struct {
 	Level                  int
