@@ -89,6 +89,10 @@ func (s *GuildTownStore) FindPlacementByID(ctx context.Context, guildID guilddom
 func (s *GuildTownStore) BuyBuilding(ctx context.Context, guildID guilddomain.ID, buildingType guildtowndomain.BuildingType, exp int64, now time.Time) (guilddomain.Guild, error) {
 	var updatedGuild guilddomain.Guild
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockGuildForUpdate(ctx, tx, guildID); err != nil {
+			return err
+		}
+
 		if err := tx.Exec(`
 			INSERT INTO guild_town_inventories (guild_id, building_type, quantity, created_at, updated_at)
 			VALUES (?, ?, 1, ?, ?)
@@ -114,6 +118,10 @@ func (s *GuildTownStore) BuyBuilding(ctx context.Context, guildID guilddomain.ID
 
 func (s *GuildTownStore) CreatePlacement(ctx context.Context, guildID guilddomain.ID, placement guildtowndomain.Placement) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockGuildForUpdate(ctx, tx, guildID); err != nil {
+			return err
+		}
+
 		var quantity int
 		if err := tx.Raw(`
 			SELECT quantity
@@ -156,7 +164,7 @@ func (s *GuildTownStore) CreatePlacement(ctx context.Context, guildID guilddomai
 
 func (s *GuildTownStore) ReplacePlacements(ctx context.Context, guildID guilddomain.ID, placements []guildtowndomain.Placement) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Exec(`SELECT id FROM guilds WHERE id = ? FOR UPDATE`, guildID).Error; err != nil {
+		if err := lockGuildForUpdate(ctx, tx, guildID); err != nil {
 			return err
 		}
 
@@ -182,6 +190,10 @@ func (s *GuildTownStore) ReplacePlacements(ctx context.Context, guildID guilddom
 func (s *GuildTownStore) UpgradePlacement(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, exp int64, now time.Time) (guilddomain.Guild, error) {
 	var updatedGuild guilddomain.Guild
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockGuildForUpdate(ctx, tx, guildID); err != nil {
+			return err
+		}
+
 		var currentLevel int
 		result := tx.Raw(`
 			SELECT level
@@ -280,6 +292,24 @@ type guildForUpdateRecord struct {
 	CurrentExp         int64          `gorm:"column:current_exp"`
 	CreatedAt          time.Time      `gorm:"column:created_at"`
 	UpdatedAt          time.Time      `gorm:"column:updated_at"`
+}
+
+func lockGuildForUpdate(ctx context.Context, tx *gorm.DB, guildID guilddomain.ID) error {
+	var lockedID guilddomain.ID
+	result := tx.WithContext(ctx).Raw(`
+		SELECT id
+		FROM guilds
+		WHERE id = ?
+		FOR UPDATE
+	`, guildID).Scan(&lockedID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return guildtownapp.ErrGuildNotFound
+	}
+
+	return nil
 }
 
 func addGuildExperience(ctx context.Context, tx *gorm.DB, guildID guilddomain.ID, exp int64, now time.Time) (guilddomain.Guild, error) {

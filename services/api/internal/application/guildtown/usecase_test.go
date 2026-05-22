@@ -314,7 +314,15 @@ func TestUseCaseBuyBuildingAddsPersistentExpForEveryPurchase(t *testing.T) {
 
 func TestUseCaseDeployBuildingDoesNotAddExp(t *testing.T) {
 	now := time.Date(2026, 5, 22, 9, 0, 0, 0, time.UTC)
-	repository := &testRepository{}
+	repository := &testRepository{
+		inventory: []guildtowndomain.InventoryItem{{
+			GuildID:      "guild_go",
+			BuildingType: "tent",
+			Quantity:     1,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}},
+	}
 	usecase := NewUseCase(repository, testCurrentUserRepository{
 		appUser: user.User{ID: "user_1"},
 		ok:      true,
@@ -341,6 +349,52 @@ func TestUseCaseDeployBuildingDoesNotAddExp(t *testing.T) {
 	}
 	if len(state.Placements) != 1 {
 		t.Fatalf("state placements length = %d, 期待値 1", len(state.Placements))
+	}
+}
+
+func TestUseCaseDeployBuildingRejectsInsufficientInventory(t *testing.T) {
+	now := time.Date(2026, 5, 22, 9, 0, 0, 0, time.UTC)
+	repository := &testRepository{
+		inventory: []guildtowndomain.InventoryItem{{
+			GuildID:      "guild_go",
+			BuildingType: "tent",
+			Quantity:     1,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}},
+		placements: []guildtowndomain.Placement{{
+			ID:           "placement_1",
+			GuildID:      "guild_go",
+			BuildingType: "tent",
+			Level:        1,
+			X:            12,
+			Y:            34,
+			Width:        210,
+			ZIndex:       0,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}},
+	}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testGuildRepository{
+		membership: testMembershipWithGuild("guild_go", "user_1", now),
+		ok:         true,
+	}, testIDGenerator{})
+	usecase.now = func() time.Time { return now }
+
+	_, err := usecase.DeployBuilding(context.Background(), "session-token", DeployBuildingCommand{
+		BuildingType: "tent",
+		X:            12,
+		Y:            34,
+		Width:        210,
+	})
+	if !errors.Is(err, ErrInsufficientInventory) {
+		t.Fatalf("DeployBuilding() error = %v, 期待値 ErrInsufficientInventory", err)
+	}
+	if len(repository.created) != 0 {
+		t.Fatalf("created placements length = %d, 期待値 0", len(repository.created))
 	}
 }
 

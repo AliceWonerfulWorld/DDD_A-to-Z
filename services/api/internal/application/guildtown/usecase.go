@@ -211,6 +211,31 @@ func (u *UseCase) DeployBuilding(ctx context.Context, sessionToken string, comma
 		return TownState{}, ErrUnknownBuildingType
 	}
 
+	inventory, err := u.repository.ListInventory(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return TownState{}, err
+	}
+	placements, err := u.repository.ListPlacements(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return TownState{}, err
+	}
+	owned := 0
+	for _, item := range inventory {
+		if item.BuildingType == command.BuildingType {
+			owned = item.Quantity
+			break
+		}
+	}
+	placed := 0
+	for _, placement := range placements {
+		if placement.BuildingType == command.BuildingType {
+			placed++
+		}
+	}
+	if placed >= owned {
+		return TownState{}, ErrInsufficientInventory
+	}
+
 	id := command.ID
 	if id == "" {
 		generatedID, err := u.ids.NewID()
