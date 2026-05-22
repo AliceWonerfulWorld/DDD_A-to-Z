@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.17-erlang-27-debian-bullseye-20250317-slim AS build
+FROM hexpm/elixir:1.17.3-erlang-27.2.4-debian-bullseye-20260518-slim AS build
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ COPY mix.exs mix.lock ./
 RUN MIX_ENV=prod mix deps.get --only prod
 
 COPY . .
-RUN MIX_ENV=prod mix compile && mix release
+RUN MIX_ENV=prod mix compile && MIX_ENV=prod mix release
 
 FROM debian:bullseye-slim AS runtime
 
