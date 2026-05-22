@@ -9,6 +9,15 @@ export interface Guild {
   color: string;
   member_count: number;
   total_contributed_cp: number;
+  currentExp?: number;
+  current_exp?: number;
+  guildLevel?: number;
+  guild_experience?: number;
+  guild_level?: number;
+  isMaxLevel?: boolean;
+  is_max_level?: boolean;
+  current_guild_level_experience?: number | null;
+  next_guild_level_experience?: number | null;
 }
 
 export interface GuildMembership {

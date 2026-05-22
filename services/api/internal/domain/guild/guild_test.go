@@ -68,6 +68,11 @@ func TestNewGuild(t *testing.T) {
 			guild.MemberCount = -1
 			return guild
 		}()},
+		{name: "guild experience は非負", guild: func() Guild {
+			guild := valid
+			guild.GuildExperience = -1
+			return guild
+		}()},
 	}
 
 	for _, tt := range tests {
@@ -76,6 +81,90 @@ func TestNewGuild(t *testing.T) {
 				t.Fatal("NewGuild() error = nil, 期待値 エラー")
 			}
 		})
+	}
+}
+
+func TestGuildLevelProgressFromExperience(t *testing.T) {
+	tests := []struct {
+		name        string
+		experience  int64
+		wantLevel   int
+		wantCurrent int64
+		wantNext    int64
+	}{
+		{name: "0 exp is level 1", experience: 0, wantLevel: 1, wantCurrent: 0, wantNext: 5000},
+		{name: "threshold reaches level 2", experience: 5000, wantLevel: 2, wantCurrent: 5000, wantNext: 20000},
+		{name: "between thresholds stays level 3", experience: 45000, wantLevel: 3, wantCurrent: 20000, wantNext: 60000},
+		{name: "max level caps at level 5", experience: 250000, wantLevel: 5, wantCurrent: 150000, wantNext: 150000},
+		{name: "negative exp is treated as zero", experience: -10, wantLevel: 1, wantCurrent: 0, wantNext: 5000},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			progress := GuildLevelProgressFromExperience(tt.experience)
+			if progress.Level != tt.wantLevel {
+				t.Fatalf("Level = %d, 期待値 %d", progress.Level, tt.wantLevel)
+			}
+			if progress.CurrentLevelExperience != tt.wantCurrent {
+				t.Fatalf("CurrentLevelExperience = %d, 期待値 %d", progress.CurrentLevelExperience, tt.wantCurrent)
+			}
+			if progress.NextLevelExperience != tt.wantNext {
+				t.Fatalf("NextLevelExperience = %d, 期待値 %d", progress.NextLevelExperience, tt.wantNext)
+			}
+		})
+	}
+}
+
+func TestCalculateUpgradeExp(t *testing.T) {
+	tests := []struct {
+		nextLevel int
+		want      int64
+	}{
+		{nextLevel: 2, want: 100},
+		{nextLevel: 3, want: 150},
+		{nextLevel: 4, want: 200},
+		{nextLevel: 5, want: 500},
+		{nextLevel: 1, want: 0},
+		{nextLevel: 6, want: 0},
+	}
+
+	for _, tt := range tests {
+		if got := CalculateUpgradeExp(tt.nextLevel); got != tt.want {
+			t.Fatalf("CalculateUpgradeExp(%d) = %d, 期待値 %d", tt.nextLevel, got, tt.want)
+		}
+	}
+}
+
+func TestGuildAddExperienceLevelsUpPersistently(t *testing.T) {
+	now := time.Date(2026, 5, 22, 9, 0, 0, 0, time.UTC)
+	guild, err := NewGuild(Guild{
+		ID:              "guild_go",
+		Slug:            "go",
+		Name:            "Go",
+		Description:     "Go guild",
+		Icon:            "GO",
+		Color:           "#00acd7",
+		SortOrder:       1,
+		GuildExperience: 4900,
+		CreatedAt:       now.Add(-time.Hour),
+		UpdatedAt:       now.Add(-time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("NewGuild() がエラーを返しました: %v", err)
+	}
+
+	updated, err := guild.AddExperience(300, now)
+	if err != nil {
+		t.Fatalf("AddExperience() がエラーを返しました: %v", err)
+	}
+	if updated.GuildExperience != 5200 {
+		t.Fatalf("GuildExperience = %d, 期待値 5200", updated.GuildExperience)
+	}
+	if updated.GuildLevel != 2 {
+		t.Fatalf("GuildLevel = %d, 期待値 2", updated.GuildLevel)
+	}
+	if !updated.UpdatedAt.Equal(now) {
+		t.Fatalf("UpdatedAt = %v, 期待値 %v", updated.UpdatedAt, now)
 	}
 }
 

@@ -14,7 +14,10 @@ var (
 	ErrUnauthenticated          = errors.New("unauthenticated")
 	ErrActiveMembershipNotFound = errors.New("active guild membership not found")
 	ErrUnknownBuildingType      = errors.New("unknown guild town building type")
+	ErrGuildNotFound            = errors.New("guild not found")
 	ErrInsufficientInventory    = errors.New("insufficient guild town inventory")
+	ErrPlacementNotFound        = errors.New("guild town placement not found")
+	ErrInvalidPlacementLevel    = errors.New("guild town placement level is invalid")
 )
 
 type UseCase struct {
@@ -26,6 +29,7 @@ type UseCase struct {
 }
 
 type TownState struct {
+	Guild      guilddomain.Guild
 	Buildings  []guildtowndomain.BuildingMaster
 	Inventory  []guildtowndomain.InventoryItem
 	Placements []guildtowndomain.Placement
@@ -34,9 +38,27 @@ type TownState struct {
 type SavePlacementCommand struct {
 	ID           guildtowndomain.PlacementID
 	BuildingType guildtowndomain.BuildingType
+	Level        int
 	X            float64
 	Y            float64
 	Width        float64
+}
+
+type BuyBuildingCommand struct {
+	BuildingType guildtowndomain.BuildingType
+}
+
+type DeployBuildingCommand struct {
+	ID           guildtowndomain.PlacementID
+	BuildingType guildtowndomain.BuildingType
+	X            float64
+	Y            float64
+	Width        float64
+}
+
+type UpgradeBuildingCommand struct {
+	PlacementID guildtowndomain.PlacementID
+	NextLevel   int
 }
 
 func NewUseCase(repository Repository, current CurrentUserRepository, guilds GuildRepository, ids IDGenerator) *UseCase {
@@ -57,21 +79,22 @@ func NewUseCase(repository Repository, current CurrentUserRepository, guilds Gui
 }
 
 func (u *UseCase) GetTown(ctx context.Context, sessionToken string) (TownState, error) {
-	guildID, err := u.requireGuildID(ctx, sessionToken)
+	membership, err := u.requireMembership(ctx, sessionToken)
 	if err != nil {
 		return TownState{}, err
 	}
 
-	inventory, err := u.repository.ListInventory(ctx, guildID)
+	inventory, err := u.repository.ListInventory(ctx, membership.Membership.GuildID)
 	if err != nil {
 		return TownState{}, err
 	}
-	placements, err := u.repository.ListPlacements(ctx, guildID)
+	placements, err := u.repository.ListPlacements(ctx, membership.Membership.GuildID)
 	if err != nil {
 		return TownState{}, err
 	}
 
 	return TownState{
+		Guild:      membership.Guild,
 		Buildings:  guildtowndomain.DefaultBuildingMasters,
 		Inventory:  inventory,
 		Placements: placements,
@@ -79,15 +102,24 @@ func (u *UseCase) GetTown(ctx context.Context, sessionToken string) (TownState, 
 }
 
 func (u *UseCase) SavePlacements(ctx context.Context, sessionToken string, commands []SavePlacementCommand) (TownState, error) {
-	guildID, err := u.requireGuildID(ctx, sessionToken)
+	membership, err := u.requireMembership(ctx, sessionToken)
 	if err != nil {
 		return TownState{}, err
 	}
 
-	inventory, err := u.repository.ListInventory(ctx, guildID)
+	inventory, err := u.repository.ListInventory(ctx, membership.Membership.GuildID)
 	if err != nil {
 		return TownState{}, err
 	}
+	existingPlacements, err := u.repository.ListPlacements(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return TownState{}, err
+	}
+	levelByPlacementID := make(map[guildtowndomain.PlacementID]int, len(existingPlacements))
+	for _, placement := range existingPlacements {
+		levelByPlacementID[placement.ID] = placement.Level
+	}
+
 	owned := make(map[guildtowndomain.BuildingType]int, len(inventory))
 	for _, item := range inventory {
 		owned[item.BuildingType] = item.Quantity
@@ -113,10 +145,15 @@ func (u *UseCase) SavePlacements(ctx context.Context, sessionToken string, comma
 			}
 			id = guildtowndomain.PlacementID(generatedID)
 		}
+		level := levelByPlacementID[id]
+		if level == 0 {
+			level = 1
+		}
 		placement, err := guildtowndomain.NewPlacement(guildtowndomain.Placement{
 			ID:           id,
-			GuildID:      guildID,
+			GuildID:      membership.Membership.GuildID,
 			BuildingType: command.BuildingType,
+			Level:        level,
 			X:            command.X,
 			Y:            command.Y,
 			Width:        command.Width,
@@ -130,37 +167,185 @@ func (u *UseCase) SavePlacements(ctx context.Context, sessionToken string, comma
 		placements = append(placements, placement)
 	}
 
-	if err := u.repository.ReplacePlacements(ctx, guildID, placements); err != nil {
+	if err := u.repository.ReplacePlacements(ctx, membership.Membership.GuildID, placements); err != nil {
 		return TownState{}, err
 	}
 
 	return TownState{
+		Guild:      membership.Guild,
 		Buildings:  guildtowndomain.DefaultBuildingMasters,
 		Inventory:  inventory,
 		Placements: placements,
 	}, nil
 }
 
-func (u *UseCase) requireGuildID(ctx context.Context, sessionToken string) (guilddomain.ID, error) {
+func (u *UseCase) BuyBuilding(ctx context.Context, sessionToken string, command BuyBuildingCommand) (TownState, error) {
+	membership, err := u.requireMembership(ctx, sessionToken)
+	if err != nil {
+		return TownState{}, err
+	}
+	if _, ok := guildtowndomain.FindBuildingMaster(command.BuildingType); !ok {
+		return TownState{}, ErrUnknownBuildingType
+	}
+
+	updatedGuild, err := u.repository.BuyBuilding(
+		ctx,
+		membership.Membership.GuildID,
+		command.BuildingType,
+		guilddomain.BuyBuildingExperience,
+		u.now(),
+	)
+	if err != nil {
+		return TownState{}, err
+	}
+
+	return u.getTownForGuild(ctx, updatedGuild)
+}
+
+func (u *UseCase) DeployBuilding(ctx context.Context, sessionToken string, command DeployBuildingCommand) (TownState, error) {
+	membership, err := u.requireMembership(ctx, sessionToken)
+	if err != nil {
+		return TownState{}, err
+	}
+	if _, ok := guildtowndomain.FindBuildingMaster(command.BuildingType); !ok {
+		return TownState{}, ErrUnknownBuildingType
+	}
+
+	inventory, err := u.repository.ListInventory(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return TownState{}, err
+	}
+	placements, err := u.repository.ListPlacements(ctx, membership.Membership.GuildID)
+	if err != nil {
+		return TownState{}, err
+	}
+	owned := 0
+	for _, item := range inventory {
+		if item.BuildingType == command.BuildingType {
+			owned = item.Quantity
+			break
+		}
+	}
+	placed := 0
+	for _, placement := range placements {
+		if placement.BuildingType == command.BuildingType {
+			placed++
+		}
+	}
+	if placed >= owned {
+		return TownState{}, ErrInsufficientInventory
+	}
+
+	id := command.ID
+	if id == "" {
+		generatedID, err := u.ids.NewID()
+		if err != nil {
+			return TownState{}, err
+		}
+		id = guildtowndomain.PlacementID(generatedID)
+	}
+
+	now := u.now()
+	placement, err := guildtowndomain.NewPlacement(guildtowndomain.Placement{
+		ID:           id,
+		GuildID:      membership.Membership.GuildID,
+		BuildingType: command.BuildingType,
+		Level:        1,
+		X:            command.X,
+		Y:            command.Y,
+		Width:        command.Width,
+		ZIndex:       0,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	})
+	if err != nil {
+		return TownState{}, err
+	}
+
+	if err := u.repository.CreatePlacement(ctx, membership.Membership.GuildID, placement); err != nil {
+		return TownState{}, err
+	}
+
+	return u.getTownForGuild(ctx, membership.Guild)
+}
+
+func (u *UseCase) UpgradeBuilding(ctx context.Context, sessionToken string, command UpgradeBuildingCommand) (TownState, error) {
+	membership, err := u.requireMembership(ctx, sessionToken)
+	if err != nil {
+		return TownState{}, err
+	}
+	if command.PlacementID == "" || command.NextLevel < 2 || command.NextLevel > guilddomain.MaxGuildLevel {
+		return TownState{}, ErrInvalidPlacementLevel
+	}
+	placement, ok, err := u.repository.FindPlacementByID(ctx, membership.Membership.GuildID, command.PlacementID)
+	if err != nil {
+		return TownState{}, err
+	}
+	if !ok {
+		return TownState{}, ErrPlacementNotFound
+	}
+	if command.NextLevel != placement.Level+1 {
+		return TownState{}, ErrInvalidPlacementLevel
+	}
+
+	exp := guilddomain.CalculateUpgradeExp(command.NextLevel)
+	if exp <= 0 {
+		return TownState{}, ErrInvalidPlacementLevel
+	}
+
+	updatedGuild, err := u.repository.UpgradePlacement(
+		ctx,
+		membership.Membership.GuildID,
+		command.PlacementID,
+		command.NextLevel,
+		exp,
+		u.now(),
+	)
+	if err != nil {
+		return TownState{}, err
+	}
+
+	return u.getTownForGuild(ctx, updatedGuild)
+}
+
+func (u *UseCase) requireMembership(ctx context.Context, sessionToken string) (guilddomain.MembershipWithGuild, error) {
 	if strings.TrimSpace(sessionToken) == "" {
-		return "", ErrUnauthenticated
+		return guilddomain.MembershipWithGuild{}, ErrUnauthenticated
 	}
 
 	appUser, ok, err := u.current.FindUserBySessionToken(ctx, sessionToken, u.now())
 	if err != nil {
-		return "", err
+		return guilddomain.MembershipWithGuild{}, err
 	}
 	if !ok {
-		return "", ErrUnauthenticated
+		return guilddomain.MembershipWithGuild{}, ErrUnauthenticated
 	}
 
 	membership, ok, err := u.guilds.FindActiveMembershipByUserID(ctx, appUser.ID)
 	if err != nil {
-		return "", err
+		return guilddomain.MembershipWithGuild{}, err
 	}
 	if !ok {
-		return "", ErrActiveMembershipNotFound
+		return guilddomain.MembershipWithGuild{}, ErrActiveMembershipNotFound
 	}
 
-	return membership.Guild.ID, nil
+	return membership, nil
+}
+
+func (u *UseCase) getTownForGuild(ctx context.Context, guild guilddomain.Guild) (TownState, error) {
+	inventory, err := u.repository.ListInventory(ctx, guild.ID)
+	if err != nil {
+		return TownState{}, err
+	}
+	placements, err := u.repository.ListPlacements(ctx, guild.ID)
+	if err != nil {
+		return TownState{}, err
+	}
+
+	return TownState{
+		Guild:      guild,
+		Buildings:  guildtowndomain.DefaultBuildingMasters,
+		Inventory:  inventory,
+		Placements: placements,
+	}, nil
 }

@@ -37,6 +37,7 @@ type Placement struct {
 	ID           PlacementID
 	GuildID      guilddomain.ID
 	BuildingType BuildingType
+	Level        int
 	X            float64
 	Y            float64
 	Width        float64
@@ -105,6 +106,12 @@ func NewPlacement(placement Placement) (Placement, error) {
 	}
 	if _, ok := FindBuildingMaster(placement.BuildingType); !ok {
 		return Placement{}, errors.New("guild town placement building type is unknown")
+	}
+	if placement.Level == 0 {
+		placement.Level = 1
+	}
+	if placement.Level < 1 || placement.Level > guilddomain.MaxGuildLevel {
+		return Placement{}, errors.New("guild town placement level must be between 1 and 5")
 	}
 	if placement.X < 0 {
 		return Placement{}, errors.New("guild town placement x cannot be negative")

@@ -160,17 +160,21 @@ func TestGuildControllerListGuilds(t *testing.T) {
 	now := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
 	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
 		guilds: []guilddomain.Guild{{
-			ID:                 "guild_typescript",
-			Slug:               "typescript",
-			Name:               "TypeScript",
-			Description:        "型の力で支えるギルド。",
-			Icon:               "📘",
-			Color:              "#3178c6",
-			SortOrder:          5,
-			MemberCount:        12,
-			TotalContributedCP: 120,
-			CreatedAt:          now,
-			UpdatedAt:          now,
+			ID:                          "guild_typescript",
+			Slug:                        "typescript",
+			Name:                        "TypeScript",
+			Description:                 "型の力で支えるギルド。",
+			Icon:                        "📘",
+			Color:                       "#3178c6",
+			SortOrder:                   5,
+			MemberCount:                 12,
+			TotalContributedCP:          120,
+			GuildExperience:             45000,
+			GuildLevel:                  3,
+			CurrentGuildLevelExperience: 20000,
+			NextGuildLevelExperience:    60000,
+			CreatedAt:                   now,
+			UpdatedAt:                   now,
 		}},
 	}, guildTestCurrentUserRepository{ok: true}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	router := stdhttp.NewServeMux()
@@ -194,6 +198,9 @@ func TestGuildControllerListGuilds(t *testing.T) {
 			Color              string `json:"color"`
 			MemberCount        int64  `json:"member_count"`
 			TotalContributedCP int64  `json:"total_contributed_cp"`
+			GuildExperience    int64  `json:"guild_experience"`
+			GuildLevel         int    `json:"guild_level"`
+			NextLevelExp       int64  `json:"next_guild_level_experience"`
 		} `json:"guilds"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
@@ -210,6 +217,15 @@ func TestGuildControllerListGuilds(t *testing.T) {
 	}
 	if body.Guilds[0].TotalContributedCP != 120 {
 		t.Fatalf("total_contributed_cp = %d, 期待値 120", body.Guilds[0].TotalContributedCP)
+	}
+	if body.Guilds[0].GuildExperience != 45000 {
+		t.Fatalf("guild_experience = %d, 期待値 45000", body.Guilds[0].GuildExperience)
+	}
+	if body.Guilds[0].GuildLevel != 3 {
+		t.Fatalf("guild_level = %d, 期待値 3", body.Guilds[0].GuildLevel)
+	}
+	if body.Guilds[0].NextLevelExp != 60000 {
+		t.Fatalf("next_guild_level_experience = %d, 期待値 60000", body.Guilds[0].NextLevelExp)
 	}
 }
 

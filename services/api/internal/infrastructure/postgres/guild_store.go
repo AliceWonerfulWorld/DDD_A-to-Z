@@ -39,7 +39,8 @@ func (s *GuildStore) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error
 			g.created_at,
 			g.updated_at,
 			COALESCE(gm.member_count, 0) AS member_count,
-			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
+			g.current_exp AS guild_experience
 		FROM guilds g
 		LEFT JOIN (
 			SELECT guild_id, COUNT(*) AS member_count
@@ -83,7 +84,8 @@ func (s *GuildStore) FindGuildByID(ctx context.Context, guildID guilddomain.ID) 
 			g.created_at,
 			g.updated_at,
 			COALESCE(gm.member_count, 0) AS member_count,
-			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
+			g.current_exp AS guild_experience
 		FROM guilds g
 		LEFT JOIN (
 			SELECT guild_id, COUNT(*) AS member_count
@@ -134,7 +136,8 @@ func (s *GuildStore) FindActiveMembershipByUserID(ctx context.Context, userID us
 			g.created_at,
 			g.updated_at,
 			COALESCE(active_gm.member_count, 0) AS member_count,
-			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
+			g.current_exp AS guild_experience
 		FROM guild_memberships gm
 		JOIN guilds g ON g.id = gm.guild_id
 		LEFT JOIN (
@@ -416,6 +419,7 @@ type guildRecord struct {
 	SortOrder          int            `gorm:"column:sort_order"`
 	MemberCount        int64          `gorm:"column:member_count"`
 	TotalContributedCP int64          `gorm:"column:total_contributed_cp"`
+	GuildExperience    int64          `gorm:"column:guild_experience"`
 	CreatedAt          time.Time      `gorm:"column:created_at"`
 	UpdatedAt          time.Time      `gorm:"column:updated_at"`
 }
@@ -431,6 +435,7 @@ func (r guildRecord) toDomain() (guilddomain.Guild, error) {
 		SortOrder:          r.SortOrder,
 		MemberCount:        r.MemberCount,
 		TotalContributedCP: r.TotalContributedCP,
+		GuildExperience:    r.GuildExperience,
 		CreatedAt:          r.CreatedAt,
 		UpdatedAt:          r.UpdatedAt,
 	})
@@ -453,6 +458,7 @@ type guildMembershipWithGuildRecord struct {
 	SortOrder           int                      `gorm:"column:sort_order"`
 	MemberCount         int64                    `gorm:"column:member_count"`
 	TotalContributedCP  int64                    `gorm:"column:total_contributed_cp"`
+	GuildExperience     int64                    `gorm:"column:guild_experience"`
 	CreatedAt           time.Time                `gorm:"column:created_at"`
 	UpdatedAt           time.Time                `gorm:"column:updated_at"`
 }
@@ -481,6 +487,7 @@ func (r guildMembershipWithGuildRecord) toDomain() (guilddomain.MembershipWithGu
 		SortOrder:          r.SortOrder,
 		MemberCount:        r.MemberCount,
 		TotalContributedCP: r.TotalContributedCP,
+		GuildExperience:    r.GuildExperience,
 		CreatedAt:          r.CreatedAt,
 		UpdatedAt:          r.UpdatedAt,
 	})

@@ -23,7 +23,24 @@ export function DashboardMonitor({
 }: DashboardMonitorProps) {
   const guildName = isGuildLoading ? "SYNCING GUILD" : guild ? `${guild.name} GUILD` : "NO GUILD";
   const guildRank = guild ? `Rank: #${guild.sortOrder + 1}` : "Rank: --";
-  const guildCp = guild ? `Last CP: ${guild.previousSeasonCp.toLocaleString()}` : "Last CP: --";
+  const guildLevel = guild?.guildLevel ?? 1;
+  const guildExperience = guild?.guildExperience ?? 0;
+  const currentLevelExperience = guild?.currentGuildLevelExperience ?? 0;
+  const nextLevelExperience = guild?.nextGuildLevelExperience;
+  const isMaxGuildLevel =
+    guild?.isMaxLevel ??
+    (guild
+      ? guildLevel >= 5 || nextLevelExperience === null || nextLevelExperience === undefined
+      : false);
+  const levelRange = Math.max(1, (nextLevelExperience ?? 5000) - currentLevelExperience);
+  const progressInLevel = Math.min(
+    levelRange,
+    Math.max(0, guildExperience - currentLevelExperience),
+  );
+  const progressPercent = isMaxGuildLevel ? 100 : Math.round((progressInLevel / levelRange) * 100);
+  const progressValue = isMaxGuildLevel
+    ? 100
+    : Math.min(100, Math.max(0, (progressInLevel / levelRange) * 100));
 
   return (
     <motion.section
@@ -56,7 +73,7 @@ export function DashboardMonitor({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr auto auto",
+            gridTemplateColumns: "1fr auto",
             alignItems: "center",
             gap: "clamp(8px, 1.5vw, 18px)",
             color: "#fff8d7",
@@ -68,7 +85,56 @@ export function DashboardMonitor({
             {guildName}
           </strong>
           <span style={{ color: "#ffd966", whiteSpace: "nowrap" }}>{guildRank}</span>
-          <span style={{ color: "#74f7a1", whiteSpace: "nowrap" }}>{guildCp}</span>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "auto 1fr auto",
+            alignItems: "center",
+            gap: "10px",
+            color: "#d9fbff",
+            fontSize: "clamp(0.48rem, 0.82vw, 0.62rem)",
+            lineHeight: 1.4,
+          }}
+        >
+          <span style={{ color: "#ffd966", whiteSpace: "nowrap" }}>EXP</span>
+          <div
+            role="progressbar"
+            aria-label="Guild level experience"
+            aria-valuemin={0}
+            aria-valuemax={levelRange}
+            aria-valuenow={isMaxGuildLevel ? levelRange : progressInLevel}
+            aria-valuetext={
+              isMaxGuildLevel
+                ? "MAX"
+                : `${progressInLevel.toLocaleString()} of ${levelRange.toLocaleString()} (${progressPercent}%)`
+            }
+            style={{
+              height: "10px",
+              border: "2px solid rgba(116, 247, 161, 0.6)",
+              background: "rgba(1, 8, 22, 0.72)",
+              boxShadow: "inset 0 0 8px rgba(0,0,0,0.64)",
+              overflow: "hidden",
+            }}
+          >
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progressValue}%` }}
+              transition={{ duration: 0.42, ease: steppedEase(8) }}
+              style={{
+                height: "100%",
+                background:
+                  "repeating-linear-gradient(90deg, #74f7a1 0, #74f7a1 8px, #39ff14 8px, #39ff14 16px)",
+                boxShadow: "0 0 10px rgba(116,247,161,0.68)",
+              }}
+            />
+          </div>
+          <span style={{ color: "#f4ecd0", whiteSpace: "nowrap" }}>
+            {isMaxGuildLevel
+              ? "MAX"
+              : `${progressInLevel.toLocaleString()} / ${levelRange.toLocaleString()}`}
+          </span>
         </div>
 
         <nav

@@ -24,8 +24,10 @@ interface GuildTownInventoryResponse {
 
 interface GuildTownPlacementResponse {
   id: string;
+  buildingId?: string;
   type?: string;
   building_type?: string;
+  level?: number;
   x: number;
   y: number;
   width: number;
@@ -33,6 +35,13 @@ interface GuildTownPlacementResponse {
 }
 
 interface GuildTownResponse {
+  guildLevel?: number;
+  currentExp?: number;
+  current_exp?: number;
+  guild_level?: number;
+  guild_experience?: number;
+  current_guild_level_experience?: number;
+  next_guild_level_experience?: number;
   buildings: GuildTownBuildingResponse[];
   inventory: GuildTownInventoryResponse[];
   placements: GuildTownPlacementResponse[];
@@ -40,8 +49,6 @@ interface GuildTownResponse {
 
 interface HomeCPResponse {
   total_cp: number;
-  next_player_level_total_cp?: number;
-  player_level?: number;
 }
 
 interface SkillPointResponse {
@@ -54,6 +61,8 @@ interface SkillPointResponse {
 export interface GuildTownStatus {
   availableItems: InventoryItem[];
   currentCp: number;
+  currentGuildLevelExperience: number;
+  guildExperience: number;
   guildLevel: number;
   nextLevelCp: number;
   placedItems: PlacedItem[];
@@ -85,8 +94,10 @@ export async function fetchGuildTownStatus(): Promise<GuildTownStatus> {
   return {
     availableItems,
     currentCp: home.total_cp,
-    guildLevel: home.player_level ?? 1,
-    nextLevelCp: home.next_player_level_total_cp ?? Math.max(home.total_cp, 1),
+    currentGuildLevelExperience: town.current_guild_level_experience ?? 0,
+    guildExperience: town.currentExp ?? town.current_exp ?? town.guild_experience ?? 0,
+    guildLevel: town.guildLevel ?? town.guild_level ?? 1,
+    nextLevelCp: Math.max(town.next_guild_level_experience ?? 5000, 1),
     placedItems: town.placements
       .map((placement) => toPlacedItem(placement, itemByType))
       .sort((a, b) => (placementOrderById.get(a.id) ?? 0) - (placementOrderById.get(b.id) ?? 0)),
@@ -103,6 +114,7 @@ export async function saveGuildTownPlacements(
       placements: payload.placements.map((item) => ({
         id: item.id.startsWith("local-") ? "" : item.id,
         building_type: item.buildingId ?? item.type,
+        level: item.level,
         x: item.x,
         y: item.y,
         width: item.width,
@@ -117,12 +129,26 @@ export async function deployBuilding(payload: SavePlacementsPayload): Promise<Gu
   return saveGuildTownPlacements(payload);
 }
 
-export async function buyBuilding(buildingId: string): Promise<never> {
-  throw new Error(`buyBuilding API is not implemented yet: ${buildingId}`);
+export async function buyBuilding(buildingId: string): Promise<GuildTownStatus> {
+  await apiFetch<GuildTownResponse>("/me/guild/town/buildings", {
+    body: JSON.stringify({ buildingId }),
+    method: "POST",
+  });
+  return fetchGuildTownStatus();
 }
 
-export async function upgradeBuilding(placedBuildingId: string): Promise<never> {
-  throw new Error(`upgradeBuilding API is not implemented yet: ${placedBuildingId}`);
+export async function upgradeBuilding(
+  placedBuildingId: string,
+  nextLevel: number,
+): Promise<GuildTownStatus> {
+  await apiFetch<GuildTownResponse>(
+    `/me/guild/town/placements/${encodeURIComponent(placedBuildingId)}/upgrade`,
+    {
+      body: JSON.stringify({ nextLevel }),
+      method: "PATCH",
+    },
+  );
+  return fetchGuildTownStatus();
 }
 
 function toInventoryItem(item: GuildTownBuildingResponse): InventoryItem {
@@ -143,14 +169,14 @@ function toPlacedItem(
   placement: GuildTownPlacementResponse,
   itemByType: Map<string, InventoryItem>,
 ): PlacedItem {
-  const type = placement.building_type ?? placement.type ?? "";
+  const type = placement.building_type ?? placement.buildingId ?? placement.type ?? "";
   const item = itemByType.get(type);
 
   return {
     id: placement.id,
     type,
     buildingId: type,
-    level: 1,
+    level: placement.level ?? 1,
     name: item?.name ?? type,
     title: item?.title ?? type,
     description: item?.description ?? "",
@@ -166,7 +192,7 @@ function toRemainingInventory(
   placements: GuildTownPlacementResponse[],
 ): UserInventoryState[] {
   const placedCountByType = placements.reduce<Record<string, number>>((countMap, placement) => {
-    const type = placement.building_type ?? placement.type ?? "";
+    const type = placement.building_type ?? placement.buildingId ?? placement.type ?? "";
     countMap[type] = (countMap[type] ?? 0) + 1;
     return countMap;
   }, {});
