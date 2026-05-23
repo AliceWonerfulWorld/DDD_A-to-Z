@@ -33,9 +33,12 @@ app.get("/guilds/:slug/tech-news", async (c) => {
   });
 });
 
-const rawPort = parseInt(process.env.PORT ?? "8082", 10);
-const port = !Number.isNaN(rawPort) && Number.isInteger(rawPort) && rawPort >= 1 && rawPort <= 65535
-  ? rawPort
+const portEnv = process.env.PORT ?? "";
+const port = /^\d+$/.test(portEnv)
+  ? (() => {
+      const n = Number(portEnv);
+      return n >= 1 && n <= 65535 ? n : 8082;
+    })()
   : 8082;
 
 serve({ fetch: app.fetch, port }, () => {
