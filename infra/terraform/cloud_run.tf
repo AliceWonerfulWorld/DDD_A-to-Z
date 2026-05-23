@@ -56,6 +56,12 @@ locals {
   chat_plain_envs = {
     ALLOWED_ORIGIN = var.chat_allowed_origin
   }
+
+  news_api_secret_envs = {
+    DATABASE_URL = "lang-war-news-database-url"
+  }
+
+  news_api_plain_envs = {}
 }
 
 # Go API サービス
@@ -230,6 +236,85 @@ resource "google_cloud_run_v2_service_iam_member" "chat_service_public" {
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.chat_service.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+# news-api サービス（Hono / Node.js）
+resource "google_cloud_run_v2_service" "news_api" {
+  project  = var.project_id
+  name     = "news-api"
+  location = var.region
+
+  deletion_protection = false
+
+  template {
+    service_account = google_service_account.cloud_run.email
+
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 3
+    }
+
+    containers {
+      image = local.image
+
+      ports {
+        container_port = 8080
+      }
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = "256Mi"
+        }
+      }
+
+      dynamic "env" {
+        for_each = local.news_api_secret_envs
+
+        content {
+          name = env.key
+
+          value_source {
+            secret_key_ref {
+              secret  = env.value
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      dynamic "env" {
+        for_each = local.news_api_plain_envs
+
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+    }
+
+    timeout = "60s"
+  }
+
+  depends_on = [
+    google_artifact_registry_repository.api,
+    google_secret_manager_secret.secrets,
+  ]
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      scaling,
+    ]
+  }
+}
+
+resource "google_cloud_run_v2_service_iam_member" "news_api_public" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.news_api.name
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
