@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router";
 import App from "./App.tsx";
+import { BattlePage } from "./components/battle/BattlePage.tsx";
 import { ContributionAnalysis } from "./components/analysis/ContributionAnalysis.tsx";
 import { GuildDashboard } from "./components/guild-dashboard/GuildDashboard.tsx";
 import { MyGuildDetails } from "./components/guild-details/MyGuildDetails.tsx";
@@ -29,7 +30,8 @@ export function AppRoutes() {
   const usesSharedHomeBgm =
     location.pathname === PATHS.HOME ||
     location.pathname === PATHS.MY_PAGE ||
-    location.pathname === PATHS.PETS;
+    location.pathname === PATHS.PETS ||
+    location.pathname === PATHS.BATTLE;
   const completeInitialProfile = async (username: string) => {
     if (username.trim() === "") return;
 
@@ -65,6 +67,7 @@ export function AppRoutes() {
         <Route path={PATHS.HOME} element={<Home onNavigate={navigate} />} />
         <Route path={PATHS.MY_PAGE} element={<MyPage onNavigate={navigate} />} />
         <Route path={PATHS.PETS} element={<PetPage onNavigate={navigate} />} />
+        <Route path={PATHS.BATTLE} element={<BattlePage onNavigate={navigate} />} />
         <Route path={PATHS.GUILD} element={<GuildDashboard onNavigate={navigate} />} />
         <Route
           path={PATHS.GUILD_SELECT}

@@ -14,12 +14,9 @@ import {
 } from "../../features/pet/api";
 import { consumeGrantedPet } from "../../features/pet/guildGrant";
 import { petPageMachine } from "../../features/pet/petPageMachine";
-import {
-  sampleBattleResult,
-  sampleCurrentPet,
-  sampleOwnedPets,
-  sampleOpponents,
-} from "../../features/pet/sampleData";
+import { buildSampleBattleResult } from "../../features/pet/battleReplay";
+import { saveBattleSession } from "../../features/pet/battleSession";
+import { sampleCurrentPet, sampleOwnedPets, sampleOpponents } from "../../features/pet/sampleData";
 import styles from "./PetPage.module.css";
 
 interface PetPageProps {
@@ -50,7 +47,6 @@ export function PetPage({ onNavigate }: PetPageProps) {
     selectedPetId,
     opponents,
     selectedOpponentId,
-    battleResult,
     statusMessage,
     noticeMessage,
     trainingStat,
@@ -152,17 +148,22 @@ export function PetPage({ onNavigate }: PetPageProps) {
   };
 
   const battle = async () => {
-    if (!selectedOpponent || isBattling) return;
+    if (!selectedOpponent || !selectedPet || isBattling) return;
 
     send({ type: "BATTLE" });
     try {
-      if (import.meta.env.DEV && selectedOpponent.userId.startsWith("sample_")) {
-        await new Promise((resolve) => window.setTimeout(resolve, 650));
-        send({ type: "BATTLE_SUCCESS", result: sampleBattleResult });
-        return;
-      }
-      const result = await startPetBattle(selectedOpponent.userId);
+      const result =
+        import.meta.env.DEV && selectedOpponent.userId.startsWith("sample_")
+          ? await new Promise<ReturnType<typeof buildSampleBattleResult>>((resolve) => {
+              window.setTimeout(
+                () => resolve(buildSampleBattleResult(selectedPet, selectedOpponent)),
+                650,
+              );
+            })
+          : await startPetBattle(selectedOpponent.userId);
+      saveBattleSession({ playerPet: selectedPet, opponent: selectedOpponent, result });
       send({ type: "BATTLE_SUCCESS", result });
+      onNavigate(PATHS.BATTLE);
     } catch (error) {
       console.error("failed to start pet battle", error);
       send({
@@ -314,19 +315,6 @@ export function PetPage({ onNavigate }: PetPageProps) {
                 {isBattling ? "BATTLE..." : "BATTLE"}
               </button>
             </div>
-
-            {battleResult && (
-              <div className={styles.battleResult}>
-                <h3 className={styles.itemTitle}>RESULT: {battleResult.result.toUpperCase()}</h3>
-                <div className={styles.list}>
-                  {battleResult.turns.map((turn) => (
-                    <p className={styles.logItem} key={turn.turn}>
-                      {turn.turn}. {turn.message}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
           </section>
         </div>
       </div>

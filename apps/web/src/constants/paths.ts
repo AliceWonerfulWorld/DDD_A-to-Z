@@ -5,6 +5,7 @@ export const PATHS = {
   HOME: "/home",
   MY_PAGE: "/mypage",
   PETS: "/pets",
+  BATTLE: "/battle",
   GUILD: "/guild",
   GUILD_SELECT: "/guild/select",
   GUILD_DETAILS: "/guild/details",
