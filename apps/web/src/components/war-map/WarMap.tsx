@@ -16,6 +16,7 @@ import { ScoutPanel } from "./ScoutPanel";
 import { createWarGuilds, findWarGuildByID, type WarGuild } from "./WarMapData";
 import { WarMapHex } from "./WarMapHex";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import type { ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 
 interface WarMapProps {
   onNavigate: (path: string) => void;
@@ -159,7 +160,7 @@ export function WarMap({ onNavigate }: WarMapProps) {
     setIsRankingOpen(false);
   };
 
-  const transformComponentRef = useRef<any>(null);
+  const transformComponentRef = useRef<ReactZoomPanPinchRef>(null);
 
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth <= 768 : false,
