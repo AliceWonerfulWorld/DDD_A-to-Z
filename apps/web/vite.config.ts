@@ -13,7 +13,7 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
       "/news-api": {
-        target: "http://localhost:8081",
+        target: "http://localhost:8082",
         rewrite: (path) => path.replace(/^\/news-api/, ""),
       },
       "/langwar.": {
