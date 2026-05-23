@@ -165,6 +165,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const [mypageData, setMypageData] = useState<MyPageResponse | null>(null);
   const [apiError, setApiError] = useState(false);
   const [selectedBadgeSlug, setSelectedBadgeSlug] = useState<string | null>(null);
+  const [badgeError, setBadgeError] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
@@ -175,6 +176,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
       .then((data) => {
         setMypageData(data);
         setSelectedBadgeSlug(data.selected_badge_slug);
+        setApiError(false);
       })
       .catch(() => setApiError(true));
   };
@@ -187,8 +189,9 @@ export function MyPage({ onNavigate }: MyPageProps) {
     try {
       await updateSelectedBadge(slug);
       setSelectedBadgeSlug(slug);
+      setBadgeError(null);
     } catch {
-      // TODO: show error feedback
+      setBadgeError("Failed to update selected badge");
     }
   };
 
@@ -935,6 +938,18 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 />
               ))}
             </div>
+            {badgeError && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontSize: "0.6rem",
+                  color: "#ff6b6b",
+                  fontFamily: '"Press Start 2P", monospace',
+                }}
+              >
+                {badgeError}
+              </div>
+            )}
           </Panel>
         )}
       </div>
