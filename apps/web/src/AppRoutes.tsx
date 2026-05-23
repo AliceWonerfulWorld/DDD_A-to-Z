@@ -8,6 +8,7 @@ import { GuildTown } from "./components/guild-town/GuildTown.tsx";
 import { Home } from "./components/home/Home.tsx";
 import { MyPage } from "./components/my-page/MyPage.tsx";
 import { InitialProfile } from "./components/profile/InitialProfile.tsx";
+import { TechNews } from "./components/tech-news/TechNews.tsx";
 import { GuildBgm } from "./components/shared/GuildBgm.tsx";
 import { HomeBgm } from "./components/shared/HomeBgm.tsx";
 import { WarMap } from "./components/war-map/WarMap.tsx";
@@ -67,6 +68,7 @@ export function AppRoutes() {
         <Route path={PATHS.GUILD_DETAILS} element={<MyGuildDetails onNavigate={navigate} />} />
         <Route path={PATHS.GUILD_MY_GUILD} element={<MyGuildDetails onNavigate={navigate} />} />
         <Route path={PATHS.GUILD_TOWN} element={<GuildTown onNavigate={navigate} />} />
+        <Route path={PATHS.GUILD_TECH_NEWS} element={<TechNews onNavigate={navigate} />} />
         <Route path={PATHS.WAR} element={<WarMap onNavigate={navigate} />} />
         <Route path="*" element={<Navigate to={PATHS.ROOT} replace />} />
       </Routes>
