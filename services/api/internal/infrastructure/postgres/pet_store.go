@@ -132,6 +132,115 @@ func (s *PetStore) FindPetByIDForUser(ctx context.Context, petID petdomain.ID, u
 	return petWithGuild, true, nil
 }
 
+func (s *PetStore) ListOpponentPets(ctx context.Context, userID user.ID) ([]petapp.PetWithGuild, error) {
+	var records []playerPetWithGuildRecord
+	if err := s.db.WithContext(ctx).Raw(`
+		SELECT
+			pp.id,
+			pp.user_id,
+			pp.guild_id,
+			pp.attribute,
+			pp.vitality,
+			pp.strength,
+			pp.agility,
+			pp.created_at,
+			pp.updated_at,
+			g.slug,
+			g.name,
+			g.description,
+			g.icon,
+			g.color,
+			g.sort_order,
+			g.created_at AS guild_created_at,
+			g.updated_at AS guild_updated_at,
+			COALESCE(active_gm.member_count, 0) AS member_count,
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
+			g.current_exp AS guild_experience
+		FROM player_pets pp
+		JOIN guilds g ON g.id = pp.guild_id
+		LEFT JOIN (
+			SELECT guild_id, COUNT(*) AS member_count
+			FROM guild_memberships
+			WHERE left_at IS NULL
+			GROUP BY guild_id
+		) active_gm ON active_gm.guild_id = g.id
+		LEFT JOIN (
+			SELECT guild_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id
+		) gcc ON gcc.guild_id = g.id
+		WHERE pp.user_id <> ?
+		ORDER BY pp.created_at DESC, pp.id ASC
+		LIMIT 20
+	`, userID).Scan(&records).Error; err != nil {
+		return nil, err
+	}
+
+	pets := make([]petapp.PetWithGuild, 0, len(records))
+	for _, record := range records {
+		petWithGuild, err := record.toApplicationModel()
+		if err != nil {
+			return nil, err
+		}
+		pets = append(pets, petWithGuild)
+	}
+
+	return pets, nil
+}
+
+func (s *PetStore) FindOpponentPetByID(ctx context.Context, petID petdomain.ID, userID user.ID) (petapp.PetWithGuild, bool, error) {
+	var record playerPetWithGuildRecord
+	result := s.db.WithContext(ctx).Raw(`
+		SELECT
+			pp.id,
+			pp.user_id,
+			pp.guild_id,
+			pp.attribute,
+			pp.vitality,
+			pp.strength,
+			pp.agility,
+			pp.created_at,
+			pp.updated_at,
+			g.slug,
+			g.name,
+			g.description,
+			g.icon,
+			g.color,
+			g.sort_order,
+			g.created_at AS guild_created_at,
+			g.updated_at AS guild_updated_at,
+			COALESCE(active_gm.member_count, 0) AS member_count,
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
+			g.current_exp AS guild_experience
+		FROM player_pets pp
+		JOIN guilds g ON g.id = pp.guild_id
+		LEFT JOIN (
+			SELECT guild_id, COUNT(*) AS member_count
+			FROM guild_memberships
+			WHERE left_at IS NULL
+			GROUP BY guild_id
+		) active_gm ON active_gm.guild_id = g.id
+		LEFT JOIN (
+			SELECT guild_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id
+		) gcc ON gcc.guild_id = g.id
+		WHERE pp.id = ? AND pp.user_id <> ?
+	`, petID, userID).Scan(&record)
+	if result.Error != nil {
+		return petapp.PetWithGuild{}, false, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return petapp.PetWithGuild{}, false, nil
+	}
+
+	petWithGuild, err := record.toApplicationModel()
+	if err != nil {
+		return petapp.PetWithGuild{}, false, err
+	}
+	return petWithGuild, true, nil
+}
+
 func (s *PetStore) UpdatePet(ctx context.Context, pet petdomain.Pet) error {
 	result := s.db.WithContext(ctx).
 		Table("player_pets").

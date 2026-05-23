@@ -22,19 +22,53 @@ type TrainPetResult struct {
 	CPBalance int64
 }
 
+type BattlePetCommand struct {
+	SessionToken  string
+	PetID         string
+	OpponentPetID string
+}
+
+type BattleOpponentsData struct {
+	Opponents []PetSummary
+}
+
+type BattleResult struct {
+	Result      string
+	WinnerPetID string
+	Turns       []BattleTurn
+	Attacker    BattlePetStatus
+	Defender    BattlePetStatus
+}
+
+type BattleTurn struct {
+	Turn              int
+	ActorPetID        string
+	TargetPetID       string
+	Damage            int
+	TargetRemainingHP int
+	Message           string
+}
+
+type BattlePetStatus struct {
+	PetID       string
+	Name        string
+	RemainingHP int
+}
+
 // PetSummary is a frontend-oriented view of a player pet.
 type PetSummary struct {
-	ID         string
-	GuildID    string
-	GuildName  string
-	Name       string
-	Species    string
-	Attribute  string
-	Level      int
-	Exp        int64
-	MaxHP      int
-	Power      int
-	Guard      int
-	Speed      int
-	AcquiredAt time.Time
+	ID          string
+	OwnerUserID string
+	GuildID     string
+	GuildName   string
+	Name        string
+	Species     string
+	Attribute   string
+	Level       int
+	Exp         int64
+	MaxHP       int
+	Power       int
+	Guard       int
+	Speed       int
+	AcquiredAt  time.Time
 }
