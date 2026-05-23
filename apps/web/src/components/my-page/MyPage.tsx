@@ -318,12 +318,15 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   disabled={isSaving}
                   onChange={setEditAvatar}
                 />
-                <NameInput
-                  username={editName}
-                  onChange={setEditName}
-                  disabled={isSaving}
-                />
-                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" }}>
+                <NameInput username={editName} onChange={setEditName} disabled={isSaving} />
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    justifyContent: "flex-end",
+                    marginTop: "10px",
+                  }}
+                >
                   <button
                     onClick={() => setIsEditingProfile(false)}
                     disabled={isSaving}
@@ -360,17 +363,24 @@ export function MyPage({ onNavigate }: MyPageProps) {
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
                   {mypageData?.user.avatar_url && (
-                    <div style={{
-                      width: "64px",
-                      height: "64px",
-                      border: "2px solid #f0c040",
-                      padding: "2px",
-                      background: "rgba(0,0,0,0.5)"
-                    }}>
+                    <div
+                      style={{
+                        width: "64px",
+                        height: "64px",
+                        border: "2px solid #f0c040",
+                        padding: "2px",
+                        background: "rgba(0,0,0,0.5)",
+                      }}
+                    >
                       <img
                         src={mypageData.user.avatar_url}
                         alt="avatar"
-                        style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated" }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          imageRendering: "pixelated",
+                        }}
                       />
                     </div>
                   )}
@@ -386,7 +396,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                     </div>
                   </div>
                 </div>
-                
+
                 <button
                   onClick={handleEditProfileClick}
                   style={{
@@ -406,7 +416,6 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 >
                   EDIT PROFILE
                 </button>
-
               </div>
             )}
 

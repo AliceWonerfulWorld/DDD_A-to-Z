@@ -71,8 +71,7 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
           zIndex: 2,
           border: "4px solid var(--color-gold)",
           background: "var(--color-navy-light)",
-          boxShadow:
-            "0 0 30px rgba(0, 245, 255, 0.15), 8px 8px 0 rgba(0,0,0,0.8)",
+          boxShadow: "0 0 30px rgba(0, 245, 255, 0.15), 8px 8px 0 rgba(0,0,0,0.8)",
           maxWidth: "500px",
           width: "100%",
           padding: "2rem",

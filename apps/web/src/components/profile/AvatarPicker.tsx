@@ -7,7 +7,12 @@ interface AvatarPickerProps {
   onChange: (url: string) => void;
 }
 
-export function AvatarPicker({ avatarUrl, githubAvatarUrl, disabled, onChange }: AvatarPickerProps) {
+export function AvatarPicker({
+  avatarUrl,
+  githubAvatarUrl,
+  disabled,
+  onChange,
+}: AvatarPickerProps) {
   const templates = [
     { id: "go", url: "/avatars/GO.png", label: "Go" },
     { id: "java", url: "/avatars/JV.png", label: "Java" },
@@ -64,7 +69,10 @@ export function AvatarPicker({ avatarUrl, githubAvatarUrl, disabled, onChange }:
             style={{
               width: "64px",
               height: "64px",
-              border: avatarUrl === t.url ? "3px solid var(--color-gold)" : "2px solid rgba(255,255,255,0.4)",
+              border:
+                avatarUrl === t.url
+                  ? "3px solid var(--color-gold)"
+                  : "2px solid rgba(255,255,255,0.4)",
               background: "rgba(0,0,0,0.5)",
               cursor: disabled ? "default" : "pointer",
               padding: "4px",
@@ -73,11 +81,14 @@ export function AvatarPicker({ avatarUrl, githubAvatarUrl, disabled, onChange }:
             }}
             title={t.label}
           >
-            <img src={t.url} alt={t.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img
+              src={t.url}
+              alt={t.label}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
           </button>
         ))}
       </div>
-
     </div>
   );
 }

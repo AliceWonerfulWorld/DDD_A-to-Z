@@ -51,7 +51,9 @@ export function AppRoutes() {
         <Route
           path={PATHS.PROFILE}
           element={
-            <InitialProfile onComplete={(username, avatarUrl) => void completeInitialProfile(username, avatarUrl)} />
+            <InitialProfile
+              onComplete={(username, avatarUrl) => void completeInitialProfile(username, avatarUrl)}
+            />
           }
         />
         <Route
