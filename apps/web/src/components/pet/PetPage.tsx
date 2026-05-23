@@ -16,6 +16,7 @@ import {
   type PetTrainingStat,
 } from "../../features/pet/api";
 import { consumeGrantedPet } from "../../features/pet/guildGrant";
+import { readHomePetId, saveHomePetId } from "../../features/pet/homePet";
 import { petPageMachine } from "../../features/pet/petPageMachine";
 import { buildSampleBattleResult } from "../../features/pet/battleReplay";
 import { saveBattleSession } from "../../features/pet/battleSession";
@@ -128,6 +129,10 @@ function apiWaitingMessage(error: unknown, fallback: string) {
 export function PetPage({ onNavigate }: PetPageProps) {
   const isMountedRef = useRef(false);
   const [grantedPetNotice, setGrantedPetNotice] = useState<GrantedPet | null>(null);
+  const [homePetId, setHomePetId] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : readHomePetId(),
+  );
+  const [homePetMessage, setHomePetMessage] = useState<string | null>(null);
   const [snapshot, send] = useMachine(petPageMachine);
   const { data, selectedPetId, opponents, selectedOpponentId, statusMessage, trainingStat } =
     snapshot.context;
@@ -148,6 +153,13 @@ export function PetPage({ onNavigate }: PetPageProps) {
       setGrantedPetNotice(grantedPet);
     }
   }, []);
+
+  useEffect(() => {
+    if (!homePetMessage) return;
+
+    const timer = window.setTimeout(() => setHomePetMessage(null), 3900);
+    return () => window.clearTimeout(timer);
+  }, [homePetMessage]);
 
   useEffect(() => {
     let isMounted = true;
@@ -290,6 +302,12 @@ export function PetPage({ onNavigate }: PetPageProps) {
     onNavigate(PATHS.BATTLE);
   };
 
+  const setHomePet = (pet: PetSummary) => {
+    saveHomePetId(pet.id);
+    setHomePetId(pet.id);
+    setHomePetMessage(`${petDisplayName(pet)} をホームに表示します。`);
+  };
+
   return (
     <motion.main
       animate="visible"
@@ -347,6 +365,14 @@ export function PetPage({ onNavigate }: PetPageProps) {
                     </div>
                     <PetStatusPanel pet={selectedPet} cpBalance={data.cpBalance} />
                     <PetStats pet={selectedPet} />
+                    <button
+                      className={styles.homePetButton}
+                      disabled={homePetId === selectedPet.id}
+                      type="button"
+                      onClick={() => setHomePet(selectedPet)}
+                    >
+                      {homePetId === selectedPet.id ? "HOME PET" : "SET HOME PET"}
+                    </button>
                   </div>
                 </div>
 
@@ -376,6 +402,12 @@ export function PetPage({ onNavigate }: PetPageProps) {
                   <div className={styles.trainingFeedback} key={statusMessage} role="status">
                     <span className={styles.trainingFeedbackLabel}>BOOST RESULT</span>
                     <p className={styles.trainingFeedbackText}>{statusMessage}</p>
+                  </div>
+                )}
+                {homePetMessage && (
+                  <div className={styles.trainingFeedback} key={homePetMessage} role="status">
+                    <span className={styles.trainingFeedbackLabel}>HOME DISPLAY</span>
+                    <p className={styles.trainingFeedbackText}>{homePetMessage}</p>
                   </div>
                 )}
 
@@ -413,6 +445,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
                       <span className={styles.chip}>GUILD</span>
                     )}
                     {pet.id === selectedPetId && <span className={styles.chip}>SELECTED</span>}
+                    {pet.id === homePetId && <span className={styles.chip}>HOME</span>}
                     <span className={styles.chip}>Lv {pet.level}</span>
                   </div>
                 </button>

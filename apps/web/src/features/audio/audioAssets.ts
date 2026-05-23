@@ -16,6 +16,7 @@ export const AUDIO_ASSETS = {
     homeNavSelect: "/SE/home-nav-select.wav",
     returnTitle: "/SE/return-title.wav",
     gopherTalk: "/SE/gopher-talk.wav",
+    pythonPetTalk: "/SE/python-pet-talk.wav",
     warGuildScout: "/SE/war-guild-scout.wav",
   },
 } as const;

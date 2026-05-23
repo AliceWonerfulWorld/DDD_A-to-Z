@@ -15,6 +15,7 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
   const modalCancelSeRef = useRef<HTMLAudioElement | null>(null);
   const returnTitleSeRef = useRef<HTMLAudioElement | null>(null);
   const gopherTalkSeRef = useRef<HTMLAudioElement | null>(null);
+  const pythonPetTalkSeRef = useRef<HTMLAudioElement | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
 
   const playSe = useCallback(
@@ -92,6 +93,10 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
     playSe(gopherTalkSeRef.current);
   }, [playSe]);
 
+  const playPythonPetTalk = useCallback(() => {
+    playSe(pythonPetTalkSeRef.current);
+  }, [playSe]);
+
   const playHomeNavSelect = useCallback(
     async (path: string) => {
       if (navigationInProgressRef.current) {
@@ -120,10 +125,12 @@ export function useHomeAudio(onNavigate: (path: string) => void | Promise<void>)
       modalCancelSeRef,
       returnTitleSeRef,
       gopherTalkSeRef,
+      pythonPetTalkSeRef,
     },
     audioError,
     isSeEnabled,
     playGopherTalk,
+    playPythonPetTalk,
     playHomeNavSelect,
     playModalCancel,
     playModalOpen,

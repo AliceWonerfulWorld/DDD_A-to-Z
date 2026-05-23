@@ -13,6 +13,8 @@ import { fetchMyGuild } from "../../features/guild/api";
 import { toDisplayGuild } from "../../features/guild/presentation";
 import { fetchProfile, type Profile } from "../../features/profile/api";
 import { fetchHomeCP, type HomeCPData } from "../../features/home/api";
+import { fetchMyPets, type PetSummary } from "../../features/pet/api";
+import { readHomePetId } from "../../features/pet/homePet";
 
 interface HomeProps {
   onNavigate: (path: string) => void | Promise<void>;
@@ -76,6 +78,7 @@ export function Home({ onNavigate }: HomeProps) {
     audioError,
     isSeEnabled,
     playGopherTalk,
+    playPythonPetTalk,
     playHomeNavSelect,
     playModalCancel,
     playModalOpen,
@@ -84,6 +87,7 @@ export function Home({ onNavigate }: HomeProps) {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [cpData, setCpData] = useState<HomeCPData | null>(null);
+  const [homePet, setHomePet] = useState<PetSummary | null>(null);
   const lifetimeTotalEarnedCp = cpData?.lifetime_total_earned_cp ?? cpData?.total_cp ?? 0;
   const playerLevel = cpData?.player_level ?? playerLevelFromTotalEarned(lifetimeTotalEarnedCp);
   const playerLevelTotalCp =
@@ -109,6 +113,20 @@ export function Home({ onNavigate }: HomeProps) {
 
   useEffect(() => {
     fetchHomeCP().then(setCpData).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    fetchMyPets()
+      .then((data) => {
+        const homePetId = readHomePetId();
+        const selectedPet =
+          data.pets.find((pet) => pet.id === homePetId) ?? data.currentGuildPet ?? data.pets[0];
+        setHomePet(selectedPet ?? null);
+      })
+      .catch((error) => {
+        console.error(error);
+        setHomePet(null);
+      });
   }, []);
 
   useEffect(() => {
@@ -203,6 +221,13 @@ export function Home({ onNavigate }: HomeProps) {
         muted={!isSeEnabled}
         aria-hidden="true"
       />
+      <audio
+        ref={audioRefs.pythonPetTalkSeRef}
+        src={AUDIO_ASSETS.se.pythonPetTalk}
+        preload="none"
+        muted={!isSeEnabled}
+        aria-hidden="true"
+      />
 
       <div
         aria-hidden="true"
@@ -257,7 +282,12 @@ export function Home({ onNavigate }: HomeProps) {
         />
 
         <section aria-label="Character placement area" className={styles.characterArea}>
-          <WalkingGopher onTalk={playGopherTalk} />
+          <WalkingGopher
+            pet={homePet}
+            onTalk={
+              homePet?.attribute.toLowerCase() === "python" ? playPythonPetTalk : playGopherTalk
+            }
+          />
         </section>
 
         <HomeNav items={navItems} onNavigate={playHomeNavSelect} />
