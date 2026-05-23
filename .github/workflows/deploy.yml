@@ -34,6 +34,8 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@21a544727d0c62386e78b4befe52d19ad12692e3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Workload Identity Federation で keyless 認証
       - name: Authenticate to Google Cloud
