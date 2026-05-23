@@ -285,7 +285,6 @@ export function PetPage({ onNavigate }: PetPageProps) {
         </motion.header>
 
         {noticeMessage && <div className={styles.notice}>{noticeMessage}</div>}
-        {statusMessage && <div className={styles.notice}>{statusMessage}</div>}
 
         <motion.div className={styles.layout} variants={pageVariants}>
           <motion.section
@@ -344,6 +343,13 @@ export function PetPage({ onNavigate }: PetPageProps) {
                     );
                   })}
                 </div>
+
+                {statusMessage && (
+                  <div className={styles.trainingFeedback} key={statusMessage} role="status">
+                    <span className={styles.trainingFeedbackLabel}>BOOST RESULT</span>
+                    <p className={styles.trainingFeedbackText}>{statusMessage}</p>
+                  </div>
+                )}
 
                 <PetBattleRecordPreview />
               </>

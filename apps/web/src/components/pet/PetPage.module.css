@@ -119,6 +119,7 @@
 }
 
 .trainingPanel {
+  position: relative;
   grid-area: training;
 }
 
@@ -537,6 +538,72 @@
   text-align: center;
 }
 
+.trainingFeedback {
+  position: absolute;
+  right: clamp(14px, 2vw, 22px);
+  bottom: clamp(16px, 2.2svh, 24px);
+  z-index: 3;
+  display: grid;
+  width: min(470px, calc(100% - 28px));
+  gap: 7px;
+  pointer-events: none;
+  border: 2px solid rgba(116, 247, 161, 0.68);
+  background:
+    linear-gradient(90deg, rgba(116, 247, 161, 0.22), rgba(107, 183, 255, 0.1)),
+    linear-gradient(180deg, rgba(8, 32, 34, 0.96), rgba(6, 16, 30, 0.96));
+  box-shadow:
+    inset 0 0 20px rgba(116, 247, 161, 0.1),
+    0 0 22px rgba(116, 247, 161, 0.24),
+    5px 5px 0 rgba(0, 0, 0, 0.28);
+  padding: 12px 14px;
+  animation: trainingToast 3.8s both;
+}
+
+.trainingFeedback::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: -2px;
+  width: 7px;
+  background: linear-gradient(180deg, #74f7a1, #6bb7ff);
+  box-shadow: 0 0 14px rgba(116, 247, 161, 0.52);
+}
+
+.trainingFeedbackLabel {
+  color: #74f7a1;
+  font-size: 0.44rem;
+  line-height: 1.35;
+  text-shadow: 0 0 12px rgba(116, 247, 161, 0.35);
+}
+
+.trainingFeedbackText {
+  margin: 0;
+  color: #fff8d7;
+  font-family: "DotGothic16", monospace;
+  font-size: clamp(0.82rem, 1.12vw, 0.94rem);
+  line-height: 1.45;
+}
+
+@keyframes trainingToast {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.99);
+  }
+}
+
 .battleButton {
   min-height: clamp(44px, 6.8svh, 56px);
   background: linear-gradient(180deg, rgba(90, 38, 44, 0.96), rgba(37, 20, 35, 0.98));
@@ -708,5 +775,11 @@
 
   .recordHeader {
     display: grid;
+  }
+
+  .trainingFeedback {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100% - 24px);
   }
 }
