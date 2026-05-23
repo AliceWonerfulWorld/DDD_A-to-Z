@@ -71,7 +71,6 @@ export function BattlePage({ onNavigate }: BattlePageProps) {
     if (view !== "battle") return;
     if (turnIndex >= replay.turns.length) return;
 
-    let innerTimer: number | undefined;
     const timer = window.setTimeout(
       () => {
         const turn = replay.turns[turnIndex];
@@ -85,19 +84,21 @@ export function BattlePage({ onNavigate }: BattlePageProps) {
           setEnemyHP((current) => clampHP(current - turn.damage));
         }
         setTurnIndex((current) => current + 1);
-
-        innerTimer = window.setTimeout(() => setActiveTurn(null), 620);
       },
       turnIndex === 0 ? 650 : 1100,
     );
 
     return () => {
       window.clearTimeout(timer);
-      if (innerTimer !== undefined) {
-        window.clearTimeout(innerTimer);
-      }
     };
   }, [replay.turns, turnIndex, view]);
+
+  useEffect(() => {
+    if (!activeTurn) return;
+
+    const timer = window.setTimeout(() => setActiveTurn(null), 620);
+    return () => window.clearTimeout(timer);
+  }, [activeTurn]);
 
   useEffect(() => {
     if (!showResultBanner) return;

@@ -17,7 +17,12 @@ import { consumeGrantedPet } from "../../features/pet/guildGrant";
 import { petPageMachine } from "../../features/pet/petPageMachine";
 import { buildSampleBattleResult } from "../../features/pet/battleReplay";
 import { saveBattleSession } from "../../features/pet/battleSession";
-import { sampleCurrentPet, sampleOwnedPets, sampleOpponents } from "../../features/pet/sampleData";
+import {
+  sampleBattleResult,
+  sampleCurrentPet,
+  sampleOwnedPets,
+  sampleOpponents,
+} from "../../features/pet/sampleData";
 import { steppedEase } from "../../lib/animationUtils";
 import styles from "./PetPage.module.css";
 
@@ -39,7 +44,7 @@ async function fetchPetPageBootstrap() {
 
 function petDisplayName(pet: PetSummary | null | undefined) {
   if (!pet) return "相棒未選択";
-  return pet.attribute.toLowerCase() === "go" ? "Gopher君" : pet.name;
+  return pet.attribute.toLowerCase() === "go" ? "Gopher" : pet.name;
 }
 
 const petPortraits: Record<string, { label: string; tone: string }> = {
@@ -123,8 +128,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
     const grantedPet = consumeGrantedPet();
     if (grantedPet) {
       const guildName = grantedPet.guildId === "guild_go" ? "Goギルド" : "所属ギルド";
-      const petName =
-        grantedPet.attribute.toLowerCase() === "go" ? "Gopher君" : grantedPet.attribute;
+      const petName = grantedPet.attribute.toLowerCase() === "go" ? "Gopher" : grantedPet.attribute;
       send({ type: "NOTICE", message: `${guildName}の相棒「${petName}」が仲間になった！` });
     }
   }, [send]);
@@ -260,6 +264,14 @@ export function PetPage({ onNavigate }: PetPageProps) {
         ),
       });
     }
+  };
+
+  const startDemoBattle = () => {
+    const opponent = sampleOpponents[0];
+    if (!opponent) return;
+
+    saveBattleSession({ playerPet: sampleCurrentPet, opponent, result: sampleBattleResult });
+    onNavigate(PATHS.BATTLE);
   };
 
   return (
@@ -420,6 +432,11 @@ export function PetPage({ onNavigate }: PetPageProps) {
               ))}
             </div>
             <div className={styles.battleActions}>
+              {import.meta.env.DEV && (
+                <button className={styles.demoBattleButton} type="button" onClick={startDemoBattle}>
+                  DEMO BATTLE
+                </button>
+              )}
               <button
                 className={styles.battleButton}
                 disabled={!selectedOpponent || !selectedPet || isBattling}

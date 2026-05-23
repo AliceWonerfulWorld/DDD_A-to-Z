@@ -614,9 +614,24 @@
   font-size: 0.62rem;
 }
 
+.demoBattleButton {
+  min-height: clamp(42px, 6.2svh, 52px);
+  border-color: rgba(116, 247, 161, 0.76);
+  background:
+    linear-gradient(90deg, rgba(116, 247, 161, 0.18), rgba(107, 183, 255, 0.1)),
+    linear-gradient(180deg, rgba(12, 54, 54, 0.96), rgba(8, 26, 46, 0.98));
+  box-shadow:
+    inset 0 0 18px rgba(116, 247, 161, 0.12),
+    0 0 16px rgba(116, 247, 161, 0.18);
+  color: #fff8d7;
+  font-family: inherit;
+  font-size: 0.58rem;
+}
+
 .actionButton:disabled,
 .battleButton:disabled,
-.smallButton:disabled {
+.smallButton:disabled,
+.demoBattleButton:disabled {
   cursor: not-allowed;
   opacity: 0.48;
 }
@@ -716,6 +731,7 @@
 
 .battleActions {
   display: grid;
+  gap: 10px;
 }
 
 @media (max-width: 860px) {
