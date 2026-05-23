@@ -1,0 +1,410 @@
+.screen {
+  min-height: 100svh;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(4, 12, 24, 0.18), rgba(5, 12, 24, 0.58)),
+    url("/pixel-town-night.png");
+  background-position: center;
+  background-size: cover;
+  color: #fff8d7;
+  font-family: "Press Start 2P", "DotGothic16", monospace;
+  image-rendering: pixelated;
+}
+
+.shell {
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: auto auto minmax(320px, 1fr) auto;
+  gap: clamp(10px, 2svh, 18px);
+  padding: clamp(14px, 2.5vw, 30px);
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #74f7a1;
+  font-size: 0.56rem;
+  line-height: 1.4;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.34rem);
+  line-height: 1.5;
+}
+
+.navButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.button {
+  min-height: 42px;
+  border: 2px solid rgba(255, 248, 215, 0.72);
+  border-bottom-color: rgba(30, 40, 58, 0.94);
+  border-right-color: rgba(30, 40, 58, 0.94);
+  background: rgba(18, 31, 52, 0.94);
+  color: #fff8d7;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.56rem;
+  line-height: 1.5;
+  padding: 8px 12px;
+}
+
+.hud {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.versus {
+  color: #ff5f56;
+  font-size: clamp(1.1rem, 3vw, 2rem);
+  text-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.8),
+    0 0 16px rgba(255, 95, 86, 0.68);
+}
+
+.hpPanel {
+  display: grid;
+  gap: 8px;
+  border: 3px solid rgba(255, 217, 102, 0.72);
+  border-bottom-color: rgba(92, 76, 34, 0.96);
+  border-right-color: rgba(92, 76, 34, 0.96);
+  background: linear-gradient(180deg, rgba(21, 37, 58, 0.92), rgba(10, 22, 39, 0.95));
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.54),
+    6px 6px 0 rgba(0, 0, 0, 0.24);
+  padding: 12px;
+}
+
+.hpPanelEnemy {
+  text-align: right;
+}
+
+.hpName {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #fff8d7;
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+
+.hpShell {
+  height: 18px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.hpFill {
+  height: 100%;
+  background: linear-gradient(90deg, #74f7a1, #ffd966);
+  box-shadow: 0 0 14px rgba(116, 247, 161, 0.45);
+}
+
+.arena {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(10px, 4vw, 70px);
+  align-items: end;
+  min-height: 360px;
+  border: 3px solid rgba(0, 245, 255, 0.38);
+  border-bottom-color: rgba(8, 44, 54, 0.94);
+  border-right-color: rgba(8, 44, 54, 0.94);
+  background:
+    linear-gradient(180deg, rgba(16, 36, 56, 0.34), rgba(5, 15, 28, 0.66)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025),
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.52),
+    inset 0 0 36px rgba(0, 245, 255, 0.08);
+  padding: clamp(18px, 4vw, 42px);
+}
+
+.arena::after {
+  position: absolute;
+  right: 8%;
+  bottom: 16%;
+  left: 8%;
+  height: 24px;
+  content: "";
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.58), transparent 68%);
+}
+
+.effectBanner {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  z-index: 5;
+  translate: -50% 0;
+  color: #ffd966;
+  font-size: clamp(1.1rem, 4vw, 2.6rem);
+  line-height: 1.3;
+  pointer-events: none;
+  text-shadow:
+    4px 4px 0 rgba(0, 0, 0, 0.82),
+    0 0 20px rgba(255, 95, 86, 0.92);
+  white-space: nowrap;
+}
+
+.outcomeBanner {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  z-index: 7;
+  translate: -50% 0;
+  color: #74f7a1;
+  font-size: clamp(1.8rem, 7vw, 5rem);
+  line-height: 1.2;
+  pointer-events: none;
+  text-shadow:
+    4px 4px 0 rgba(0, 0, 0, 0.82),
+    0 0 24px rgba(116, 247, 161, 0.75);
+  white-space: nowrap;
+}
+
+.outcomeLose {
+  color: #ff5f56;
+  text-shadow:
+    4px 4px 0 rgba(0, 0, 0, 0.82),
+    0 0 24px rgba(255, 95, 86, 0.76);
+}
+
+.fighter {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  min-height: 250px;
+  align-content: end;
+}
+
+.fighterEnemy {
+  color: #ffd966;
+}
+
+.fighterName {
+  min-width: min(260px, 100%);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  background: rgba(18, 31, 52, 0.9);
+  color: #fff8d7;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.damage {
+  position: absolute;
+  top: 20px;
+  z-index: 6;
+  color: #ff5f56;
+  font-size: clamp(1rem, 3vw, 2rem);
+  line-height: 1;
+  pointer-events: none;
+  text-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.86),
+    0 0 18px rgba(255, 95, 86, 0.78);
+}
+
+.placeholder {
+  display: grid;
+  width: 150px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 4px solid rgba(255, 248, 215, 0.62);
+  background:
+    linear-gradient(180deg, rgba(116, 247, 161, 0.22), rgba(0, 245, 255, 0.14)),
+    rgba(20, 38, 54, 0.74);
+  color: #fff8d7;
+  font-size: 1.8rem;
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.7),
+    inset 0 0 22px rgba(255, 255, 255, 0.08);
+}
+
+.terminal {
+  min-height: 128px;
+  max-height: 24svh;
+  overflow: auto;
+  border: 3px solid rgba(116, 247, 161, 0.7);
+  border-bottom-color: rgba(8, 40, 22, 0.96);
+  border-right-color: rgba(8, 40, 22, 0.96);
+  background: rgba(0, 0, 0, 0.86);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.78),
+    inset 0 0 28px rgba(116, 247, 161, 0.08);
+  padding: 14px;
+}
+
+.terminalTitle {
+  margin: 0 0 10px;
+  color: #74f7a1;
+  font-size: 0.58rem;
+  line-height: 1.4;
+}
+
+.logList {
+  display: grid;
+  gap: 7px;
+}
+
+.logLine {
+  margin: 0;
+  color: rgba(255, 248, 215, 0.78);
+  font-family: "DotGothic16", monospace;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.resultPanel {
+  min-height: min(620px, 68svh);
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  border: 3px solid rgba(255, 217, 102, 0.74);
+  border-bottom-color: rgba(38, 28, 8, 0.98);
+  border-right-color: rgba(38, 28, 8, 0.98);
+  background:
+    linear-gradient(180deg, rgba(3, 10, 24, 0.88), rgba(0, 0, 0, 0.9)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.026),
+      rgba(255, 255, 255, 0.026) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.78),
+    inset 0 0 40px rgba(255, 217, 102, 0.08);
+  padding: clamp(18px, 4vw, 42px);
+}
+
+.resultTitle {
+  margin: 0;
+  color: #74f7a1;
+  font-size: clamp(2rem, 8vw, 5.4rem);
+  line-height: 1.1;
+  text-shadow:
+    5px 5px 0 rgba(0, 0, 0, 0.84),
+    0 0 28px rgba(116, 247, 161, 0.68);
+}
+
+.resultLose {
+  color: #ff5f56;
+  text-shadow:
+    5px 5px 0 rgba(0, 0, 0, 0.84),
+    0 0 28px rgba(255, 95, 86, 0.68);
+}
+
+.resultGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.resultMetric {
+  display: grid;
+  gap: 8px;
+  min-height: 82px;
+  align-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.32);
+  padding: 12px;
+}
+
+.resultMetric span {
+  color: rgba(255, 248, 215, 0.62);
+  font-size: 0.52rem;
+  line-height: 1.4;
+}
+
+.resultMetric strong {
+  color: #fff8d7;
+  font-size: clamp(0.82rem, 2vw, 1.25rem);
+  line-height: 1.4;
+}
+
+.resultSummary {
+  display: grid;
+  gap: 8px;
+  color: rgba(255, 248, 215, 0.74);
+  font-family: "DotGothic16", monospace;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.resultSummary p {
+  margin: 0;
+}
+
+.resultActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template-rows: auto auto minmax(300px, 1fr) auto;
+  }
+
+  .topBar,
+  .hud {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .navButtons {
+    justify-content: stretch;
+  }
+
+  .button {
+    width: 100%;
+  }
+
+  .versus {
+    text-align: center;
+  }
+
+  .arena {
+    grid-template-columns: 1fr 1fr;
+    min-height: 320px;
+    padding: 18px 10px;
+  }
+
+  .resultGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fighterName {
+    min-width: 0;
+    width: 100%;
+    font-size: 0.54rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .resultGrid {
+    grid-template-columns: 1fr;
+  }
+}
