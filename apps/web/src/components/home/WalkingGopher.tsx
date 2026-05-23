@@ -21,6 +21,12 @@ const SPRITE_ROWS = 9;
 const AUDIO_PANEL_SAFE_SPACE = 124;
 const DEFAULT_STAGE_WIDTH = 960;
 
+const homePetSpriteAssets: Record<string, string> = {
+  python: SPRITE_ASSETS.PYTHON,
+  rust: SPRITE_ASSETS.RUST,
+  java: SPRITE_ASSETS.JAVA,
+};
+
 function createWalkPath(stageWidth: number) {
   const safeStageWidth = Math.max(stageWidth, 320);
   const minX = Math.min(AUDIO_PANEL_SAFE_SPACE, Math.max(16, safeStageWidth - GOPHER_HITBOX_WIDTH));
@@ -219,11 +225,12 @@ export function WalkingGopher({ onTalk, pet }: { onTalk: () => void; pet?: PetSu
 }
 
 function HomePetSprite({ attribute, row }: { attribute: string; row: number }) {
-  if (attribute === "python") {
-    return <PythonWalkingSprite />;
-  }
   if (attribute === "go") {
     return <GopherSprite frameCount={8} row={row} />;
+  }
+  const spriteAsset = homePetSpriteAssets[attribute];
+  if (spriteAsset) {
+    return <LanguageHomePetSprite asset={spriteAsset} row={row} />;
   }
 
   const label = attribute.slice(0, 2).toUpperCase();
@@ -247,21 +254,22 @@ function HomePetSprite({ attribute, row }: { attribute: string; row: number }) {
   );
 }
 
-function PythonWalkingSprite() {
+function LanguageHomePetSprite({ asset, row }: { asset: string; row: number }) {
   const scale = 132 / SPRITE_FRAME_WIDTH;
   const displaySheetWidth = Math.round(SPRITE_FRAME_WIDTH * SPRITE_COLUMNS * scale);
   const displaySheetHeight = Math.round(SPRITE_FRAME_HEIGHT * SPRITE_ROWS * scale);
   const frameStep = Math.round(SPRITE_FRAME_WIDTH * scale);
+  const rowOffsetY = Math.round(SPRITE_FRAME_HEIGHT * row * scale);
 
   return (
     <motion.div
-      animate={{ backgroundPositionX: ["0px", `-${frameStep * 6}px`] }}
-      transition={{ duration: 0.9, repeat: Infinity, ease: steppedEase(6) }}
+      animate={{ backgroundPositionX: ["0px", `-${frameStep * 8}px`] }}
+      transition={{ duration: 0.9, repeat: Infinity, ease: steppedEase(8) }}
       style={{
         width: "132px",
         height: "143px",
-        backgroundImage: `url(${SPRITE_ASSETS.PYTHON})`,
-        backgroundPositionY: "0px",
+        backgroundImage: `url(${asset})`,
+        backgroundPositionY: `-${rowOffsetY}px`,
         backgroundRepeat: "no-repeat",
         backgroundSize: `${displaySheetWidth}px ${displaySheetHeight}px`,
         imageRendering: "pixelated",

@@ -77,9 +77,15 @@ const SPRITE_FRAME_WIDTH = 192;
 const SPRITE_FRAME_HEIGHT = 208;
 const SPRITE_COLUMNS = 8;
 const SPRITE_ROWS = 9;
-const PYTHON_IDLE_FRAMES = 6;
+const PET_IDLE_FRAMES = 6;
 const PET_SPRITE_DISPLAY_WIDTH = 132;
 const PET_SPRITE_DISPLAY_HEIGHT = 143;
+
+const petSpriteAssets: Record<string, string> = {
+  python: SPRITE_ASSETS.PYTHON,
+  rust: SPRITE_ASSETS.RUST,
+  java: SPRITE_ASSETS.JAVA,
+};
 
 const pageVariants: Variants = {
   hidden: { opacity: 0 },
@@ -614,8 +620,9 @@ function PetPortrait({ pet }: { pet: PetSummary }) {
   if (pet.attribute.toLowerCase() === "go") {
     return <GopherSprite />;
   }
-  if (pet.attribute.toLowerCase() === "python") {
-    return <PythonPetSprite />;
+  const spriteAsset = petSpriteAssets[pet.attribute.toLowerCase()];
+  if (spriteAsset) {
+    return <LanguagePetSprite asset={spriteAsset} />;
   }
 
   const portrait = petPortraits[pet.attribute] ?? {
@@ -635,12 +642,12 @@ function PetPortrait({ pet }: { pet: PetSummary }) {
   );
 }
 
-function PythonPetSprite() {
+function LanguagePetSprite({ asset }: { asset: string }) {
   const scale = PET_SPRITE_DISPLAY_WIDTH / SPRITE_FRAME_WIDTH;
   const displaySheetWidth = Math.round(SPRITE_FRAME_WIDTH * SPRITE_COLUMNS * scale);
   const displaySheetHeight = Math.round(SPRITE_FRAME_HEIGHT * SPRITE_ROWS * scale);
   const frameStep = Math.round(SPRITE_FRAME_WIDTH * scale);
-  const totalMoveX = frameStep * PYTHON_IDLE_FRAMES;
+  const totalMoveX = frameStep * PET_IDLE_FRAMES;
 
   return (
     <motion.div
@@ -649,12 +656,12 @@ function PythonPetSprite() {
       transition={{
         duration: 0.9,
         repeat: Infinity,
-        ease: steppedEase(PYTHON_IDLE_FRAMES),
+        ease: steppedEase(PET_IDLE_FRAMES),
       }}
       style={{
         width: `${PET_SPRITE_DISPLAY_WIDTH}px`,
         height: `${PET_SPRITE_DISPLAY_HEIGHT}px`,
-        backgroundImage: `url(${SPRITE_ASSETS.PYTHON})`,
+        backgroundImage: `url(${asset})`,
         backgroundRepeat: "no-repeat",
         backgroundSize: `${displaySheetWidth}px ${displaySheetHeight}px`,
       }}

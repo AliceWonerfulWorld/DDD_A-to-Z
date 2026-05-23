@@ -5,4 +5,6 @@ export const SPRITE_ASSETS = {
   RUST_SAMURAI: "/character/rust_samurai_sheet.png",
   GOPHER: "/character/gopher.webp",
   PYTHON: "/character/python.webp",
+  RUST: "/character/rust.webp",
+  JAVA: "/character/duke.webp",
 } as const;
