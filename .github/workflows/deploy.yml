@@ -48,6 +48,7 @@ jobs:
       - name: Run DB migrations
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: nix develop -c ./scripts/atlas.sh migrate apply --env prod
 
       # Artifact Registry に push するため Docker を認証
