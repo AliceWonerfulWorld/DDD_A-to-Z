@@ -26,12 +26,19 @@ func NewProfileController(usecase *profileapp.UseCase, logger *slog.Logger) *Pro
 // プロフィール関連のエンドポイントを登録
 func (c *ProfileController) RegisterRoutes(mux *stdhttp.ServeMux) {
 	mux.HandleFunc("POST /profile/complete", c.completeInitialProfile)
+	mux.HandleFunc("PUT /profile", c.updateProfile)
 	mux.HandleFunc("GET /profile", c.getProfile)
 }
 
 // bodyの構造体
 type completeInitialProfileRequest struct {
 	DisplayName string `json:"display_name"`
+	AvatarURL   string `json:"avatar_url"`
+}
+
+type updateProfileRequest struct {
+	DisplayName string `json:"display_name"`
+	AvatarURL   string `json:"avatar_url"`
 }
 
 // プロフィール初期設定
@@ -51,6 +58,7 @@ func (c *ProfileController) completeInitialProfile(w stdhttp.ResponseWriter, r *
 	input := profileapp.CompleteInitialProfileInput{
 		SessionToken: cookie.Value,
 		DisplayName:  req.DisplayName,
+		AvatarURL:    req.AvatarURL,
 	}
 
 	if err := c.usecase.CompleteInitialProfile(r.Context(), input); err != nil {
@@ -71,7 +79,42 @@ func (c *ProfileController) completeInitialProfile(w stdhttp.ResponseWriter, r *
 		return
 	}
 
-	w.WriteHeader(stdhttp.StatusOK)
+	w.WriteHeader(stdhttp.StatusNoContent)
+}
+
+func (c *ProfileController) updateProfile(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		writeAPIError(w, stdhttp.StatusUnauthorized, "unauthenticated", "unauthenticated", 0, nil)
+		return
+	}
+
+	var req updateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_request", "invalid json body", 0, nil)
+		return
+	}
+
+	input := profileapp.UpdateProfileInput{
+		SessionToken: cookie.Value,
+		DisplayName:  req.DisplayName,
+		AvatarURL:    req.AvatarURL,
+	}
+
+	if err := c.usecase.UpdateProfile(r.Context(), input); err != nil {
+		switch {
+		case errors.Is(err, profileapp.ErrUnauthenticated):
+			writeAPIError(w, stdhttp.StatusUnauthorized, "unauthenticated", "unauthenticated", 0, nil)
+		case errors.Is(err, profileapp.ErrInvalidDisplayName):
+			writeAPIError(w, stdhttp.StatusBadRequest, "invalid_display_name", err.Error(), 0, nil)
+		default:
+			c.logger.Error("failed to update profile", "error", err)
+			writeAPIError(w, stdhttp.StatusInternalServerError, "internal_error", "Internal Server Error", 0, nil)
+		}
+		return
+	}
+
+	w.WriteHeader(stdhttp.StatusNoContent)
 }
 
 func (c *ProfileController) getProfile(w stdhttp.ResponseWriter, r *stdhttp.Request) {
@@ -101,6 +144,7 @@ func (c *ProfileController) getProfile(w stdhttp.ResponseWriter, r *stdhttp.Requ
 
 	resp := map[string]any{
 		"display_name": profile.DisplayName,
+		"avatar_url":   profile.AvatarURL,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

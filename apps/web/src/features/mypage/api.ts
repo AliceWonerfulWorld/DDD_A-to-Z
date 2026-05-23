@@ -5,6 +5,7 @@ export interface MyPageUser {
   github_id: number;
   username: string;
   avatar_url: string;
+  github_avatar_url: string;
   created_at: string;
 }
 

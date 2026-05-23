@@ -3,7 +3,10 @@ import { motion } from "framer-motion";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { useGuardedNavigation } from "../../hooks/useGuardedNavigation";
 import { fetchMyPage, type MyPageResponse, type GitHubStats } from "../../features/mypage/api";
+import { updateProfileAPI } from "../../features/profile/api";
 import { findGuildBySlug } from "../../features/guild/guildMaster";
+import { AvatarPicker } from "../profile/AvatarPicker";
+import { NameInput } from "../profile/NameInput";
 import styles from "./MyPage.module.css";
 
 interface MyPageProps {
@@ -155,12 +158,42 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const guardedNavigate = useGuardedNavigation(onNavigate);
   const [mypageData, setMypageData] = useState<MyPageResponse | null>(null);
   const [apiError, setApiError] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editAvatar, setEditAvatar] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
+  const loadMyPage = () => {
     fetchMyPage()
       .then(setMypageData)
       .catch(() => setApiError(true));
+  };
+
+  useEffect(() => {
+    loadMyPage();
   }, []);
+
+  const handleEditProfileClick = () => {
+    if (mypageData) {
+      setEditName(mypageData.user.username);
+      setEditAvatar(mypageData.user.avatar_url);
+    }
+    setIsEditingProfile(true);
+  };
+
+  const handleSaveProfileClick = async () => {
+    if (!editName.trim() || isSaving) return;
+    setIsSaving(true);
+    try {
+      await updateProfileAPI(editName, editAvatar);
+      setIsEditingProfile(false);
+      loadMyPage();
+    } catch (e) {
+      console.error("failed to update profile", e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const langEntries: LangEntry[] = useMemo(() => {
     if (!mypageData) return [];
@@ -277,61 +310,114 @@ export function MyPage({ onNavigate }: MyPageProps) {
           {/* Left: Adventurer Profile */}
           <Panel borderColor="rgba(240,192,64,0.3)">
             <SectionTitle text="PROFILE" color="#f0c040" />
-            <div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+            {isEditingProfile ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <AvatarPicker
+                  avatarUrl={editAvatar}
+                  githubAvatarUrl={mypageData?.user.github_avatar_url}
+                  disabled={isSaving}
+                  onChange={setEditAvatar}
+                />
+                <NameInput username={editName} onChange={setEditName} disabled={isSaving} />
                 <div
                   style={{
-                    fontFamily: '"Press Start 2P", monospace',
-                    fontSize: "1rem",
-                    color: "#e8e8d0",
-                  }}
-                >
-                  {mypageData?.user.username ?? "-"}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "rgba(232,232,208,0.4)",
-                    marginTop: "4px",
-                    fontFamily: '"Press Start 2P", monospace',
-                  }}
-                >
-                  -
-                </div>
-                <div
-                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    justifyContent: "flex-end",
                     marginTop: "10px",
-                    border: "1px solid rgba(240,192,64,0.15)",
-                    background: "rgba(240,192,64,0.04)",
-                    padding: "8px",
                   }}
                 >
-                  <div
+                  <button
+                    onClick={() => setIsEditingProfile(false)}
+                    disabled={isSaving}
                     style={{
-                      fontSize: "0.7rem",
-                      color: "rgba(232,232,208,0.3)",
                       fontFamily: '"Press Start 2P", monospace',
+                      fontSize: "0.7rem",
+                      padding: "8px 12px",
+                      background: "rgba(255,255,255,0.1)",
+                      color: "#fff",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      cursor: "pointer",
                     }}
                   >
-                    TITLE
-                  </div>
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}
+                    CANCEL
+                  </button>
+                  <button
+                    onClick={() => void handleSaveProfileClick()}
+                    disabled={isSaving}
+                    style={{
+                      fontFamily: '"Press Start 2P", monospace',
+                      fontSize: "0.7rem",
+                      padding: "8px 12px",
+                      background: "#f0c040",
+                      color: "#1b1304",
+                      border: "1px solid #fff3a6",
+                      cursor: "pointer",
+                    }}
                   >
-                    <span style={{ fontSize: "1.4rem" }}>👑</span>
-                    <span
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#f0c040",
-                        fontFamily: '"Press Start 2P", monospace',
-                      }}
-                    >
-                      -
-                    </span>
-                  </div>
+                    SAVE
+                  </button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                  {mypageData?.user.avatar_url && (
+                    <div
+                      style={{
+                        width: "64px",
+                        height: "64px",
+                        border: "2px solid #f0c040",
+                        padding: "2px",
+                        background: "rgba(0,0,0,0.5)",
+                      }}
+                    >
+                      <img
+                        src={mypageData.user.avatar_url}
+                        alt="avatar"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          imageRendering: "pixelated",
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontFamily: '"Press Start 2P", monospace',
+                        fontSize: "1rem",
+                        color: "#e8e8d0",
+                      }}
+                    >
+                      {mypageData?.user.username ?? "-"}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleEditProfileClick}
+                  style={{
+                    alignSelf: "flex-start",
+                    fontFamily: '"Press Start 2P", monospace',
+                    fontSize: "0.6rem",
+                    color: "#1b1304",
+                    background: "#f0c040",
+                    border: "2px solid #fff3a6",
+                    borderBottomColor: "#6f4f1c",
+                    borderRightColor: "#6f4f1c",
+                    boxShadow: "0 0 0 2px rgba(0,0,0,0.72), 4px 4px 0 rgba(0,0,0,0.48)",
+                    padding: "6px 10px",
+                    cursor: "pointer",
+                    marginTop: "4px",
+                  }}
+                >
+                  EDIT PROFILE
+                </button>
+              </div>
+            )}
 
             {/* Season info */}
             <div

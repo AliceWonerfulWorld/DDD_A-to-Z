@@ -21,6 +21,7 @@ func NewProfileStore(db *gorm.DB) *ProfileStore {
 type profileRecord struct {
 	UserID      user.ID   `gorm:"column:user_id"`
 	DisplayName string    `gorm:"column:display_name"`
+	AvatarURL   string    `gorm:"column:avatar_url"`
 	CreatedAt   time.Time `gorm:"column:created_at"`
 	UpdatedAt   time.Time `gorm:"column:updated_at"`
 }
@@ -29,6 +30,7 @@ func (r profileRecord) toDomain() domainprofile.Profile {
 	return domainprofile.Profile{
 		UserID:      r.UserID,
 		DisplayName: r.DisplayName,
+		AvatarURL:   r.AvatarURL,
 		CreatedAt:   r.CreatedAt,
 		UpdatedAt:   r.UpdatedAt,
 	}
@@ -37,19 +39,20 @@ func (r profileRecord) toDomain() domainprofile.Profile {
 // レコード保存(Upsert)
 func (s *ProfileStore) Save(ctx context.Context, p domainprofile.Profile) error {
 	return s.db.WithContext(ctx).Exec(`
-		INSERT INTO user_profiles (user_id, display_name, created_at, updated_at)
-		VALUES (?, ?, ?, ?)
+		INSERT INTO user_profiles (user_id, display_name, avatar_url, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT (user_id) DO UPDATE
 		SET display_name = EXCLUDED.display_name,
+		    avatar_url   = EXCLUDED.avatar_url,
 		    updated_at   = EXCLUDED.updated_at
-	`, p.UserID, p.DisplayName, p.CreatedAt, p.UpdatedAt).Error
+	`, p.UserID, p.DisplayName, p.AvatarURL, p.CreatedAt, p.UpdatedAt).Error
 }
 
 // レコード取得
 func (s *ProfileStore) FindByUserID(ctx context.Context, userID user.ID) (domainprofile.Profile, bool, error) {
 	var rec profileRecord
 	result := s.db.WithContext(ctx).Raw(`
-		SELECT user_id, display_name, created_at, updated_at
+		SELECT user_id, display_name, avatar_url, created_at, updated_at
 		FROM user_profiles
 		WHERE user_id = ?
 	`, userID).Scan(&rec)

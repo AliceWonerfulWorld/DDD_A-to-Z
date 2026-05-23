@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { fetchMe } from "../../features/auth/api";
 
 const JOURNEY_START_DELAY_MS = 1800;
 const INTRO_TEXT = "歓迎しよう、新たな挑戦者よ。\n君のコードネームを教えてくれ。";
@@ -11,7 +12,7 @@ const buildSendoffText = (name: string) =>
   `よし、「${name}」よ。\nコードの世界へ、いってらっしゃい！`;
 
 interface InitialProfileFlowArgs {
-  onComplete: (username: string) => void;
+  onComplete: (username: string, avatarUrl: string) => void;
 }
 
 function getAudioContext(): typeof window.AudioContext | undefined {
@@ -22,7 +23,9 @@ function getAudioContext(): typeof window.AudioContext | undefined {
 }
 
 export function useInitialProfileFlow({ onComplete }: InitialProfileFlowArgs) {
-  const [username, setUsername] = useState("octocat");
+  const [username, setUsername] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [githubAvatarUrl, setGithubAvatarUrl] = useState("");
   const [introText, setIntroText] = useState("");
   const [angryText, setAngryText] = useState("");
   const [confirmText, setConfirmText] = useState("");
@@ -199,6 +202,15 @@ export function useInitialProfileFlow({ onComplete }: InitialProfileFlowArgs) {
       intervalRef: introSpeechIntervalRef,
       speedMs: 90,
     });
+
+    void fetchMe().then((user) => {
+      if (user) {
+        setUsername(user.username || "octocat");
+        const ghUrl = user.avatar_url || "";
+        setGithubAvatarUrl(ghUrl);
+        setAvatarUrl(ghUrl);
+      }
+    });
   }, [playSpeech]);
 
   const handleUsernameChange = useCallback(
@@ -227,7 +239,7 @@ export function useInitialProfileFlow({ onComplete }: InitialProfileFlowArgs) {
       });
 
       transitionTimeoutRef.current = window.setTimeout(() => {
-        onComplete(trimmedUsername);
+        onComplete(trimmedUsername, avatarUrl);
       }, JOURNEY_START_DELAY_MS);
     },
     [onComplete],
@@ -301,5 +313,8 @@ export function useInitialProfileFlow({ onComplete }: InitialProfileFlowArgs) {
     isSendingOff,
     isTransitioning,
     username,
+    avatarUrl,
+    githubAvatarUrl,
+    setAvatarUrl,
   };
 }

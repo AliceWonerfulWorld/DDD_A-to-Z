@@ -16,21 +16,24 @@ const maxDisplayNameLength = 50
 type Profile struct {
 	UserID      user.ID
 	DisplayName string
+	AvatarURL   string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
 
 // New creates a new Profile, validating all invariants.
-func New(userID user.ID, displayName string, now time.Time) (Profile, error) {
+func New(userID user.ID, displayName, avatarURL string, now time.Time) (Profile, error) {
 	if userID == "" {
 		return Profile{}, errors.New("user id is required")
 	}
 	if err := validateDisplayName(displayName); err != nil {
 		return Profile{}, err
 	}
+
 	return Profile{
 		UserID:      userID,
 		DisplayName: displayName,
+		AvatarURL:   avatarURL,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}, nil

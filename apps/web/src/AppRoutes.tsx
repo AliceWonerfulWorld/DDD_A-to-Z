@@ -32,13 +32,13 @@ export function AppRoutes() {
     location.pathname === PATHS.MY_PAGE ||
     location.pathname === PATHS.PETS ||
     location.pathname === PATHS.BATTLE;
-  const completeInitialProfile = async (username: string) => {
+  const completeInitialProfile = async (username: string, avatarUrl: string) => {
     if (username.trim() === "") return;
 
     try {
       const user = await fetchMe();
       if (user) {
-        await completeInitialProfileAPI(username);
+        await completeInitialProfileAPI(username, avatarUrl);
         markInitialProfileCompleted(user.id);
       }
     } catch (error) {
@@ -57,7 +57,9 @@ export function AppRoutes() {
         <Route
           path={PATHS.PROFILE}
           element={
-            <InitialProfile onComplete={(username) => void completeInitialProfile(username)} />
+            <InitialProfile
+              onComplete={(username, avatarUrl) => void completeInitialProfile(username, avatarUrl)}
+            />
           }
         />
         <Route

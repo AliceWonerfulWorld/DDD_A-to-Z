@@ -43,3 +43,8 @@ type GuildMembershipReader interface {
 	GetGuildMembership(ctx context.Context, userID user.ID) (*GuildInfo, error)
 	GetTotalGuilds(ctx context.Context) (int, error)
 }
+
+// ProfileReader provides the user's custom profile settings.
+type ProfileReader interface {
+	GetProfile(ctx context.Context, userID user.ID) (*ProfileInfo, error)
+}

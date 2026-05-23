@@ -3,12 +3,14 @@ import { steppedEase } from "../../lib/animationUtils";
 import { ParticleBackground } from "../shared/ParticleBackground";
 import { CodeRain } from "./CodeRain";
 import { JourneyStartOverlay } from "./JourneyStartOverlay";
+import { NameInput } from "./NameInput";
 import { ProfileActions } from "./ProfileActions";
 import { ProfileGopherStage } from "./ProfileGopherStage";
 import { useInitialProfileFlow } from "./useInitialProfileFlow";
+import { AvatarPicker } from "./AvatarPicker";
 
 interface InitialProfileProps {
-  onComplete: (username: string) => void;
+  onComplete: (username: string, avatarUrl: string) => void;
 }
 
 export function InitialProfile({ onComplete }: InitialProfileProps) {
@@ -23,6 +25,9 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
     isSendingOff,
     isTransitioning,
     username,
+    avatarUrl,
+    githubAvatarUrl,
+    setAvatarUrl,
   } = useInitialProfileFlow({ onComplete });
 
   return (
@@ -81,6 +86,12 @@ export function InitialProfile({ onComplete }: InitialProfileProps) {
           isConfirmingName={isConfirmingName}
           isGopherAngry={isGopherAngry}
           isSendingOff={isSendingOff}
+        />
+        <AvatarPicker
+          avatarUrl={avatarUrl}
+          githubAvatarUrl={githubAvatarUrl}
+          disabled={isTransitioning || isConfirmingName || isSendingOff}
+          onChange={setAvatarUrl}
         />
         <NameInput
           disabled={isTransitioning || isConfirmingName || isSendingOff}
@@ -157,53 +168,6 @@ function DialogueBox({ text }: { text: string }) {
       >
         _
       </motion.span>
-    </div>
-  );
-}
-
-function NameInput({
-  disabled,
-  onChange,
-  username,
-}: {
-  disabled: boolean;
-  onChange: (username: string) => void;
-  username: string;
-}) {
-  return (
-    <div style={{ width: "100%" }}>
-      <label
-        style={{
-          display: "block",
-          marginBottom: "0.5rem",
-          fontSize: "0.8rem",
-          color: "var(--color-gold)",
-          letterSpacing: "0.1em",
-        }}
-      >
-        ▶ ENTER YOUR NAME
-      </label>
-      <div style={{ position: "relative" }}>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          style={{
-            width: "100%",
-            padding: "0.8rem",
-            fontSize: "1.2rem",
-            fontFamily: "var(--font-dot)",
-            background: "rgba(0,0,0,0.5)",
-            color: "var(--color-pixel-white)",
-            border: "2px solid rgba(255,255,255,0.4)",
-            outline: "none",
-            textAlign: "center",
-          }}
-          onFocus={(e) => (e.target.style.borderColor = "var(--color-gold)")}
-          onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.4)")}
-        />
-      </div>
     </div>
   );
 }
