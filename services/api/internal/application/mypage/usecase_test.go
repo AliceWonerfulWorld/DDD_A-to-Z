@@ -88,7 +88,7 @@ type stubProfileReader struct {
 	err     error
 }
 
-func (s *stubProfileReader) GetProfileInfo(_ context.Context, _ user.ID) (*mypage.ProfileInfo, error) {
+func (s *stubProfileReader) GetProfile(_ context.Context, _ user.ID) (*mypage.ProfileInfo, error) {
 	return s.profile, s.err
 }
 

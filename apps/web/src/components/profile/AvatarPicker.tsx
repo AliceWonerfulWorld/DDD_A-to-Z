@@ -1,4 +1,3 @@
-
 interface AvatarPickerProps {
   avatarUrl: string;
   githubAvatarUrl?: string;
