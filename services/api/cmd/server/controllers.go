@@ -129,7 +129,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		mypageapp.NewGuildMembershipReader(guildStore),
 		mypageapp.NewProfileReader(profileStore),
 	)
-	petUseCase := petapp.NewUseCaseWithTraining(
+	petUseCase := petapp.NewUseCaseWithTrainingAndBattle(
 		authStore,
 		newMypageCPReader(contributionPointStore, mypageStore),
 		petStore,
@@ -138,6 +138,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		cpUseCase,
 		security.NewIDGenerator("pet_training"),
 		postgres.NewPetTrainingTransactioner(db, cpLedgerIDGenerator),
+		petStore,
 	)
 	spUseCase := spapp.NewUseCase(authStore, contributionPointStore)
 	homeCPProvider := newHomeCPDataProvider(contributionPointStore, mypageStore)

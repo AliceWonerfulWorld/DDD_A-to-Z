@@ -20,6 +20,9 @@ var (
 	ErrInsufficientCP      = errors.New("insufficient cp")
 	ErrTrainingIDMissing   = errors.New("pet training id generator is required")
 	ErrTrainingUnavailable = errors.New("pet training dependencies are unavailable")
+	ErrBattleUnavailable   = errors.New("pet battle dependencies are unavailable")
+	ErrOpponentPetNotFound = errors.New("opponent pet not found")
+	ErrInvalidBattleTarget = errors.New("invalid battle target")
 )
 
 // UseCase handles pet data retrieval for the authenticated user.
@@ -32,6 +35,7 @@ type UseCase struct {
 	trainingCP   CPSpender
 	trainingIDs  IDGenerator
 	transaction  TrainingTransactioner
+	battlePets   PetBattleReader
 	now          func() time.Time
 }
 
@@ -50,6 +54,20 @@ func NewUseCaseWithTraining(
 	trainingIDs IDGenerator,
 	transaction TrainingTransactioner,
 ) *UseCase {
+	return NewUseCaseWithTrainingAndBattle(current, cp, pets, guild, trainingPets, trainingCP, trainingIDs, transaction, nil)
+}
+
+func NewUseCaseWithTrainingAndBattle(
+	current CurrentUserRepository,
+	cp CPBalanceReader,
+	pets PetReader,
+	guild CurrentGuildReader,
+	trainingPets PetTrainingRepository,
+	trainingCP CPSpender,
+	trainingIDs IDGenerator,
+	transaction TrainingTransactioner,
+	battlePets PetBattleReader,
+) *UseCase {
 	return &UseCase{
 		current:      current,
 		cp:           cp,
@@ -59,6 +77,7 @@ func NewUseCaseWithTraining(
 		trainingCP:   trainingCP,
 		trainingIDs:  trainingIDs,
 		transaction:  transaction,
+		battlePets:   battlePets,
 		now:          time.Now,
 	}
 }
@@ -194,6 +213,91 @@ func (u *UseCase) TrainPet(ctx context.Context, command TrainPetCommand) (TrainP
 	return result, nil
 }
 
+func (u *UseCase) ListBattleOpponents(ctx context.Context, sessionToken string) (BattleOpponentsData, error) {
+	if err := ctx.Err(); err != nil {
+		return BattleOpponentsData{}, err
+	}
+	if strings.TrimSpace(sessionToken) == "" {
+		return BattleOpponentsData{}, ErrUnauthenticated
+	}
+	if u.battlePets == nil {
+		return BattleOpponentsData{}, ErrBattleUnavailable
+	}
+
+	appUser, ok, err := u.current.FindUserBySessionToken(ctx, sessionToken, u.now())
+	if err != nil {
+		return BattleOpponentsData{}, err
+	}
+	if !ok {
+		return BattleOpponentsData{}, ErrUnauthenticated
+	}
+
+	opponents, err := u.battlePets.ListOpponentPets(ctx, appUser.ID)
+	if err != nil {
+		return BattleOpponentsData{}, err
+	}
+
+	summaries := make([]OpponentSummary, 0, len(opponents))
+	for _, opponent := range opponents {
+		summaries = append(summaries, toOpponentSummary(opponent))
+	}
+	return BattleOpponentsData{Opponents: summaries}, nil
+}
+
+func (u *UseCase) BattlePet(ctx context.Context, command BattlePetCommand) (BattleResult, error) {
+	if err := ctx.Err(); err != nil {
+		return BattleResult{}, err
+	}
+	if strings.TrimSpace(command.SessionToken) == "" {
+		return BattleResult{}, ErrUnauthenticated
+	}
+	if strings.TrimSpace(command.PetID) == "" {
+		return BattleResult{}, ErrPetNotFound
+	}
+	if strings.TrimSpace(command.OpponentPetID) == "" {
+		return BattleResult{}, ErrOpponentPetNotFound
+	}
+	if command.PetID == command.OpponentPetID {
+		return BattleResult{}, ErrInvalidBattleTarget
+	}
+	if u.battlePets == nil {
+		return BattleResult{}, ErrBattleUnavailable
+	}
+
+	appUser, ok, err := u.current.FindUserBySessionToken(ctx, command.SessionToken, u.now())
+	if err != nil {
+		return BattleResult{}, err
+	}
+	if !ok {
+		return BattleResult{}, ErrUnauthenticated
+	}
+
+	attackerPet, found, err := u.battlePets.FindPetByIDForUser(ctx, petdomain.ID(command.PetID), appUser.ID)
+	if err != nil {
+		return BattleResult{}, err
+	}
+	if !found {
+		return BattleResult{}, ErrPetNotFound
+	}
+
+	defenderPet, found, err := u.battlePets.FindOpponentPetByID(ctx, petdomain.ID(command.OpponentPetID), appUser.ID)
+	if err != nil {
+		return BattleResult{}, err
+	}
+	if !found {
+		return BattleResult{}, ErrOpponentPetNotFound
+	}
+
+	attacker := toPetSummary(attackerPet)
+	defender := toPetSummary(defenderPet)
+	battle, err := petdomain.Battle(toBattlePet(attacker), toBattlePet(defender))
+	if err != nil {
+		return BattleResult{}, err
+	}
+
+	return toBattleResult(battle, attacker, defender), nil
+}
+
 func (u *UseCase) withTrainingTransaction(
 	ctx context.Context,
 	run func(ctx context.Context, pets PetTrainingRepository, cp CPSpender) error,
@@ -217,20 +321,101 @@ func trainingCost(stat petdomain.TrainingStat) int64 {
 func toPetSummary(petWithGuild PetWithGuild) PetSummary {
 	foundPet := petWithGuild.Pet
 	return PetSummary{
-		ID:         string(foundPet.ID),
-		GuildID:    string(foundPet.GuildID),
-		GuildName:  petWithGuild.Guild.Name,
-		Name:       petName(foundPet.Attribute),
-		Species:    petSpecies(foundPet.Attribute),
-		Attribute:  petAttributeLabel(foundPet.Attribute),
-		Level:      1,
-		Exp:        0,
-		MaxHP:      foundPet.Stats.Vitality*5 + 5,
-		Power:      foundPet.Stats.Strength - 1,
-		Guard:      foundPet.Stats.Vitality - 1,
-		Speed:      foundPet.Stats.Agility - 1,
-		AcquiredAt: foundPet.CreatedAt,
+		ID:          string(foundPet.ID),
+		OwnerUserID: string(foundPet.UserID),
+		GuildID:     string(foundPet.GuildID),
+		GuildName:   petWithGuild.Guild.Name,
+		Name:        petName(foundPet.Attribute),
+		Species:     petSpecies(foundPet.Attribute),
+		Attribute:   petAttributeLabel(foundPet.Attribute),
+		Level:       1,
+		Exp:         0,
+		MaxHP:       foundPet.Stats.Vitality*5 + 5,
+		Power:       foundPet.Stats.Strength - 1,
+		Guard:       foundPet.Stats.Vitality - 1,
+		Speed:       foundPet.Stats.Agility - 1,
+		AcquiredAt:  foundPet.CreatedAt,
 	}
+}
+
+func toOpponentSummary(petWithGuild PetWithGuild) OpponentSummary {
+	summary := toPetSummary(petWithGuild)
+	return OpponentSummary{
+		ID:        summary.ID,
+		GuildID:   summary.GuildID,
+		GuildName: summary.GuildName,
+		Name:      summary.Name,
+		Species:   summary.Species,
+		Attribute: summary.Attribute,
+		Level:     summary.Level,
+		MaxHP:     summary.MaxHP,
+		Power:     summary.Power,
+		Guard:     summary.Guard,
+		Speed:     summary.Speed,
+	}
+}
+
+func toBattlePet(summary PetSummary) petdomain.BattlePet {
+	return petdomain.BattlePet{
+		ID:    petdomain.ID(summary.ID),
+		MaxHP: summary.MaxHP,
+		Power: summary.Power,
+		Guard: summary.Guard,
+		Speed: summary.Speed,
+	}
+}
+
+func toBattleResult(result petdomain.BattleResult, attacker PetSummary, defender PetSummary) BattleResult {
+	turns := make([]BattleTurn, 0, len(result.Turns))
+	for _, turn := range result.Turns {
+		actorName := battlePetName(turn.ActorPetID, attacker, defender)
+		targetName := battlePetName(turn.TargetPetID, attacker, defender)
+		turns = append(turns, BattleTurn{
+			Turn:              turn.Turn,
+			ActorPetID:        string(turn.ActorPetID),
+			TargetPetID:       string(turn.TargetPetID),
+			Damage:            turn.Damage,
+			TargetRemainingHP: turn.TargetRemainingHP,
+			Message:           fmt.Sprintf("%s attacks %s for %d damage.", actorName, targetName, turn.Damage),
+		})
+	}
+
+	return BattleResult{
+		Result:      battleResultLabel(result.Outcome),
+		WinnerPetID: string(result.WinnerPetID),
+		Turns:       turns,
+		Attacker: BattlePetStatus{
+			PetID:       attacker.ID,
+			Name:        attacker.Name,
+			RemainingHP: result.AttackerRemainingHP,
+		},
+		Defender: BattlePetStatus{
+			PetID:       defender.ID,
+			Name:        defender.Name,
+			RemainingHP: result.DefenderRemainingHP,
+		},
+	}
+}
+
+func battleResultLabel(outcome petdomain.BattleOutcome) string {
+	switch outcome {
+	case petdomain.BattleOutcomeAttackerWin:
+		return "win"
+	case petdomain.BattleOutcomeDefenderWin:
+		return "loss"
+	default:
+		return "draw"
+	}
+}
+
+func battlePetName(petID petdomain.ID, attacker PetSummary, defender PetSummary) string {
+	if petID == petdomain.ID(attacker.ID) {
+		return attacker.Name
+	}
+	if petID == petdomain.ID(defender.ID) {
+		return defender.Name
+	}
+	return string(petID)
 }
 
 func petName(attribute petdomain.Attribute) string {

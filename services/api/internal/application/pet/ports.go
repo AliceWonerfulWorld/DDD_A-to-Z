@@ -31,6 +31,12 @@ type PetTrainingRepository interface {
 	UpdatePet(ctx context.Context, pet petdomain.Pet) error
 }
 
+type PetBattleReader interface {
+	ListOpponentPets(ctx context.Context, userID user.ID) ([]PetWithGuild, error)
+	FindPetByIDForUser(ctx context.Context, petID petdomain.ID, userID user.ID) (PetWithGuild, bool, error)
+	FindOpponentPetByID(ctx context.Context, petID petdomain.ID, userID user.ID) (PetWithGuild, bool, error)
+}
+
 type CPSpender interface {
 	Spend(ctx context.Context, command contributionpointapp.SpendCommand) (contributionpointdomain.LedgerEntry, error)
 }

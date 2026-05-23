@@ -70,6 +70,38 @@ func (s *stubPetTrainingRepository) UpdatePet(_ context.Context, pet petdomain.P
 	return nil
 }
 
+type stubPetBattleReader struct {
+	opponents     []petapp.PetWithGuild
+	attacker      petapp.PetWithGuild
+	attackerFound bool
+	defender      petapp.PetWithGuild
+	defenderFound bool
+}
+
+func (s *stubPetBattleReader) ListOpponentPets(_ context.Context, userID user.ID) ([]petapp.PetWithGuild, error) {
+	opponents := make([]petapp.PetWithGuild, 0, len(s.opponents))
+	for _, opponent := range s.opponents {
+		if opponent.Pet.UserID != userID {
+			opponents = append(opponents, opponent)
+		}
+	}
+	return opponents, nil
+}
+
+func (s *stubPetBattleReader) FindPetByIDForUser(_ context.Context, petID petdomain.ID, userID user.ID) (petapp.PetWithGuild, bool, error) {
+	if !s.attackerFound || s.attacker.Pet.ID != petID || s.attacker.Pet.UserID != userID {
+		return petapp.PetWithGuild{}, false, nil
+	}
+	return s.attacker, true, nil
+}
+
+func (s *stubPetBattleReader) FindOpponentPetByID(_ context.Context, petID petdomain.ID, userID user.ID) (petapp.PetWithGuild, bool, error) {
+	if !s.defenderFound || s.defender.Pet.ID != petID || s.defender.Pet.UserID == userID {
+		return petapp.PetWithGuild{}, false, nil
+	}
+	return s.defender, true, nil
+}
+
 type stubCPSpender struct {
 	balance int64
 	spent   *contributionpointapp.SpendCommand
@@ -390,6 +422,171 @@ func TestTrainPetCannotTrainOtherUsersPet(t *testing.T) {
 	}
 	if pets.updated != nil {
 		t.Fatalf("updated pet = %+v, 期待値 nil", pets.updated)
+	}
+}
+
+func TestListBattleOpponentsExcludesCurrentUsersPets(t *testing.T) {
+	now := time.Date(2026, 5, 23, 0, 0, 0, 0, time.UTC)
+	testUser := user.User{ID: "user_1"}
+	otherUser := user.User{ID: "user_2"}
+	goGuild := mustGuild(t, "guild_go", "go", "Go", now)
+	rustGuild := mustGuild(t, "guild_rust", "rust", "Rust", now)
+	battlePets := &stubPetBattleReader{opponents: []petapp.PetWithGuild{
+		{
+			Pet:   mustPet(t, "pet_go", testUser.ID, "guild_go", petdomain.AttributeGo, petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7}, now),
+			Guild: goGuild,
+		},
+		{
+			Pet:   mustPet(t, "pet_rust", otherUser.ID, "guild_rust", petdomain.AttributeRust, petdomain.Stats{Vitality: 8, Strength: 8, Agility: 4}, now),
+			Guild: rustGuild,
+		},
+	}}
+	uc := petapp.NewUseCaseWithTrainingAndBattle(
+		&stubCurrentUser{user: testUser, found: true},
+		&stubCPBalanceReader{},
+		&stubPetReader{},
+		&stubCurrentGuildReader{},
+		nil,
+		nil,
+		nil,
+		nil,
+		battlePets,
+	)
+
+	result, err := uc.ListBattleOpponents(context.Background(), "valid-token")
+	if err != nil {
+		t.Fatalf("ListBattleOpponents() error = %v", err)
+	}
+	if len(result.Opponents) != 1 {
+		t.Fatalf("opponents length = %d, 期待値 1", len(result.Opponents))
+	}
+	if result.Opponents[0].ID != "pet_rust" {
+		t.Fatalf("opponent = %+v, 期待値 pet_rust", result.Opponents[0])
+	}
+}
+
+func TestListBattleOpponentsCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	uc := petapp.NewUseCaseWithTrainingAndBattle(
+		&stubCurrentUser{user: user.User{ID: "user_1"}, found: true},
+		&stubCPBalanceReader{},
+		&stubPetReader{},
+		&stubCurrentGuildReader{},
+		nil,
+		nil,
+		nil,
+		nil,
+		&stubPetBattleReader{},
+	)
+
+	_, err := uc.ListBattleOpponents(ctx, "valid-token")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, 期待値 context.Canceled", err)
+	}
+}
+
+func TestBattlePetSuccess(t *testing.T) {
+	now := time.Date(2026, 5, 23, 0, 0, 0, 0, time.UTC)
+	testUser := user.User{ID: "user_1"}
+	otherUser := user.User{ID: "user_2"}
+	goGuild := mustGuild(t, "guild_go", "go", "Go", now)
+	rustGuild := mustGuild(t, "guild_rust", "rust", "Rust", now)
+	attacker := petapp.PetWithGuild{
+		Pet:   mustPet(t, "pet_go", testUser.ID, "guild_go", petdomain.AttributeGo, petdomain.Stats{Vitality: 6, Strength: 20, Agility: 7}, now),
+		Guild: goGuild,
+	}
+	defender := petapp.PetWithGuild{
+		Pet:   mustPet(t, "pet_rust", otherUser.ID, "guild_rust", petdomain.AttributeRust, petdomain.Stats{Vitality: 4, Strength: 8, Agility: 4}, now),
+		Guild: rustGuild,
+	}
+	uc := petapp.NewUseCaseWithTrainingAndBattle(
+		&stubCurrentUser{user: testUser, found: true},
+		&stubCPBalanceReader{},
+		&stubPetReader{},
+		&stubCurrentGuildReader{},
+		nil,
+		nil,
+		nil,
+		nil,
+		&stubPetBattleReader{attacker: attacker, attackerFound: true, defender: defender, defenderFound: true},
+	)
+
+	result, err := uc.BattlePet(context.Background(), petapp.BattlePetCommand{
+		SessionToken:  "valid-token",
+		PetID:         "pet_go",
+		OpponentPetID: "pet_rust",
+	})
+	if err != nil {
+		t.Fatalf("BattlePet() error = %v", err)
+	}
+	if result.Result != "win" || result.WinnerPetID != "pet_go" {
+		t.Fatalf("result = %+v, 期待値 win pet_go", result)
+	}
+	if len(result.Turns) == 0 {
+		t.Fatal("turns length = 0")
+	}
+	if result.Turns[0].ActorPetID != "pet_go" || result.Turns[0].Message != "Gopher attacks Ferris for 18 damage." {
+		t.Fatalf("first turn = %+v", result.Turns[0])
+	}
+	if result.Attacker.PetID != "pet_go" || result.Attacker.Name != "Gopher" {
+		t.Fatalf("attacker = %+v", result.Attacker)
+	}
+	if result.Defender.PetID != "pet_rust" || result.Defender.Name != "Ferris" {
+		t.Fatalf("defender = %+v", result.Defender)
+	}
+}
+
+func TestBattlePetCannotUseOtherUsersPetAsAttacker(t *testing.T) {
+	uc := petapp.NewUseCaseWithTrainingAndBattle(
+		&stubCurrentUser{user: user.User{ID: "user_1"}, found: true},
+		&stubCPBalanceReader{},
+		&stubPetReader{},
+		&stubCurrentGuildReader{},
+		nil,
+		nil,
+		nil,
+		nil,
+		&stubPetBattleReader{},
+	)
+
+	_, err := uc.BattlePet(context.Background(), petapp.BattlePetCommand{
+		SessionToken:  "valid-token",
+		PetID:         "pet_other",
+		OpponentPetID: "pet_opponent",
+	})
+	if !errors.Is(err, petapp.ErrPetNotFound) {
+		t.Fatalf("error = %v, 期待値 ErrPetNotFound", err)
+	}
+}
+
+func TestBattlePetCannotBattleOwnPetAsOpponent(t *testing.T) {
+	now := time.Date(2026, 5, 23, 0, 0, 0, 0, time.UTC)
+	testUser := user.User{ID: "user_1"}
+	goGuild := mustGuild(t, "guild_go", "go", "Go", now)
+	attacker := petapp.PetWithGuild{
+		Pet:   mustPet(t, "pet_go", testUser.ID, "guild_go", petdomain.AttributeGo, petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7}, now),
+		Guild: goGuild,
+	}
+	uc := petapp.NewUseCaseWithTrainingAndBattle(
+		&stubCurrentUser{user: testUser, found: true},
+		&stubCPBalanceReader{},
+		&stubPetReader{},
+		&stubCurrentGuildReader{},
+		nil,
+		nil,
+		nil,
+		nil,
+		&stubPetBattleReader{attacker: attacker, attackerFound: true, defender: attacker, defenderFound: true},
+	)
+
+	_, err := uc.BattlePet(context.Background(), petapp.BattlePetCommand{
+		SessionToken:  "valid-token",
+		PetID:         "pet_go",
+		OpponentPetID: "pet_go",
+	})
+	if !errors.Is(err, petapp.ErrInvalidBattleTarget) {
+		t.Fatalf("error = %v, 期待値 ErrInvalidBattleTarget", err)
 	}
 }
 
