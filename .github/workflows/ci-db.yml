@@ -8,23 +8,37 @@ on:
   pull_request:
     paths:
       - ".github/workflows/ci-db.yml"
+      - ".github/workflows/deploy.yml"
       - "atlas.hcl"
       - "db/**"
+      - "services/api/**"
+      - "services/chat/**"
+      - "proto/**"
+      - "gen/go/**"
       - "package.json"
       - "scripts/atlas.sh"
       - "flake.lock"
       - "flake.nix"
+      - "go.work"
+      - "go.work.sum"
   push:
     branches:
       - main
     paths:
       - ".github/workflows/ci-db.yml"
+      - ".github/workflows/deploy.yml"
       - "atlas.hcl"
       - "db/**"
+      - "services/api/**"
+      - "services/chat/**"
+      - "proto/**"
+      - "gen/go/**"
       - "package.json"
       - "scripts/atlas.sh"
       - "flake.lock"
       - "flake.nix"
+      - "go.work"
+      - "go.work.sum"
 
 jobs:
   db:
@@ -50,4 +64,10 @@ jobs:
       - name: Dry-run migrations
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-        run: nix develop -c ./scripts/atlas.sh migrate apply --env prod --dry-run
+        run: |
+          case "$NEON_DATABASE_URL" in
+            *\?*) export NEON_DATABASE_URL="${NEON_DATABASE_URL}&statement_cache_capacity=0" ;;
+            *)    export NEON_DATABASE_URL="${NEON_DATABASE_URL}?statement_cache_capacity=0" ;;
+          esac
+          nix develop -c ./scripts/atlas.sh migrate apply --env prod --dry-run
+
