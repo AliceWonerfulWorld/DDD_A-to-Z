@@ -1,0 +1,11 @@
+{
+  "name": "@lang-war/loadtest-d",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p .cache/bin && ldc2 source/app.d -of=.cache/bin/lang-war-loadtest-d",
+    "dev": "sh -c 'mkdir -p .cache/bin && ldc2 source/app.d -of=.cache/bin/lang-war-loadtest-d && ./.cache/bin/lang-war-loadtest-d \"$@\"' --",
+    "lint": "mkdir -p .cache/bin && ldc2 source/app.d -of=.cache/bin/lang-war-loadtest-d",
+    "test": "mkdir -p .cache/bin && ldc2 -unittest -main source/app.d -of=.cache/bin/lang-war-loadtest-d-test && ./.cache/bin/lang-war-loadtest-d-test"
+  }
+}

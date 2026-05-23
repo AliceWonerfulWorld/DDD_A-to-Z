@@ -1,0 +1,11 @@
+{
+  "authors": ["Lang War contributors"],
+  "copyright": "Copyright © 2026 Lang War contributors",
+  "description": "Defensive load testing CLI for Lang War API.",
+  "license": "MIT",
+  "name": "lang-war-loadtest-d",
+  "sourcePaths": ["source"],
+  "targetName": "lang-war-loadtest-d",
+  "targetPath": ".cache/bin",
+  "targetType": "executable"
+}
