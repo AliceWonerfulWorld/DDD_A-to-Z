@@ -180,14 +180,20 @@ export function RankingsPanel({
             padding: isMobile ? "4px 6px" : "8px clamp(8px, 1.5vw, 16px)",
           }}
         >
-            <span
-              style={{
-                color:
-                  index === 0 ? "#ffd966" : index === 1 ? "#e2e8f0" : index === 2 ? "#b45309" : "#a1a1aa",
-                fontSize: isMobile ? "0.55rem" : "clamp(0.72rem, 1.45vw, 1rem)",
-                lineHeight: 1,
-              }}
-            >
+          <span
+            style={{
+              color:
+                index === 0
+                  ? "#ffd966"
+                  : index === 1
+                    ? "#e2e8f0"
+                    : index === 2
+                      ? "#b45309"
+                      : "#a1a1aa",
+              fontSize: isMobile ? "0.55rem" : "clamp(0.72rem, 1.45vw, 1rem)",
+              lineHeight: 1,
+            }}
+          >
             #{index + 1}
           </span>
           <span style={{ minWidth: 0, overflow: "hidden" }}>
