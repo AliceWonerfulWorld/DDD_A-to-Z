@@ -16,6 +16,7 @@ import { HomeBgm } from "./components/shared/HomeBgm.tsx";
 import { WarMap } from "./components/war-map/WarMap.tsx";
 import { PATHS } from "./constants/paths.ts";
 import { fetchMe } from "./features/auth/api.ts";
+import { AUDIO_ASSETS } from "./features/audio/audioAssets.ts";
 import { completeInitialProfileAPI } from "./features/profile/api.ts";
 import { markInitialProfileCompleted } from "./features/profile/initialProfile.ts";
 
@@ -30,8 +31,8 @@ export function AppRoutes() {
   const usesSharedHomeBgm =
     location.pathname === PATHS.HOME ||
     location.pathname === PATHS.MY_PAGE ||
-    location.pathname === PATHS.PETS ||
     location.pathname === PATHS.BATTLE;
+  const usesPetBgm = location.pathname === PATHS.PETS;
   const completeInitialProfile = async (username: string, avatarUrl: string) => {
     if (username.trim() === "") return;
 
@@ -51,6 +52,7 @@ export function AppRoutes() {
   return (
     <>
       {usesSharedHomeBgm && <HomeBgm />}
+      {usesPetBgm && <HomeBgm src={AUDIO_ASSETS.bgm.petDisplay} />}
       {usesSharedGuildBgm && <GuildBgm />}
       <Routes>
         <Route path={PATHS.ROOT} element={<App />} />

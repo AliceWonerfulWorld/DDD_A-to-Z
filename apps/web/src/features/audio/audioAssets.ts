@@ -2,6 +2,7 @@ export const AUDIO_ASSETS = {
   bgm: {
     title: "/bgm/title_bgm.mp3",
     home: "/bgm/home_bgm.ogg",
+    petDisplay: "/bgm/petdisplay_bgm.ogg",
     guild: "/bgm/guild.ogg",
     guildTown: "/bgm/guild-town.ogg",
     warMap: "/bgm/war_map.ogg",
