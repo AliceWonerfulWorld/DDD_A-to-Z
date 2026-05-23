@@ -86,6 +86,14 @@ func (s *stubMypageGuildMembershipReader) GetTotalGuilds(_ context.Context) (int
 	return s.total, nil
 }
 
+type stubMypageBadgeReader struct {
+	badges []mypage.BadgeSummary
+}
+
+func (s *stubMypageBadgeReader) ListUserBadges(_ context.Context, _ user.ID) ([]mypage.BadgeSummary, error) {
+	return s.badges, nil
+}
+
 // --- tests ---
 
 func TestMypageController_NoCookie(t *testing.T) {
@@ -96,6 +104,8 @@ func TestMypageController_NoCookie(t *testing.T) {
 		&stubMypageGitHubStatsReader{},
 		&stubMypageGitHubTokenRepo{},
 		&stubMypageGuildMembershipReader{},
+		&stubMypageBadgeReader{},
+		nil,
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)
@@ -136,6 +146,8 @@ func TestMypageController_Success(t *testing.T) {
 		&stubMypageGitHubStatsReader{},
 		&stubMypageGitHubTokenRepo{},
 		&stubMypageGuildMembershipReader{},
+		&stubMypageBadgeReader{},
+		nil,
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)

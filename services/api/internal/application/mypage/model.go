@@ -14,6 +14,7 @@ type MyPageData struct {
 	Repositories RepositorySummary
 	GitHubStats  *GitHubStats
 	Guild        *GuildInfo
+	Badges       []BadgeSummary
 }
 
 // CPSummary holds the current balance and lifetime earn/spend totals.
@@ -63,4 +64,13 @@ type GitHubStats struct {
 	GitHubCreatedAt     string
 	YearlyCommits       int
 	YearlyContributions int
+}
+
+// BadgeSummary holds a badge earned by the user.
+type BadgeSummary struct {
+	Slug        string
+	Name        string
+	Description string
+	Icon        string
+	EarnedAt    string
 }

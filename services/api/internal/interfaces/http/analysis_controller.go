@@ -7,23 +7,50 @@ import (
 	stdhttp "net/http"
 	"time"
 
+	badgeapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/badge"
 	githubapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/github"
 	analysisapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/repositoryanalysis"
+	badgedomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/badge"
+	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
 type Analyzer interface {
 	Analyze(ctx context.Context, sessionToken string) (analysisapp.AnalysisResult, error)
 }
 
-type AnalysisController struct {
-	usecase Analyzer
-	logger  *slog.Logger
+type BadgeGrantingChecker interface {
+	CheckAndGrantBadges(ctx context.Context, userID user.ID, conditionType badgedomain.ConditionType, value int64) ([]badgeapp.GrantResult, error)
 }
 
-func NewAnalysisController(usecase Analyzer, logger *slog.Logger) *AnalysisController {
+type TotalEarnedReader interface {
+	GetTotalEarned(ctx context.Context, userID user.ID) (int64, error)
+}
+
+type AnalysisController struct {
+	usecase      Analyzer
+	badgeChecker BadgeGrantingChecker
+	totalEarned  TotalEarnedReader
+	session      interface {
+		FindUserBySessionToken(ctx context.Context, token string, now time.Time) (user.User, bool, error)
+	}
+	logger *slog.Logger
+}
+
+func NewAnalysisController(
+	usecase Analyzer,
+	badgeChecker BadgeGrantingChecker,
+	totalEarned TotalEarnedReader,
+	session interface {
+		FindUserBySessionToken(ctx context.Context, token string, now time.Time) (user.User, bool, error)
+	},
+	logger *slog.Logger,
+) *AnalysisController {
 	return &AnalysisController{
-		usecase: usecase,
-		logger:  logger,
+		usecase:      usecase,
+		badgeChecker: badgeChecker,
+		totalEarned:  totalEarned,
+		session:      session,
+		logger:       logger,
 	}
 }
 
@@ -44,6 +71,29 @@ func (c *AnalysisController) analyzeContribution(w stdhttp.ResponseWriter, r *st
 	if err != nil {
 		c.writeError(w, err)
 		return
+	}
+
+	if result.TotalCP > 0 {
+		appUser, ok, userErr := c.session.FindUserBySessionToken(r.Context(), cookie.Value, time.Now())
+		if userErr == nil && ok {
+			totalEarned, earnedErr := c.totalEarned.GetTotalEarned(r.Context(), appUser.ID)
+			if earnedErr == nil {
+				grantResults, badgeErr := c.badgeChecker.CheckAndGrantBadges(r.Context(), appUser.ID, badgedomain.ConditionTypeCPEarned, totalEarned)
+				if badgeErr != nil {
+					c.logger.WarnContext(r.Context(), "failed to check/grant badges", "error", badgeErr, "user_id", appUser.ID)
+				} else {
+					for _, gr := range grantResults {
+						if gr.JustEarned {
+							c.logger.Info("badge earned", "badge", gr.Badge.Slug, "user_id", appUser.ID)
+						}
+					}
+				}
+			} else {
+				c.logger.WarnContext(r.Context(), "failed to get total earned for badge check", "error", earnedErr, "user_id", appUser.ID)
+			}
+		} else if userErr != nil {
+			c.logger.WarnContext(r.Context(), "failed to resolve user for badge check", "error", userErr)
+		}
 	}
 
 	contributions := make([]map[string]any, 0, len(result.Contributions))

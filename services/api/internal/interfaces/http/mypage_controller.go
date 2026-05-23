@@ -78,6 +78,17 @@ func (c *MypageController) toResponse(data mypageapp.MyPageData) map[string]any 
 		langSummary = map[string]int{}
 	}
 
+	badges := make([]map[string]any, 0, len(data.Badges))
+	for _, b := range data.Badges {
+		badges = append(badges, map[string]any{
+			"slug":        b.Slug,
+			"name":        b.Name,
+			"description": b.Description,
+			"icon":        b.Icon,
+			"earned_at":   b.EarnedAt,
+		})
+	}
+
 	resp := map[string]any{
 		"user": map[string]any{
 			"id":         data.User.ID,
@@ -96,6 +107,7 @@ func (c *MypageController) toResponse(data mypageapp.MyPageData) map[string]any 
 			"language_summary": langSummary,
 			"recent":           recent,
 		},
+		"badges": badges,
 	}
 
 	if data.GitHubStats != nil {

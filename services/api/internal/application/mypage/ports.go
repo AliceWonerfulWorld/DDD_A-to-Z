@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	badgedomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/badge"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
@@ -42,4 +43,14 @@ type GitHubStatsReader interface {
 type GuildMembershipReader interface {
 	GetGuildMembership(ctx context.Context, userID user.ID) (*GuildInfo, error)
 	GetTotalGuilds(ctx context.Context) (int, error)
+}
+
+// BadgeReader provides read-only access to user badges.
+type BadgeReader interface {
+	ListUserBadges(ctx context.Context, userID user.ID) ([]BadgeSummary, error)
+}
+
+// BadgeGrantingChecker checks conditions and grants badges if earned.
+type BadgeGrantingChecker interface {
+	CheckAndGrantBadges(ctx context.Context, userID user.ID, conditionType badgedomain.ConditionType, value int64) (int, error)
 }

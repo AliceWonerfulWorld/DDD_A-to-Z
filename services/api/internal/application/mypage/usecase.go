@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 	"time"
+
+	badgedomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/badge"
 )
 
 const defaultRecentLimit = 5
@@ -12,13 +14,15 @@ const defaultRecentLimit = 5
 var ErrUnauthenticated = errors.New("unauthenticated")
 
 type UseCase struct {
-	current      CurrentUserRepository
-	cp           ContributionPointReader
-	repositories RepositorySummaryReader
-	stats        GitHubStatsReader
-	tokens       GitHubTokenRepository
-	guild        GuildMembershipReader
-	now          func() time.Time
+	current              CurrentUserRepository
+	cp                   ContributionPointReader
+	repositories         RepositorySummaryReader
+	stats                GitHubStatsReader
+	tokens               GitHubTokenRepository
+	guild                GuildMembershipReader
+	badges               BadgeReader
+	badgeGrantingChecker BadgeGrantingChecker
+	now                  func() time.Time
 }
 
 func NewUseCase(
@@ -28,15 +32,19 @@ func NewUseCase(
 	stats GitHubStatsReader,
 	tokens GitHubTokenRepository,
 	guild GuildMembershipReader,
+	badges BadgeReader,
+	badgeGrantingChecker BadgeGrantingChecker,
 ) *UseCase {
 	return &UseCase{
-		current:      current,
-		cp:           cp,
-		repositories: repositories,
-		stats:        stats,
-		tokens:       tokens,
-		guild:        guild,
-		now:          time.Now,
+		current:              current,
+		cp:                   cp,
+		repositories:         repositories,
+		stats:                stats,
+		tokens:               tokens,
+		guild:                guild,
+		badges:               badges,
+		badgeGrantingChecker: badgeGrantingChecker,
+		now:                  time.Now,
 	}
 }
 
@@ -102,6 +110,22 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 		guildInfo.TotalGuilds = totalGuilds
 	}
 
+	var badgeSummaries []BadgeSummary
+	if u.badges != nil {
+		if u.badgeGrantingChecker != nil {
+			_, grantErr := u.badgeGrantingChecker.CheckAndGrantBadges(ctx, appUser.ID, badgedomain.ConditionTypeCPEarned, totalEarned)
+			if grantErr != nil {
+				slog.WarnContext(ctx, "failed to check/grant badges", "error", grantErr, "user_id", appUser.ID)
+			}
+		}
+		userBadges, badgeErr := u.badges.ListUserBadges(ctx, appUser.ID)
+		if badgeErr != nil {
+			slog.WarnContext(ctx, "failed to get user badges", "error", badgeErr, "user_id", appUser.ID)
+		} else {
+			badgeSummaries = userBadges
+		}
+	}
+
 	return MyPageData{
 		User: appUser,
 		CP: CPSummary{
@@ -112,5 +136,6 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 		Repositories: repoSummary,
 		GitHubStats:  ghStats,
 		Guild:        guildInfo,
+		Badges:       badgeSummaries,
 	}, nil
 }
