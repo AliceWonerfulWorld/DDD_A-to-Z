@@ -2,7 +2,12 @@ import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { useGuardedNavigation } from "../../hooks/useGuardedNavigation";
-import { fetchMyPage, type MyPageResponse, type GitHubStats } from "../../features/mypage/api";
+import {
+  fetchMyPage,
+  type MyPageResponse,
+  type GitHubStats,
+  type MyPageBadge,
+} from "../../features/mypage/api";
 import { findGuildBySlug } from "../../features/guild/guildMaster";
 import styles from "./MyPage.module.css";
 
@@ -782,6 +787,18 @@ export function MyPage({ onNavigate }: MyPageProps) {
             )}
           </Panel>
         </div>
+
+        {/* ═══ Badges Row ═══ */}
+        {mypageData && mypageData.badges && mypageData.badges.length > 0 && (
+          <Panel borderColor="rgba(240,192,64,0.3)">
+            <SectionTitle text="BADGES" color="#f0c040" />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+              {mypageData.badges.map((badge) => (
+                <BadgeCard key={badge.slug} badge={badge} />
+              ))}
+            </div>
+          </Panel>
+        )}
       </div>
     </div>
   );
@@ -836,5 +853,50 @@ function GitHubStatsPanel({ stats }: { stats: GitHubStats }) {
         value={stats.yearly_contributions.toLocaleString()}
       />
     </div>
+  );
+}
+
+function BadgeCard({ badge }: { badge: MyPageBadge }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.35, ease: steppedEase(6) }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        border: "1px solid rgba(240,192,64,0.25)",
+        background: "rgba(240,192,64,0.06)",
+        padding: "8px 12px",
+      }}
+    >
+      <span style={{ fontSize: "1.4rem" }}>{badge.icon}</span>
+      <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: "0.8rem",
+            color: "#f0c040",
+            fontFamily: '"Press Start 2P", monospace',
+            lineHeight: 1.4,
+          }}
+        >
+          {badge.name}
+        </div>
+        <div
+          style={{
+            fontSize: "0.6rem",
+            color: "rgba(232,232,208,0.5)",
+            fontFamily: '"Press Start 2P", monospace',
+            lineHeight: 1.4,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {badge.description}
+        </div>
+      </div>
+    </motion.div>
   );
 }
