@@ -320,7 +320,7 @@ type pullRequestPayload struct {
 }
 
 func (c *RepositoryClient) ListPullRequests(ctx context.Context, accessToken, owner, repo, author string, since time.Time) ([]repositoryanalysis.PullRequestItem, error) {
-	nextURL := c.baseURL + "/repos/" + owner + "/" + repo + "/pulls?state=all&sort=created&direction=desc&per_page=100"
+	nextURL := c.baseURL + "/repos/" + owner + "/" + repo + "/pulls?state=all&sort=created&direction=desc&per_page=100&author=" + author
 	var items []repositoryanalysis.PullRequestItem
 
 	for nextURL != "" {
