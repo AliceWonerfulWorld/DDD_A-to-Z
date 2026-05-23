@@ -342,6 +342,17 @@ CREATE TABLE guild_chat_messages (
 CREATE INDEX guild_chat_messages_guild_id_created_at_idx
   ON guild_chat_messages(guild_id, created_at DESC, id DESC);
 
+CREATE TABLE admin_logs (
+  id          BIGSERIAL PRIMARY KEY,
+  action      TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id   TEXT NOT NULL,
+  payload     JSONB NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX admin_logs_created_at_idx ON admin_logs(created_at DESC);
+
 CREATE TABLE player_pets (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id),

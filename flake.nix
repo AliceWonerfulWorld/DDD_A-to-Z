@@ -30,6 +30,8 @@
             pkgs.nodejs_24
             pkgs.google-cloud-sdk
             pkgs.opentofu
+            pkgs.php83
+            pkgs.php83Packages.composer
             pnpmPackage
             goPackage
           ];
