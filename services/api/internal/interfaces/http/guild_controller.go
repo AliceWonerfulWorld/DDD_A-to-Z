@@ -304,10 +304,11 @@ func memberContributionResponses(members []guilddomain.MemberContribution) []map
 	responses := make([]map[string]any, 0, len(members))
 	for _, member := range members {
 		responses = append(responses, map[string]any{
-			"user_id":         member.UserID,
-			"name":            member.Name,
-			"total_earned_cp": member.TotalEarnedCP,
-			"joined_at":       member.JoinedAt.Format(time.RFC3339),
+			"user_id":              member.UserID,
+			"name":                 member.Name,
+			"total_earned_cp":      member.TotalEarnedCP,
+			"total_contributed_cp": member.TotalContributedCP,
+			"joined_at":            member.JoinedAt.Format(time.RFC3339),
 		})
 	}
 
