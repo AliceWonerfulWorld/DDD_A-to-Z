@@ -131,6 +131,63 @@
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.28);
 }
 
+.placeholderPortrait {
+  --pet-tone: #74f7a1;
+  position: relative;
+  display: grid;
+  width: min(148px, 88%);
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 4px solid color-mix(in srgb, var(--pet-tone) 64%, #fff8d7);
+  background:
+    radial-gradient(
+      circle at 50% 34%,
+      color-mix(in srgb, var(--pet-tone) 34%, transparent),
+      transparent 42%
+    ),
+    linear-gradient(180deg, rgba(255, 248, 215, 0.1), rgba(0, 0, 0, 0.18)), rgba(18, 31, 52, 0.92);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.54),
+    inset 0 0 24px color-mix(in srgb, var(--pet-tone) 24%, transparent),
+    0 0 18px color-mix(in srgb, var(--pet-tone) 22%, transparent);
+}
+
+.placeholderAura {
+  position: absolute;
+  inset: 18%;
+  border: 2px solid color-mix(in srgb, var(--pet-tone) 62%, #fff8d7);
+  background: color-mix(in srgb, var(--pet-tone) 15%, transparent);
+  transform: rotate(45deg);
+}
+
+.placeholderFace {
+  position: relative;
+  z-index: 1;
+  color: #fff8d7;
+  font-size: clamp(1.55rem, 3.4vw, 2.45rem);
+  line-height: 1;
+  text-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.72),
+    0 0 16px color-mix(in srgb, var(--pet-tone) 55%, transparent);
+}
+
+.placeholderName {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  z-index: 1;
+  overflow: hidden;
+  color: rgba(255, 248, 215, 0.86);
+  font-family: "DotGothic16", monospace;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .petName {
   margin: 0 0 10px;
   font-size: clamp(0.9rem, 1.8vw, 1.18rem);

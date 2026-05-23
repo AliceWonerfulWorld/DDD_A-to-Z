@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type CSSProperties } from "react";
 import { useMachine } from "@xstate/react";
 import { PATHS } from "../../constants/paths";
 import { ApiError } from "../../lib/api/client";
@@ -39,6 +39,15 @@ function petDisplayName(pet: PetSummary | null | undefined) {
   if (!pet) return "相棒未選択";
   return pet.attribute === "Go" ? "Gopher君" : pet.name;
 }
+
+const petPortraits: Record<string, { label: string; tone: string }> = {
+  Rust: { label: "Fe", tone: "#ff9f6e" },
+  TypeScript: { label: "TS", tone: "#6bb7ff" },
+  Python: { label: "Py", tone: "#ffd966" },
+  Java: { label: "Jv", tone: "#ff7b7b" },
+  Haskell: { label: "λ", tone: "#b89cff" },
+  Zig: { label: "Zg", tone: "#f7a541" },
+};
 
 function statValue(pet: PetSummary, stat: PetTrainingStat) {
   if (stat === "hp") return pet.maxHp;
@@ -243,7 +252,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
               <>
                 <div className={styles.currentPet}>
                   <div className={styles.spriteStage} aria-hidden="true">
-                    <GopherSprite />
+                    <PetPortrait pet={selectedPet} />
                   </div>
                   <div>
                     <h2 className={styles.petName}>{petDisplayName(selectedPet)}</h2>
@@ -362,6 +371,28 @@ function PetStats({ pet }: { pet: PetSummary }) {
           <span className={styles.statValue}>{statValue(pet, stat)}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function PetPortrait({ pet }: { pet: PetSummary }) {
+  if (pet.attribute === "Go") {
+    return <GopherSprite />;
+  }
+
+  const portrait = petPortraits[pet.attribute] ?? {
+    label: pet.attribute.slice(0, 2).toUpperCase(),
+    tone: "#74f7a1",
+  };
+
+  return (
+    <div
+      className={styles.placeholderPortrait}
+      style={{ "--pet-tone": portrait.tone } as CSSProperties}
+    >
+      <span className={styles.placeholderAura} />
+      <span className={styles.placeholderFace}>{portrait.label}</span>
+      <span className={styles.placeholderName}>{petDisplayName(pet)}</span>
     </div>
   );
 }
