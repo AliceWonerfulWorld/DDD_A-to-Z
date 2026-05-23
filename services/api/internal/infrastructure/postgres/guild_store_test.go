@@ -12,6 +12,7 @@ import (
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
 	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
+	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/security"
 	"gorm.io/gorm"
@@ -276,6 +277,62 @@ func TestGuildStoreUpdateMembershipRejectsAlreadyLeftMembership(t *testing.T) {
 	})
 	if !errors.Is(err, guildapp.ErrActiveMembershipNotFound) {
 		t.Fatalf("UpdateMembership() error = %v, 期待値 ErrActiveMembershipNotFound", err)
+	}
+}
+
+func TestGuildStoreCreatePetRejectsDuplicateGuildPet(t *testing.T) {
+	ctx := context.Background()
+	tx := beginPostgresTestTransaction(t, ctx)
+	store, err := NewGuildStore(tx)
+	if err != nil {
+		t.Fatalf("NewGuildStore() がエラーを返しました: %v", err)
+	}
+
+	now := time.Date(2026, 5, 23, 12, 0, 0, 0, time.UTC)
+	guildID := fmt.Sprintf("guild_pet_test_%d", uniqueGitHubID())
+	insertPostgresTestGuild(t, ctx, tx, testGuild{
+		ID:          guildID,
+		Slug:        guildID,
+		Name:        "Pet Guild",
+		Description: "ペット配布用のテストギルド。",
+		Icon:        "PG",
+		Color:       "#00acd7",
+		SortOrder:   1,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+	appUser := createPostgresTestUser(t, ctx, tx)
+	firstPet := petdomain.Pet{
+		ID:        petdomain.ID("pet_first_" + string(appUser.ID)),
+		UserID:    appUser.ID,
+		GuildID:   guilddomain.ID(guildID),
+		Attribute: petdomain.AttributeGo,
+		Stats:     petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := store.CreatePet(ctx, firstPet); err != nil {
+		if isMissingSchemaError(err) {
+			t.Skipf("PostgreSQL 結合テストをスキップします: player_pets schema が migrate されていません: %v", err)
+		}
+		t.Fatalf("CreatePet() がエラーを返しました: %v", err)
+	}
+
+	foundPet, ok, err := store.FindPetByUserAndGuild(ctx, appUser.ID, guilddomain.ID(guildID))
+	if err != nil {
+		t.Fatalf("FindPetByUserAndGuild() がエラーを返しました: %v", err)
+	}
+	if !ok {
+		t.Fatal("FindPetByUserAndGuild() ok = false, 期待値 true")
+	}
+	if foundPet.ID != firstPet.ID {
+		t.Fatalf("found pet id = %q, 期待値 %q", foundPet.ID, firstPet.ID)
+	}
+
+	duplicatePet := firstPet
+	duplicatePet.ID = petdomain.ID("pet_duplicate_" + string(appUser.ID))
+	if err := store.CreatePet(ctx, duplicatePet); !errors.Is(err, guildapp.ErrPetAlreadyOwned) {
+		t.Fatalf("CreatePet() error = %v, 期待値 ErrPetAlreadyOwned", err)
 	}
 }
 

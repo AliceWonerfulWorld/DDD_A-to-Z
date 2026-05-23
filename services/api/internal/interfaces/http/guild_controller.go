@@ -11,6 +11,7 @@ import (
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
+	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 )
 
 type GuildController struct {
@@ -59,13 +60,13 @@ func (c *GuildController) joinGuild(w stdhttp.ResponseWriter, r *stdhttp.Request
 		return
 	}
 
-	membership, err := c.usecase.JoinGuild(r.Context(), cookie.Value, guilddomain.ID(r.PathValue("guildID")))
+	result, err := c.usecase.JoinGuild(r.Context(), cookie.Value, guilddomain.ID(r.PathValue("guildID")))
 	if err != nil {
 		c.writeError(w, err)
 		return
 	}
 
-	if err := writeJSON(w, stdhttp.StatusCreated, membershipResponse(membership)); err != nil {
+	if err := writeJSON(w, stdhttp.StatusCreated, joinGuildResponse(result)); err != nil {
 		c.logger.Error("failed to write guild join response", "error", err)
 	}
 }
@@ -258,6 +259,32 @@ func membershipResponse(membership guilddomain.MembershipWithGuild) map[string]a
 			"user_id":   membership.Membership.UserID,
 			"joined_at": membership.Membership.JoinedAt.Format(time.RFC3339),
 		},
+	}
+}
+
+func joinGuildResponse(result guildapp.JoinGuildResult) map[string]any {
+	response := membershipResponse(result.Membership)
+	response["granted_pet"] = petResponse(result.GrantedPet)
+	response["pet_already_owned"] = result.PetAlreadyOwned
+
+	return response
+}
+
+func petResponse(pet *petdomain.Pet) any {
+	if pet == nil {
+		return nil
+	}
+
+	return map[string]any{
+		"id":         pet.ID,
+		"user_id":    pet.UserID,
+		"guild_id":   pet.GuildID,
+		"attribute":  pet.Attribute,
+		"vitality":   pet.Stats.Vitality,
+		"strength":   pet.Stats.Strength,
+		"agility":    pet.Stats.Agility,
+		"created_at": pet.CreatedAt.Format(time.RFC3339),
+		"updated_at": pet.UpdatedAt.Format(time.RFC3339),
 	}
 }
 

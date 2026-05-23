@@ -9,6 +9,7 @@ import (
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
 	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
+	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"gorm.io/gorm"
 )
@@ -335,6 +336,47 @@ func (s *GuildStore) UpdateMembership(ctx context.Context, membership guilddomai
 	return nil
 }
 
+func (s *GuildStore) FindPetByUserAndGuild(ctx context.Context, userID user.ID, guildID guilddomain.ID) (petdomain.Pet, bool, error) {
+	var record playerPetRecord
+	result := s.db.WithContext(ctx).Raw(`
+		SELECT id, user_id, guild_id, attribute, vitality, strength, agility, created_at, updated_at
+		FROM player_pets
+		WHERE user_id = ?
+			AND guild_id = ?
+	`, userID, guildID).Scan(&record)
+	if result.Error != nil {
+		return petdomain.Pet{}, false, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return petdomain.Pet{}, false, nil
+	}
+
+	foundPet, err := record.toDomain()
+	if err != nil {
+		return petdomain.Pet{}, false, err
+	}
+
+	return foundPet, true, nil
+}
+
+func (s *GuildStore) CreatePet(ctx context.Context, pet petdomain.Pet) error {
+	err := s.db.WithContext(ctx).Exec(`
+		INSERT INTO player_pets (id, user_id, guild_id, attribute, vitality, strength, agility, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, pet.ID, pet.UserID, pet.GuildID, pet.Attribute, pet.Stats.Vitality, pet.Stats.Strength, pet.Stats.Agility, pet.CreatedAt, pet.UpdatedAt).Error
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) &&
+			pgErr.Code == "23505" &&
+			pgErr.ConstraintName == "player_pets_user_id_guild_id_key" {
+			return guildapp.ErrPetAlreadyOwned
+		}
+		return err
+	}
+
+	return nil
+}
+
 func (s *GuildStore) CreateCPContribution(ctx context.Context, contribution guilddomain.CPContribution) error {
 	result := s.db.WithContext(ctx).Exec(`
 		INSERT INTO guild_cp_contributions (id, guild_id, user_id, point_ledger_id, amount, created_at)
@@ -510,6 +552,18 @@ type guildCPContributionRecord struct {
 	CreatedAt     time.Time                    `gorm:"column:created_at"`
 }
 
+type playerPetRecord struct {
+	ID        petdomain.ID        `gorm:"column:id"`
+	UserID    user.ID             `gorm:"column:user_id"`
+	GuildID   guilddomain.ID      `gorm:"column:guild_id"`
+	Attribute petdomain.Attribute `gorm:"column:attribute"`
+	Vitality  int                 `gorm:"column:vitality"`
+	Strength  int                 `gorm:"column:strength"`
+	Agility   int                 `gorm:"column:agility"`
+	CreatedAt time.Time           `gorm:"column:created_at"`
+	UpdatedAt time.Time           `gorm:"column:updated_at"`
+}
+
 type guildMemberContributionRecord struct {
 	UserID        user.ID   `gorm:"column:user_id"`
 	Name          string    `gorm:"column:name"`
@@ -560,5 +614,21 @@ func (r guildCPContributionRecord) toDomain() (guilddomain.CPContribution, error
 		PointLedgerID: r.PointLedgerID,
 		Amount:        r.Amount,
 		CreatedAt:     r.CreatedAt,
+	})
+}
+
+func (r playerPetRecord) toDomain() (petdomain.Pet, error) {
+	return petdomain.NewPet(petdomain.Pet{
+		ID:        r.ID,
+		UserID:    r.UserID,
+		GuildID:   r.GuildID,
+		Attribute: r.Attribute,
+		Stats: petdomain.Stats{
+			Vitality: r.Vitality,
+			Strength: r.Strength,
+			Agility:  r.Agility,
+		},
+		CreatedAt: r.CreatedAt,
+		UpdatedAt: r.UpdatedAt,
 	})
 }
