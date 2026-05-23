@@ -335,13 +335,17 @@ export function PetPage({ onNavigate }: PetPageProps) {
                         type="button"
                         onClick={() => void train(stat)}
                       >
-                        {trainingStat === stat
-                          ? "TRAINING..."
-                          : `${training.label} +${training.amount} / ${training.cost} CP`}
+                        <span className={styles.actionLabel}>
+                          {trainingStat === stat ? "TRAINING..." : training.label}
+                        </span>
+                        <span className={styles.actionBoost}>+{training.amount}</span>
+                        <span className={styles.actionCost}>{training.cost} CP</span>
                       </button>
                     );
                   })}
                 </div>
+
+                <PetBattleRecordPreview />
               </>
             )}
           </motion.section>
@@ -423,6 +427,36 @@ export function PetPage({ onNavigate }: PetPageProps) {
         </motion.div>
       </motion.div>
     </motion.main>
+  );
+}
+
+function PetBattleRecordPreview() {
+  const metrics = [
+    { label: "BATTLES", value: "--" },
+    { label: "WINS", value: "--" },
+    { label: "STREAK", value: "--" },
+  ];
+
+  return (
+    <section className={styles.recordPanel} aria-labelledby="pet-record-title">
+      <div className={styles.recordHeader}>
+        <div>
+          <h3 className={styles.recordTitle} id="pet-record-title">
+            CAREER LOG
+          </h3>
+          <p className={styles.recordCaption}>戦績データ連携予定</p>
+        </div>
+        <span className={styles.recordBadge}>COMING SOON</span>
+      </div>
+      <div className={styles.recordMetrics}>
+        {metrics.map((metric) => (
+          <div className={styles.recordMetric} key={metric.label}>
+            <span className={styles.recordMetricLabel}>{metric.label}</span>
+            <strong className={styles.recordMetricValue}>{metric.value}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
