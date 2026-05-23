@@ -24,14 +24,14 @@ export function ScoutPanel({ guild, isCurrentGuild = false, onClose }: ScoutPane
             right: "clamp(12px, 2vw, 24px)",
             top: "calc(env(safe-area-inset-top, 0px) + clamp(78px, 9vw, 96px))",
             zIndex: 12,
-            width: "min(calc(100vw - 24px), 392px)",
+            width: "min(calc(100vw - 165px), 392px)",
             border: `3px solid ${guild.color}`,
             borderBottomColor: "rgba(20, 18, 12, 0.98)",
             borderRightColor: "rgba(20, 18, 12, 0.98)",
             background: "linear-gradient(180deg, rgba(2, 8, 20, 0.94), rgba(0, 0, 0, 0.86))",
             boxShadow: `0 0 0 2px rgba(0,0,0,0.76), 8px 8px 0 rgba(0,0,0,0.36), inset 0 0 24px ${guild.color}22`,
             color: "#fff8d7",
-            padding: "16px",
+            padding: "clamp(12px, 3vw, 16px)",
             pointerEvents: "auto",
             backdropFilter: "blur(2px)",
           }}
@@ -83,8 +83,8 @@ export function ScoutPanel({ guild, isCurrentGuild = false, onClose }: ScoutPane
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "72px minmax(0, 1fr)",
-              gap: "12px",
+              gridTemplateColumns: "clamp(48px, 15vw, 72px) minmax(0, 1fr)",
+              gap: "clamp(8px, 2vw, 12px)",
               alignItems: "center",
               marginBottom: "14px",
               paddingRight: "34px",
@@ -94,14 +94,14 @@ export function ScoutPanel({ guild, isCurrentGuild = false, onClose }: ScoutPane
               aria-hidden="true"
               style={{
                 display: "grid",
-                width: "72px",
-                height: "72px",
+                width: "clamp(48px, 15vw, 72px)",
+                height: "clamp(48px, 15vw, 72px)",
                 placeItems: "center",
                 border: `2px solid ${guild.color}`,
                 background: `radial-gradient(circle at 50% 20%, ${guild.color}36, rgba(0,0,0,0.78) 62%)`,
                 boxShadow: `inset 0 0 14px rgba(0,0,0,0.68), 0 0 12px ${guild.color}55`,
                 color: guild.accent,
-                fontSize: "0.9rem",
+                fontSize: "clamp(0.7rem, 2vw, 0.9rem)",
                 overflow: "hidden",
               }}
             >
@@ -166,7 +166,7 @@ export function ScoutPanel({ guild, isCurrentGuild = false, onClose }: ScoutPane
               margin: "0 0 16px",
               color: "#f4ecd0",
               fontFamily: '"DotGothic16", monospace',
-              fontSize: "clamp(0.82rem, 1.45vw, 0.98rem)",
+              fontSize: "clamp(0.72rem, 1.45vw, 0.98rem)",
               lineHeight: 1.55,
             }}
           >
@@ -177,7 +177,7 @@ export function ScoutPanel({ guild, isCurrentGuild = false, onClose }: ScoutPane
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: "10px",
+              gap: "clamp(8px, 2vw, 10px)",
               margin: 0,
             }}
           >
