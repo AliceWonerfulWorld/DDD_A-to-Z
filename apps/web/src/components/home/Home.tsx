@@ -51,6 +51,7 @@ const navItems = [
   { label: "REPO ANALYSIS", caption: "GITHUB SCAN", path: PATHS.ANALYSIS, accent: "#7cff6b" },
   { label: "WAR MAP", caption: "BATTLE FRONT", path: PATHS.WAR, accent: "#ff5f56" },
   { label: "GUILD BASE", caption: "COMMUNITY HQ", path: PATHS.GUILD, accent: "#00f5ff" },
+  { label: "MY PET", caption: "GROW & BATTLE", path: PATHS.PETS, accent: "#74f7a1" },
   { label: "MY STATUS", caption: "PLAYER DATA", path: PATHS.MY_PAGE, accent: "#ffd700" },
 ];
 const homeFirstVisitGuideKey = "lang-war.home.first-visit-guide-seen";

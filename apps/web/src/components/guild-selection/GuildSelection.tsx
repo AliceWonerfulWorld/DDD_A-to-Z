@@ -5,6 +5,7 @@ import { GUILD_MASTERS, type GuildMaster } from "../../features/guild/guildMaste
 import { fetchGuilds, joinGuild as joinGuildAPI } from "../../features/guild/api";
 import { hasEverJoinedGuild } from "../../features/guild/membership";
 import { toDisplayGuilds } from "../../features/guild/presentation";
+import { normalizeGrantedPet, storeGrantedPet } from "../../features/pet/guildGrant";
 import { ApiError } from "../../lib/api/client";
 import { steppedEase } from "../../lib/animationUtils";
 
@@ -56,7 +57,12 @@ export function GuildSelection({ onNavigate }: GuildSelectionProps) {
     setIsJoining(true);
     setStatusMessage(null);
     try {
-      await joinGuildAPI(selectedGuild.id);
+      const result = await joinGuildAPI(selectedGuild.id);
+      const grantedPet = result.granted_pet ?? result.grantedPet;
+      const petAlreadyOwned = result.pet_already_owned ?? result.petAlreadyOwned ?? false;
+      if (grantedPet && !petAlreadyOwned) {
+        storeGrantedPet(normalizeGrantedPet(grantedPet));
+      }
       onNavigate(PATHS.GUILD);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
