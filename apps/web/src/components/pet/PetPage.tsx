@@ -338,12 +338,12 @@ export function PetPage({ onNavigate }: PetPageProps) {
                 </button>
               ))}
               <button
-                className={styles.actionButton}
+                className={styles.battleButton}
                 disabled={!selectedOpponent || !selectedPet || isBattling}
                 type="button"
                 onClick={() => void battle()}
               >
-                {isBattling ? "BATTLE..." : "BATTLE"}
+                {isBattling ? "MATCHING..." : "START BATTLE"}
               </button>
             </div>
           </section>

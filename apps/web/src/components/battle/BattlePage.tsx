@@ -93,6 +93,13 @@ export function BattlePage({ onNavigate }: BattlePageProps) {
     return () => window.clearTimeout(timer);
   }, [replay.turns, turnIndex, view]);
 
+  useEffect(() => {
+    if (!showResultBanner) return;
+
+    const timer = window.setTimeout(() => setView("result"), 1800);
+    return () => window.clearTimeout(timer);
+  }, [showResultBanner]);
+
   const replayAgain = () => {
     setTurnIndex(0);
     setActiveTurn(null);
@@ -182,20 +189,9 @@ export function BattlePage({ onNavigate }: BattlePageProps) {
             </section>
 
             <section className={styles.terminal} aria-label="Battle log">
-              <div className={styles.terminalHeader}>
-                <p className={styles.terminalTitle}>
-                  {isComplete ? "BATTLE COMPLETE" : "BATTLE LOG"}
-                </p>
-                {showResultBanner && (
-                  <button
-                    className={styles.nextButton}
-                    type="button"
-                    onClick={() => setView("result")}
-                  >
-                    NEXT
-                  </button>
-                )}
-              </div>
+              <p className={styles.terminalTitle}>
+                {isComplete ? "BATTLE COMPLETE" : "BATTLE LOG"}
+              </p>
               <div className={styles.logList}>
                 {logs.length === 0 && <p className={styles.logLine}>Battle sequence booting...</p>}
                 {logs.map((log, index) => (
