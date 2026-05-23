@@ -67,6 +67,7 @@ export interface MyPageResponse {
   guild: MyPageGuild | null;
   github_stats: GitHubStats | null;
   badges: MyPageBadge[];
+  selected_badge_slug: string | null;
 }
 
 export async function fetchMyPage(): Promise<MyPageResponse> {

@@ -9,6 +9,7 @@ export async function completeInitialProfileAPI(displayName: string): Promise<vo
 
 export type Profile = {
   display_name: string;
+  selected_badge_slug: string | null;
 };
 
 export async function fetchProfile(): Promise<Profile | null> {
@@ -16,7 +17,13 @@ export async function fetchProfile(): Promise<Profile | null> {
     const data = await apiFetch<Profile>("/profile");
     return data;
   } catch {
-    // 401 や 404 の場合は null を返す
     return null;
   }
+}
+
+export async function updateSelectedBadge(badgeSlug: string | null): Promise<void> {
+  await apiFetch<void>("/profile/badge", {
+    method: "PATCH",
+    body: JSON.stringify({ badge_slug: badgeSlug }),
+  });
 }

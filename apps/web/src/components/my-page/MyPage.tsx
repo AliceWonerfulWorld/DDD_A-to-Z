@@ -8,6 +8,7 @@ import {
   type GitHubStats,
   type MyPageBadge,
 } from "../../features/mypage/api";
+import { updateSelectedBadge } from "../../features/profile/api";
 import { findGuildBySlug } from "../../features/guild/guildMaster";
 import styles from "./MyPage.module.css";
 
@@ -160,12 +161,32 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const guardedNavigate = useGuardedNavigation(onNavigate);
   const [mypageData, setMypageData] = useState<MyPageResponse | null>(null);
   const [apiError, setApiError] = useState(false);
+  const [selectedBadgeSlug, setSelectedBadgeSlug] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMyPage()
-      .then(setMypageData)
+      .then((data) => {
+        setMypageData(data);
+        setSelectedBadgeSlug(data.selected_badge_slug);
+      })
       .catch(() => setApiError(true));
   }, []);
+
+  const handleBadgeSelect = async (slug: string | null) => {
+    try {
+      await updateSelectedBadge(slug);
+      setSelectedBadgeSlug(slug);
+    } catch {
+      // TODO: show error feedback
+    }
+  };
+
+  const effectiveSelectedSlug = selectedBadgeSlug;
+
+  const activeBadge = useMemo(() => {
+    if (!mypageData || !effectiveSelectedSlug) return null;
+    return mypageData.badges.find((b) => b.slug === effectiveSelectedSlug) ?? null;
+  }, [mypageData, effectiveSelectedSlug]);
 
   const langEntries: LangEntry[] = useMemo(() => {
     if (!mypageData) return [];
@@ -331,7 +352,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                         fontFamily: '"Press Start 2P", monospace',
                       }}
                     >
-                      -
+                      {activeBadge ? activeBadge.name : "-"}
                     </span>
                   </div>
                 </div>
@@ -794,7 +815,12 @@ export function MyPage({ onNavigate }: MyPageProps) {
             <SectionTitle text="BADGES" color="#f0c040" />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               {mypageData.badges.map((badge) => (
-                <BadgeCard key={badge.slug} badge={badge} />
+                <BadgeCard
+                  key={badge.slug}
+                  badge={badge}
+                  selected={badge.slug === effectiveSelectedSlug}
+                  onSelect={handleBadgeSelect}
+                />
               ))}
             </div>
           </Panel>
@@ -856,19 +882,30 @@ function GitHubStatsPanel({ stats }: { stats: GitHubStats }) {
   );
 }
 
-function BadgeCard({ badge }: { badge: MyPageBadge }) {
+function BadgeCard({
+  badge,
+  selected,
+  onSelect,
+}: {
+  badge: MyPageBadge;
+  selected: boolean;
+  onSelect: (slug: string | null) => void;
+}) {
   return (
-    <motion.div
+    <motion.button
       initial={{ opacity: 0, scale: 0.85 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.35, ease: steppedEase(6) }}
+      onClick={() => onSelect(selected ? null : badge.slug)}
       style={{
         display: "flex",
         alignItems: "center",
         gap: "8px",
-        border: "1px solid rgba(240,192,64,0.25)",
-        background: "rgba(240,192,64,0.06)",
+        border: selected ? "2px solid #f0c040" : "1px solid rgba(240,192,64,0.25)",
+        background: selected ? "rgba(240,192,64,0.15)" : "rgba(240,192,64,0.06)",
         padding: "8px 12px",
+        cursor: "pointer",
+        fontFamily: '"Press Start 2P", monospace',
       }}
     >
       <span style={{ fontSize: "1.4rem" }}>{badge.icon}</span>
@@ -876,7 +913,7 @@ function BadgeCard({ badge }: { badge: MyPageBadge }) {
         <div
           style={{
             fontSize: "0.8rem",
-            color: "#f0c040",
+            color: selected ? "#f0c040" : "rgba(232,232,208,0.7)",
             fontFamily: '"Press Start 2P", monospace',
             lineHeight: 1.4,
           }}
@@ -894,9 +931,9 @@ function BadgeCard({ badge }: { badge: MyPageBadge }) {
             textOverflow: "ellipsis",
           }}
         >
-          {badge.description}
+          {selected ? "✓ ACTIVE TITLE" : badge.description}
         </div>
       </div>
-    </motion.div>
+    </motion.button>
   );
 }
