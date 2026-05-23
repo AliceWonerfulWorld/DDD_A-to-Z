@@ -10,7 +10,7 @@ import { useInitialProfileFlow } from "./useInitialProfileFlow";
 import { AvatarPicker } from "./AvatarPicker";
 
 interface InitialProfileProps {
-  onComplete: (username: string) => void;
+  onComplete: (username: string, avatarUrl: string) => void;
 }
 
 export function InitialProfile({ onComplete }: InitialProfileProps) {
