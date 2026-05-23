@@ -289,10 +289,27 @@ CREATE TABLE repository_analysis_contributions (
 CREATE INDEX repository_analysis_contributions_occurred_at_idx ON repository_analysis_contributions(occurred_at DESC);
 CREATE INDEX repository_analysis_contributions_user_id_occurred_at_idx ON repository_analysis_contributions(user_id, occurred_at DESC);
 
+CREATE TABLE badges (
+  slug TEXT PRIMARY KEY CHECK (length(slug) > 0),
+  name TEXT NOT NULL CHECK (length(name) > 0),
+  description TEXT NOT NULL CHECK (length(description) > 0),
+  icon TEXT NOT NULL CHECK (length(icon) > 0),
+  condition_type TEXT NOT NULL CHECK (length(condition_type) > 0),
+  threshold BIGINT NOT NULL CHECK (threshold > 0),
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+INSERT INTO badges (slug, name, description, icon, condition_type, threshold, created_at, updated_at) VALUES
+  ('cp-bronze',     'CP Bronze',     'Earned 50 Contribution Points',              '🥉', 'cp_earned', 50,  NOW(), NOW()),
+  ('cp-silver',     'CP Silver',     'Earned 100 Contribution Points',             '🥈', 'cp_earned', 100, NOW(), NOW()),
+  ('cp-gold',       'CP Gold',        'Earned 300 Contribution Points',             '🥇', 'cp_earned', 300, NOW(), NOW()),
+  ('cp-platinum',   'CP Platinum',    'Earned 500 Contribution Points',             '💎', 'cp_earned', 500, NOW(), NOW());
+
 CREATE TABLE user_profiles (
   user_id TEXT PRIMARY KEY REFERENCES users(id),
   display_name TEXT NOT NULL CHECK (length(display_name) > 0 AND length(display_name) <= 50),
-selected_badge_slug TEXT REFERENCES badges(slug),
+  selected_badge_slug TEXT REFERENCES badges(slug),
   avatar_url TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
@@ -382,23 +399,6 @@ CREATE TABLE tech_news_cache (
 );
 
 CREATE INDEX tech_news_cache_slug_fetched_at_idx ON tech_news_cache(slug, fetched_at DESC);
-
-CREATE TABLE badges (
-  slug TEXT PRIMARY KEY CHECK (length(slug) > 0),
-  name TEXT NOT NULL CHECK (length(name) > 0),
-  description TEXT NOT NULL CHECK (length(description) > 0),
-  icon TEXT NOT NULL CHECK (length(icon) > 0),
-  condition_type TEXT NOT NULL CHECK (length(condition_type) > 0),
-  threshold BIGINT NOT NULL CHECK (threshold > 0),
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-
-INSERT INTO badges (slug, name, description, icon, condition_type, threshold, created_at, updated_at) VALUES
-  ('cp-bronze',     'CP Bronze',     'Earned 50 Contribution Points',              '🥉', 'cp_earned', 50,  NOW(), NOW()),
-  ('cp-silver',     'CP Silver',     'Earned 100 Contribution Points',             '🥈', 'cp_earned', 100, NOW(), NOW()),
-  ('cp-gold',       'CP Gold',        'Earned 300 Contribution Points',             '🥇', 'cp_earned', 300, NOW(), NOW()),
-  ('cp-platinum',   'CP Platinum',    'Earned 500 Contribution Points',             '💎', 'cp_earned', 500, NOW(), NOW());
 
 CREATE TABLE user_badges (
   id TEXT PRIMARY KEY,
