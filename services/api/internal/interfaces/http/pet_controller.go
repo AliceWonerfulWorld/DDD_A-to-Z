@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	stdhttp "net/http"
@@ -34,6 +35,9 @@ func (c *PetController) getMyPets(w stdhttp.ResponseWriter, r *stdhttp.Request) 
 
 	data, err := c.usecase.GetMyPets(r.Context(), cookie.Value)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
 		c.writeError(w, err)
 		return
 	}
@@ -47,6 +51,8 @@ func (c *PetController) writeError(w stdhttp.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, petapp.ErrUnauthenticated):
 		writeAPIError(w, stdhttp.StatusUnauthorized, "unauthenticated", "unauthenticated", 0, nil)
+	case errors.Is(err, context.Canceled):
+		return
 	default:
 		c.logger.Error("pets request failed", "error", err)
 		writeAPIError(w, stdhttp.StatusInternalServerError, "internal_error", "Internal Server Error", 0, nil)

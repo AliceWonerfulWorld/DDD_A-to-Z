@@ -23,6 +23,18 @@ interface PetPageProps {
   onNavigate: (path: string) => void;
 }
 
+let petPageBootstrapPromise: Promise<{
+  myPets: PromiseSettledResult<Awaited<ReturnType<typeof fetchMyPets>>>;
+  opponents: PromiseSettledResult<Awaited<ReturnType<typeof fetchBattleOpponents>>>;
+}> | null = null;
+
+async function fetchPetPageBootstrap() {
+  petPageBootstrapPromise ??= Promise.allSettled([fetchMyPets(), fetchBattleOpponents()]).then(
+    ([myPets, opponents]) => ({ myPets, opponents }),
+  );
+  return petPageBootstrapPromise;
+}
+
 function petDisplayName(pet: PetSummary | null | undefined) {
   if (!pet) return "相棒未選択";
   return pet.attribute === "Go" ? "Gopher君" : pet.name;
@@ -67,14 +79,46 @@ export function PetPage({ onNavigate }: PetPageProps) {
   useEffect(() => {
     let isMounted = true;
 
-    fetchMyPets()
-      .then((result) => {
-        if (!isMounted) return;
-        send({ type: "LOAD_SUCCESS", data: result });
+    fetchPetPageBootstrap()
+      .then(({ myPets, opponents }) => {
+        if (!isMounted) {
+          return;
+        }
+        if (myPets.status === "rejected" || opponents.status === "rejected") {
+          petPageBootstrapPromise = null;
+        }
+
+        if (myPets.status === "fulfilled") {
+          send({ type: "LOAD_SUCCESS", data: myPets.value });
+        } else if (import.meta.env.DEV) {
+          console.error("failed to fetch pets", myPets.reason);
+          send({
+            type: "LOAD_SUCCESS",
+            data: {
+              cpBalance: 120,
+              currentGuildPet: sampleCurrentPet,
+              pets: sampleOwnedPets,
+            },
+            statusMessage: "API未接続のため、画面確認用サンプルを表示しています。",
+          });
+        } else {
+          console.error("failed to fetch pets", myPets.reason);
+          send({ type: "LOAD_FAILURE", message: "ペット情報を取得できませんでした。" });
+        }
+
+        if (opponents.status === "fulfilled") {
+          send({ type: "OPPONENTS_SUCCESS", opponents: opponents.value });
+        } else if (import.meta.env.DEV) {
+          console.info("battle opponents are not available yet", opponents.reason);
+          send({ type: "OPPONENTS_SUCCESS", opponents: sampleOpponents });
+        } else {
+          send({ type: "OPPONENTS_FAILURE" });
+        }
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (!isMounted) return;
-        console.error("failed to fetch pets", error);
+        console.error("failed to fetch pet page data", error);
+        petPageBootstrapPromise = null;
         if (import.meta.env.DEV) {
           send({
             type: "LOAD_SUCCESS",
@@ -85,23 +129,10 @@ export function PetPage({ onNavigate }: PetPageProps) {
             },
             statusMessage: "API未接続のため、画面確認用サンプルを表示しています。",
           });
-          return;
-        }
-        send({ type: "LOAD_FAILURE", message: "ペット情報を取得できませんでした。" });
-      });
-
-    fetchBattleOpponents()
-      .then((result) => {
-        if (!isMounted) return;
-        send({ type: "OPPONENTS_SUCCESS", opponents: result });
-      })
-      .catch((error) => {
-        if (!isMounted) return;
-        console.info("battle opponents are not available yet", error);
-        if (import.meta.env.DEV) {
           send({ type: "OPPONENTS_SUCCESS", opponents: sampleOpponents });
           return;
         }
+        send({ type: "LOAD_FAILURE", message: "ペット情報を取得できませんでした。" });
         send({ type: "OPPONENTS_FAILURE" });
       });
 
