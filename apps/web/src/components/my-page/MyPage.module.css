@@ -1,0 +1,61 @@
+/* MyPage.module.css */
+
+.mainContainer {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.topRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.bottomRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.panel {
+  background: rgba(0,0,0,0.35);
+  padding: 14px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+@media (max-width: 768px) {
+  .mainContainer {
+    padding: 10px;
+    gap: 10px;
+    overflow: auto; /* Mobile allows scrolling instead of fixed height */
+  }
+
+  .topRow, .bottomRow {
+    grid-template-columns: 1fr; /* Stack vertically */
+    flex: none; /* Do not stretch to fill height */
+    min-height: auto;
+    gap: 8px;
+  }
+
+  .panel {
+    padding: 10px;
+    height: auto; /* Shrink to wrap content tightly */
+    overflow: visible;
+  }
+}
