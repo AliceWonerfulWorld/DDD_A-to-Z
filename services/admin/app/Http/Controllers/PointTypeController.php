@@ -30,9 +30,11 @@ class PointTypeController
     {
         $validated = $request->validate([
             'code'     => ['required', 'string', 'max:255'],
-            'language' => ['required', 'string', 'max:255'],
+            'language' => ['nullable', 'string', 'max:255'],
             'label'    => ['required', 'string', 'max:255'],
         ]);
+
+        $validated['language'] ??= '';
 
         // 複合PKの重複チェック
         $exists = PointType::where('code', $validated['code'])
