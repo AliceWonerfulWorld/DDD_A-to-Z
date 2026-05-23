@@ -341,3 +341,18 @@ CREATE TABLE guild_chat_messages (
 
 CREATE INDEX guild_chat_messages_guild_id_created_at_idx
   ON guild_chat_messages(guild_id, created_at DESC, id DESC);
+
+CREATE TABLE player_pets (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  guild_id TEXT NOT NULL REFERENCES guilds(id),
+  attribute TEXT NOT NULL CHECK (length(attribute) > 0),
+  vitality INTEGER NOT NULL CHECK (vitality > 0),
+  strength INTEGER NOT NULL CHECK (strength > 0),
+  agility INTEGER NOT NULL CHECK (agility > 0),
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (user_id, guild_id)
+);
+
+CREATE INDEX player_pets_user_id_created_at_idx ON player_pets(user_id, created_at DESC);
