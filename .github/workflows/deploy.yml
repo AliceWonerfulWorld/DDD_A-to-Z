@@ -84,7 +84,7 @@ jobs:
             -f services/news-api/Dockerfile \
             -t ${{ env.NEWS_API_IMAGE }}:${{ github.sha }} \
             -t ${{ env.NEWS_API_IMAGE }}:latest \
-            .
+            services/news-api
 
           docker push ${{ env.NEWS_API_IMAGE }}:${{ github.sha }}
           docker push ${{ env.NEWS_API_IMAGE }}:latest

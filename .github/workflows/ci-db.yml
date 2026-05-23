@@ -43,6 +43,20 @@ on:
 jobs:
   db:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: atlas
+          POSTGRES_PASSWORD: atlas
+          POSTGRES_DB: atlas
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
@@ -62,4 +76,6 @@ jobs:
         run: nix develop -c ./scripts/atlas.sh migrate lint --env ci
 
       - name: Test migrations against ephemeral DB
+        env:
+          CI_DATABASE_URL: postgres://atlas:atlas@localhost:5432/atlas?search_path=public&sslmode=disable
         run: nix develop -c ./scripts/atlas.sh migrate apply --env ci
