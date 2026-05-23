@@ -38,19 +38,25 @@ export function TechNews({ onNavigate }: TechNewsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const latestRequestId = useRef(0);
+
   const loadNews = useCallback((slug: string) => {
+    const requestId = ++latestRequestId.current;
     setIsLoading(true);
     setError(null);
     fetchTechNews(slug)
       .then((data) => {
+        if (requestId !== latestRequestId.current) return;
         setItems(data);
       })
       .catch((err) => {
+        if (requestId !== latestRequestId.current) return;
         console.error("failed to fetch tech news", err);
         setError("FAILED TO LOAD NEWS");
         setItems([]);
       })
       .finally(() => {
+        if (requestId !== latestRequestId.current) return;
         setIsLoading(false);
       });
   }, []);
@@ -143,6 +149,7 @@ export function TechNews({ onNavigate }: TechNewsProps) {
                   }
                 : undefined
             }
+            aria-pressed={guild.slug === selectedSlug}
             onClick={() => handleSlugChange(guild.slug)}
           >
             {guild.icon} {guild.name.toUpperCase()}

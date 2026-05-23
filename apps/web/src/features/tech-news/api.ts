@@ -15,9 +15,12 @@ export async function fetchTechNews(slug: string): Promise<TechNewsItem[]> {
     if (res.status === 400) {
       return [];
     }
-    return [];
+    throw new Error(`fetchTechNews: ${res.status} ${res.statusText}`);
   }
 
   const data = await res.json();
-  return data.news ?? [];
+  if (!Array.isArray(data.news)) {
+    throw new Error("fetchTechNews: invalid response, news is not an array");
+  }
+  return data.news;
 }
