@@ -1,0 +1,177 @@
+.page {
+  min-height: 100svh;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #07172b;
+  font-family: "Press Start 2P", "DotGothic16", monospace;
+  color: #f4ecd0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(60px, 10vh, 100px) 16px clamp(80px, 12vh, 120px);
+}
+
+.backButton {
+  position: fixed;
+  top: clamp(14px, 2.2vw, 28px);
+  left: clamp(14px, 2.2vw, 28px);
+  z-index: 10;
+  border: 2px solid rgba(255, 217, 102, 0.78);
+  background: rgba(3, 10, 24, 0.72);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.62),
+    5px 5px 0 rgba(0, 0, 0, 0.36);
+  color: #fff8d7;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: clamp(0.56rem, 1.3vw, 0.78rem);
+  line-height: 1.5;
+  padding: 10px 12px;
+}
+
+.title {
+  font-size: clamp(0.9rem, 2.4vw, 1.4rem);
+  text-align: center;
+  letter-spacing: 0.15em;
+  text-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.72),
+    0 0 20px rgba(0, 245, 255, 0.3);
+  margin-bottom: clamp(12px, 2vw, 24px);
+}
+
+.slugNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 700px;
+  margin-bottom: clamp(16px, 3vh, 32px);
+}
+
+.slugButton {
+  border: 2px solid rgba(244, 236, 208, 0.45);
+  border-bottom-color: rgba(55, 44, 35, 0.98);
+  border-right-color: rgba(55, 44, 35, 0.98);
+  background: linear-gradient(180deg, rgba(18, 19, 24, 0.86), rgba(4, 7, 15, 0.92));
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    3px 3px 0 rgba(0, 0, 0, 0.3);
+  color: rgba(244, 236, 208, 0.7);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: clamp(0.48rem, 1vw, 0.62rem);
+  line-height: 1.5;
+  padding: 8px 12px;
+  transition: all 0.15s ease;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.72);
+}
+
+.slugButton:hover {
+  background: linear-gradient(180deg, rgba(30, 32, 42, 0.92), rgba(8, 14, 28, 0.96));
+  color: #f4ecd0;
+  transform: translateY(-1px);
+}
+
+.slugButtonActive {
+  background: linear-gradient(180deg, rgba(20, 24, 38, 0.95), rgba(6, 12, 22, 0.98));
+  color: #f4ecd0;
+  transform: none;
+}
+
+.newsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 680px;
+  width: 100%;
+}
+
+.newsCard {
+  display: block;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(14, 18, 30, 0.88), rgba(4, 7, 15, 0.92));
+  border: 2px solid rgba(244, 236, 208, 0.22);
+  border-left-width: 4px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    3px 3px 0 rgba(0, 0, 0, 0.25),
+    inset 0 0 12px rgba(244, 236, 208, 0.04);
+  text-decoration: none;
+  color: #f4ecd0;
+  transition: all 0.15s ease;
+}
+
+.newsCard:hover {
+  border-color: rgba(244, 236, 208, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    4px 4px 0 rgba(0, 0, 0, 0.3),
+    inset 0 0 16px rgba(244, 236, 208, 0.08);
+  transform: translateY(-2px);
+}
+
+.newsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.newsTitle {
+  font-size: clamp(0.52rem, 1.1vw, 0.68rem);
+  flex: 1;
+  line-height: 1.6;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.72);
+}
+
+.newsSource {
+  font-size: clamp(0.42rem, 0.9vw, 0.54rem);
+  flex-shrink: 0;
+  opacity: 0.75;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.72);
+}
+
+.newsSummary {
+  font-family: "DotGothic16", monospace;
+  font-size: clamp(0.56rem, 1vw, 0.68rem);
+  line-height: 1.55;
+  color: rgba(244, 236, 208, 0.65);
+  margin: 0 0 8px;
+}
+
+.newsTime {
+  font-size: clamp(0.4rem, 0.8vw, 0.5rem);
+  color: rgba(244, 236, 208, 0.4);
+}
+
+.statusMessage {
+  text-align: center;
+  font-size: clamp(0.56rem, 1.2vw, 0.72rem);
+  padding: 40px 16px;
+  color: rgba(244, 236, 208, 0.5);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.72);
+}
+
+.errorMessage {
+  text-align: center;
+  font-size: clamp(0.56rem, 1.2vw, 0.72rem);
+  padding: 40px 16px;
+  color: #ff9b9b;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.72);
+}
+
+.scanlines {
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.09),
+    rgba(0, 0, 0, 0.09) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  pointer-events: none;
+  z-index: 100;
+}
