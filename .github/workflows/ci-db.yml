@@ -61,6 +61,9 @@ jobs:
       - name: Lint migrations
         run: nix develop -c ./scripts/atlas.sh migrate lint --env ci
 
+      - name: Install official Atlas CLI
+        run: curl -sSf https://atlasgo.sh | sh
+
       - name: Dry-run migrations
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
@@ -69,5 +72,5 @@ jobs:
             *\?*) export NEON_DATABASE_URL="${NEON_DATABASE_URL}&statement_cache_capacity=0" ;;
             *)    export NEON_DATABASE_URL="${NEON_DATABASE_URL}?statement_cache_capacity=0" ;;
           esac
-          nix develop -c ./scripts/atlas.sh migrate apply --env prod --dry-run
+          atlas migrate apply --env prod --dry-run --config file://atlas.hcl
 
