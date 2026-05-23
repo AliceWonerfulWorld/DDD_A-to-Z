@@ -86,6 +86,15 @@ func (s *stubMypageGuildMembershipReader) GetTotalGuilds(_ context.Context) (int
 	return s.total, nil
 }
 
+type stubMypageProfileReader struct {
+	profile *mypage.ProfileInfo
+	err     error
+}
+
+func (s *stubMypageProfileReader) GetProfile(_ context.Context, _ user.ID) (*mypage.ProfileInfo, error) {
+	return s.profile, s.err
+}
+
 // --- tests ---
 
 func TestMypageController_NoCookie(t *testing.T) {
@@ -96,6 +105,7 @@ func TestMypageController_NoCookie(t *testing.T) {
 		&stubMypageGitHubStatsReader{},
 		&stubMypageGitHubTokenRepo{},
 		&stubMypageGuildMembershipReader{},
+		&stubMypageProfileReader{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)
@@ -136,6 +146,7 @@ func TestMypageController_Success(t *testing.T) {
 		&stubMypageGitHubStatsReader{},
 		&stubMypageGitHubTokenRepo{},
 		&stubMypageGuildMembershipReader{},
+		&stubMypageProfileReader{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)
