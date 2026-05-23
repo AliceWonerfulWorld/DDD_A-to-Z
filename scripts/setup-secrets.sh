@@ -11,6 +11,7 @@
 #   GITHUB_REDIRECT_URL     — GitHub OAuth callback URL
 #   AUTH_COOKIE_SECRET      — OAuth state cookie 署名用 secret（Chat Service の SECRET_KEY_BASE としても使うため64 bytes以上）
 #   GITHUB_TOKEN_ENCRYPTION_SECRET — GitHub token 暗号化用 secret
+#   NEWS_DATABASE_URL              — news-api 用 Neon DB 接続文字列
 #
 # 使い方:
 #   cp .env.prod.example .env.prod
@@ -27,6 +28,7 @@
 #   - lang-war-github-redirect-url
 #   - lang-war-auth-cookie-secret
 #   - lang-war-github-token-encryption-secret
+#   - lang-war-news-database-url
 set -euo pipefail
 
 # ── プロジェクトルートの .env.prod を読み込む ──────────────────
@@ -63,6 +65,7 @@ missing=""
 [ -z "${GITHUB_REDIRECT_URL:-}"  ] && missing="${missing}  GITHUB_REDIRECT_URL\n"
 [ -z "${AUTH_COOKIE_SECRET:-}"   ] && missing="${missing}  AUTH_COOKIE_SECRET\n"
 [ -z "${GITHUB_TOKEN_ENCRYPTION_SECRET:-}" ] && missing="${missing}  GITHUB_TOKEN_ENCRYPTION_SECRET\n"
+[ -z "${NEWS_DATABASE_URL:-}"              ] && missing="${missing}  NEWS_DATABASE_URL\n"
 
 if [ -n "${missing}" ]; then
   echo "Error: ${ENV_FILE} に以下の変数が設定されていません:"
@@ -178,9 +181,14 @@ ensure_secret "lang-war-auth-cookie-secret"
 add_secret_version "lang-war-auth-cookie-secret" "${AUTH_COOKIE_SECRET}"
 echo ""
 
-echo "[6/6] lang-war-github-token-encryption-secret"
+echo "[6/7] lang-war-github-token-encryption-secret"
 ensure_secret "lang-war-github-token-encryption-secret"
 add_secret_version "lang-war-github-token-encryption-secret" "${GITHUB_TOKEN_ENCRYPTION_SECRET}"
+echo ""
+
+echo "[7/7] lang-war-news-database-url"
+ensure_secret "lang-war-news-database-url"
+add_secret_version "lang-war-news-database-url" "${NEWS_DATABASE_URL}"
 echo ""
 
 # ── 登録済みシークレット一覧を表示 ───────────────────────────
