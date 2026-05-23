@@ -284,8 +284,8 @@ func TestUseCaseJoinGuildDoesNotGrantDuplicatePet(t *testing.T) {
 	if repository.createdPet != nil {
 		t.Fatal("CreatePet() は呼ばれない必要があります")
 	}
-	if result.GrantedPet == nil || result.GrantedPet.ID != "pet_existing" {
-		t.Fatalf("GrantedPet = %#v, 期待値 既存 pet", result.GrantedPet)
+	if result.GrantedPet != nil {
+		t.Fatalf("GrantedPet = %#v, 期待値 nil", result.GrantedPet)
 	}
 	if !result.PetAlreadyOwned {
 		t.Fatal("PetAlreadyOwned = false, 期待値 true")

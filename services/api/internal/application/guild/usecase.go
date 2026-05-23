@@ -199,10 +199,10 @@ func (u *UseCase) JoinGuild(ctx context.Context, sessionToken string, guildID gu
 }
 
 func (u *UseCase) grantGuildPet(ctx context.Context, userID user.ID, guildID guilddomain.ID, now time.Time) (*petdomain.Pet, bool, error) {
-	if existing, ok, err := u.repository.FindPetByUserAndGuild(ctx, userID, guildID); err != nil {
+	if _, ok, err := u.repository.FindPetByUserAndGuild(ctx, userID, guildID); err != nil {
 		return nil, false, err
 	} else if ok {
-		return &existing, true, nil
+		return nil, true, nil
 	}
 
 	petID, err := u.petIDs.NewID()
