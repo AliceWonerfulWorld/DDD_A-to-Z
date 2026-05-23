@@ -234,7 +234,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
                 650,
               );
             })
-          : await startPetBattle(selectedOpponent.userId);
+          : await startPetBattle(selectedPet.id, selectedOpponent.petId);
       if (!isMountedRef.current) return;
       saveBattleSession({ playerPet: selectedPet, opponent: selectedOpponent, result });
       send({ type: "BATTLE_SUCCESS", result });
