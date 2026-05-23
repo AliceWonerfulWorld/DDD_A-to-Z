@@ -21,7 +21,16 @@ app.get("/guilds/:slug/tech-news", async (c) => {
   }
 
   const items = await getTechNews(slug as GuildSlug);
-  return c.json({ news: items });
+  return c.json({
+    news: items.map((item) => ({
+      title: item.title,
+      url: item.url,
+      source: item.source,
+      summary: item.summary,
+      published_at: item.publishedAt,
+      slug: item.slug,
+    })),
+  });
 });
 
 const port = parseInt(process.env.PORT ?? "8081", 10);
