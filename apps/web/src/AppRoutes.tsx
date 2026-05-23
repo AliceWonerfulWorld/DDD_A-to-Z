@@ -7,6 +7,7 @@ import { GuildSelection } from "./components/guild-selection/GuildSelection.tsx"
 import { GuildTown } from "./components/guild-town/GuildTown.tsx";
 import { Home } from "./components/home/Home.tsx";
 import { MyPage } from "./components/my-page/MyPage.tsx";
+import { PetPage } from "./components/pet/PetPage.tsx";
 import { InitialProfile } from "./components/profile/InitialProfile.tsx";
 import { TechNews } from "./components/tech-news/TechNews.tsx";
 import { GuildBgm } from "./components/shared/GuildBgm.tsx";
@@ -25,7 +26,10 @@ export function AppRoutes() {
     location.pathname === PATHS.GUILD_SELECT ||
     location.pathname === PATHS.GUILD_DETAILS ||
     location.pathname === PATHS.GUILD_MY_GUILD;
-  const usesSharedHomeBgm = location.pathname === PATHS.HOME || location.pathname === PATHS.MY_PAGE;
+  const usesSharedHomeBgm =
+    location.pathname === PATHS.HOME ||
+    location.pathname === PATHS.MY_PAGE ||
+    location.pathname === PATHS.PETS;
   const completeInitialProfile = async (username: string) => {
     if (username.trim() === "") return;
 
@@ -60,6 +64,7 @@ export function AppRoutes() {
         />
         <Route path={PATHS.HOME} element={<Home onNavigate={navigate} />} />
         <Route path={PATHS.MY_PAGE} element={<MyPage onNavigate={navigate} />} />
+        <Route path={PATHS.PETS} element={<PetPage onNavigate={navigate} />} />
         <Route path={PATHS.GUILD} element={<GuildDashboard onNavigate={navigate} />} />
         <Route
           path={PATHS.GUILD_SELECT}

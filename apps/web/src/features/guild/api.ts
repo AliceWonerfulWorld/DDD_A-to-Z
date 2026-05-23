@@ -1,4 +1,5 @@
 import { ApiError, apiFetch } from "../../lib/api/client";
+import type { GrantedPetAPIResponse } from "../pet/guildGrant";
 
 export interface Guild {
   id: string;
@@ -50,6 +51,10 @@ export interface GuildMembershipResponse {
   guild: Guild | null;
   membership?: GuildMembership;
   members?: GuildMemberContribution[];
+  granted_pet?: GrantedPetAPIResponse | null;
+  grantedPet?: GrantedPetAPIResponse | null;
+  pet_already_owned?: boolean;
+  petAlreadyOwned?: boolean;
 }
 
 export async function fetchGuilds(): Promise<Guild[]> {
