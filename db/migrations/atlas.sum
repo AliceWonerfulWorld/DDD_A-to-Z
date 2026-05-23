@@ -1,4 +1,4 @@
-h1:8e2DvesMdx7MFA7pildfUhRin/dulnup7iUYN5oDM3c=
+h1:FzI4U1OXGvu3gpWnHl7L2o25uwYqIZ5oUVbpmpo0qsI=
 20260511165019_create_auth_tables.sql h1:xBhU31KhHPurVx2RqVxMmiyIjEg1sqKV3RUJyU6gr9Y=
 20260513090000_create_cp_tables.sql h1:3Ax1icNsujVhIX3ObVtWMEbIP/a3XPD2JQHeLhQG5Mg=
 20260514113146_contribution_point.sql h1:ZUdMX0wLF3+SpmuKtFVvhtIdFQSC+P0fjO8k/eYmEhA=
@@ -17,3 +17,4 @@ h1:8e2DvesMdx7MFA7pildfUhRin/dulnup7iUYN5oDM3c=
 20260522194000_drop_guild_town_building_type_checks.sql h1:fWDwwiBYV3fT/FLLrexq+A5EHOPrbMqKUYQtXI97ZyY=
 20260522210000_add_chat_tokens.sql h1:VvVTDxIETOyoWe7Xd7hwNwa3sIyg4m1KArSh3FB12Fk=
 20260523033000_player_pets.sql h1:+NG6igc9feuhbfIZY3phpGaCULmeKsOVMKvNZqMhw4g=
+20260524000000_tech_news_cache.sql h1:V2UGIVM37DfUT30P3WSEfn0QUcPX23WlRF032tKe5Ys=

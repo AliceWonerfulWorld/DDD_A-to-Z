@@ -356,3 +356,16 @@ CREATE TABLE player_pets (
 );
 
 CREATE INDEX player_pets_user_id_created_at_idx ON player_pets(user_id, created_at DESC);
+
+CREATE TABLE tech_news_cache (
+  id SERIAL PRIMARY KEY,
+  slug TEXT NOT NULL,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT '',
+  summary TEXT NOT NULL DEFAULT '',
+  published_at TIMESTAMPTZ NOT NULL,
+  fetched_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX tech_news_cache_slug_fetched_at_idx ON tech_news_cache(slug, fetched_at DESC);
