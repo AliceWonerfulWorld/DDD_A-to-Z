@@ -204,6 +204,12 @@ func TestGetMyPage_Success(t *testing.T) {
 	if result.Guild != nil {
 		t.Errorf("expected nil guild, got %v", result.Guild)
 	}
+	if len(result.Badges) != 0 {
+		t.Errorf("expected empty badges, got %d", len(result.Badges))
+	}
+	if result.SelectedBadgeSlug != nil {
+		t.Errorf("expected nil selected_badge_slug, got %v", result.SelectedBadgeSlug)
+	}
 }
 
 func TestGetMyPage_CPError(t *testing.T) {

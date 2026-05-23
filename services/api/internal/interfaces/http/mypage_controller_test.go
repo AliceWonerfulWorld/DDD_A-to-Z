@@ -209,4 +209,16 @@ func TestMypageController_Success(t *testing.T) {
 	if body["guild"] != nil {
 		t.Errorf("expected null guild, got %v", body["guild"])
 	}
+
+	badgesSection, ok := body["badges"].([]any)
+	if !ok {
+		t.Fatal("expected badges array in response")
+	}
+	if len(badgesSection) != 0 {
+		t.Errorf("expected empty badges, got %d", len(badgesSection))
+	}
+
+	if body["selected_badge_slug"] != nil {
+		t.Errorf("expected null selected_badge_slug, got %v", body["selected_badge_slug"])
+	}
 }
