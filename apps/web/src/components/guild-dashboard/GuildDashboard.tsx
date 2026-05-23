@@ -20,6 +20,7 @@ import { DashboardMonitor } from "./DashboardMonitor";
 import { GUILD_TABS, INITIAL_LOGS } from "./data";
 import { GuildBadge } from "./GuildBadge";
 import { GuildNavigation } from "./GuildNavigation";
+import { GuildTechNewsPanel } from "./GuildTechNewsPanel";
 import type { ActivityLog, GuildTab } from "./types";
 
 const CHAT_SERVICE_URL = import.meta.env.VITE_CHAT_SERVICE_URL ?? "ws://localhost:4000";
@@ -321,6 +322,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
 
       <GuildBadge guild={currentGuild} isLoading={!isCurrentGuildLoaded} />
       <GuildNavigation onNavigate={onNavigate} />
+      <GuildTechNewsPanel guildSlug={currentGuild?.slug ?? null} onNavigate={onNavigate} />
       <motion.button
         type="button"
         initial={{ opacity: 0, y: -10 }}
