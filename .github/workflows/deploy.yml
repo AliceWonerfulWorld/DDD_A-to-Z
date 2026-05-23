@@ -22,6 +22,7 @@ env:
   CHAT_CLOUD_RUN_SERVICE: chat-service
   CHAT_IMAGE: asia-northeast1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/lang-war/chat-service
   CHAT_ALLOWED_ORIGIN: https://ddd-a-to-z-web.vercel.app
+  NEWS_API_IMAGE: asia-northeast1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/lang-war/news-api
 
 jobs:
   deploy:
@@ -77,6 +78,17 @@ jobs:
           docker push ${{ env.CHAT_IMAGE }}:${{ github.sha }}
           docker push ${{ env.CHAT_IMAGE }}:latest
 
+      - name: Build and push News API Docker image
+        run: |
+          docker build \
+            -f services/news-api/Dockerfile \
+            -t ${{ env.NEWS_API_IMAGE }}:${{ github.sha }} \
+            -t ${{ env.NEWS_API_IMAGE }}:latest \
+            .
+
+          docker push ${{ env.NEWS_API_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.NEWS_API_IMAGE }}:latest
+
       - name: Validate Chat Service secret length
         run: |
           secret_bytes="$(gcloud secrets versions access latest \
@@ -120,6 +132,21 @@ jobs:
             --memory=512Mi \
             --cpu=1 \
             --timeout=3600
+
+      - name: Deploy News API to Cloud Run
+        run: |
+          gcloud run deploy news-api \
+            --image=${{ env.NEWS_API_IMAGE }}:${{ github.sha }} \
+            --region=${{ env.GCP_REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --set-secrets="DATABASE_URL=lang-war-database-url:latest" \
+            --port=8080 \
+            --min-instances=0 \
+            --max-instances=3 \
+            --memory=256Mi \
+            --cpu=1 \
+            --timeout=60
 
       - name: Disable old Secret Manager versions
         run: |

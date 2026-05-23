@@ -11,6 +11,7 @@
 #   GITHUB_REDIRECT_URL     — GitHub OAuth callback URL
 #   AUTH_COOKIE_SECRET      — OAuth state cookie 署名用 secret（Chat Service の SECRET_KEY_BASE としても使うため64 bytes以上）
 #   GITHUB_TOKEN_ENCRYPTION_SECRET — GitHub token 暗号化用 secret
+#   NEWS_DATABASE_URL              — news-api 用 Neon DB 接続文字列
 #
 # 使い方:
 #   cp .env.prod.example .env.prod
@@ -63,6 +64,7 @@ missing=""
 [ -z "${GITHUB_REDIRECT_URL:-}"  ] && missing="${missing}  GITHUB_REDIRECT_URL\n"
 [ -z "${AUTH_COOKIE_SECRET:-}"   ] && missing="${missing}  AUTH_COOKIE_SECRET\n"
 [ -z "${GITHUB_TOKEN_ENCRYPTION_SECRET:-}" ] && missing="${missing}  GITHUB_TOKEN_ENCRYPTION_SECRET\n"
+[ -z "${NEWS_DATABASE_URL:-}"              ] && missing="${missing}  NEWS_DATABASE_URL\n"
 
 if [ -n "${missing}" ]; then
   echo "Error: ${ENV_FILE} に以下の変数が設定されていません:"
