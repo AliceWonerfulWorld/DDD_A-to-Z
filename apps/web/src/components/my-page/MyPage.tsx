@@ -355,6 +355,19 @@ export function MyPage({ onNavigate }: MyPageProps) {
                       {activeBadge ? activeBadge.name : "-"}
                     </span>
                   </div>
+                  {activeBadge && (
+                    <div
+                      style={{
+                        fontSize: "0.6rem",
+                        color: "rgba(232,232,208,0.5)",
+                        fontFamily: '"Press Start 2P", monospace',
+                        lineHeight: 1.4,
+                        marginTop: "4px",
+                      }}
+                    >
+                      {activeBadge.description}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -901,38 +914,27 @@ function BadgeCard({
         display: "flex",
         alignItems: "center",
         gap: "8px",
+        width: "140px",
         border: selected ? "2px solid #f0c040" : "1px solid rgba(240,192,64,0.25)",
         background: selected ? "rgba(240,192,64,0.15)" : "rgba(240,192,64,0.06)",
-        padding: "8px 12px",
+        padding: "8px 10px",
         cursor: "pointer",
         fontFamily: '"Press Start 2P", monospace',
       }}
     >
-      <span style={{ fontSize: "1.4rem" }}>{badge.icon}</span>
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: "0.8rem",
-            color: selected ? "#f0c040" : "rgba(232,232,208,0.7)",
-            fontFamily: '"Press Start 2P", monospace',
-            lineHeight: 1.4,
-          }}
-        >
-          {badge.name}
-        </div>
-        <div
-          style={{
-            fontSize: "0.6rem",
-            color: "rgba(232,232,208,0.5)",
-            fontFamily: '"Press Start 2P", monospace',
-            lineHeight: 1.4,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {selected ? "✓ ACTIVE TITLE" : badge.description}
-        </div>
+      <span style={{ fontSize: "1.3rem" }}>{badge.icon}</span>
+      <div
+        style={{
+          fontSize: "0.7rem",
+          color: selected ? "#f0c040" : "rgba(232,232,208,0.7)",
+          fontFamily: '"Press Start 2P", monospace',
+          lineHeight: 1.4,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {badge.name}
       </div>
     </motion.button>
   );
