@@ -9,8 +9,14 @@ import {
 } from "../../features/guild/api";
 import { connectChat, type GuildChatMessage } from "../../features/chat/api";
 import type { ChatConnection } from "../../features/chat/api";
-import { toDisplayGuild, type DisplayGuild } from "../../features/guild/presentation";
-import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
+import {
+  toDisplayGuild,
+  type DisplayGuild,
+} from "../../features/guild/presentation";
+import {
+  BACK_NAVIGATION_SE_SRC,
+  useBackNavigationSe,
+} from "../../hooks/useBackNavigationSe";
 import { steppedEase } from "../../lib/animationUtils";
 import { PATHS } from "../../constants/paths";
 import { GuildChatExpandedModal } from "../../features/chat/components/GuildChatExpandedModal";
@@ -21,7 +27,8 @@ import { GuildBadge } from "./GuildBadge";
 import { GuildNavigation } from "./GuildNavigation";
 import type { ActivityLog, GuildTab } from "./types";
 
-const CHAT_SERVICE_URL = import.meta.env.VITE_CHAT_SERVICE_URL ?? "ws://localhost:4000";
+const CHAT_SERVICE_URL =
+  import.meta.env.VITE_CHAT_SERVICE_URL ?? "ws://localhost:4000";
 
 interface GuildDashboardProps {
   onNavigate: (path: string) => void;
@@ -31,6 +38,51 @@ type ChatView = "closed" | "compact" | "expanded";
 
 const ACTIVITY_LOG_LIMIT = 20;
 const ACTIVITY_LOG_POLLING_MS = 10_000;
+
+const DASHBOARD_LAYOUTS = {
+  mobile: {
+    src: "/guild-dashboards/dashboard-mob.png",
+    aspectW: 9,
+    aspectH: 16,
+    monitor: { left: "31.5%", top: "34.2%", width: "37%", height: "30%" },
+  },
+  tablet: {
+    src: "/guild-dashboards/dashboard-tab.png",
+    aspectW: 4,
+    aspectH: 3,
+    monitor: { left: "28.5%", top: "26.5%", width: "43%", height: "35%" },
+  },
+  desktop: {
+    src: "/guild-dashboards/dashboard.png",
+    aspectW: 1672,
+    aspectH: 941,
+    monitor: { left: "29.2%", top: "16.2%", width: "41.6%", height: "44.2%" },
+  },
+};
+
+function useDeviceLayout() {
+  const [layout, setLayout] = useState<"mobile" | "tablet" | "desktop">(
+    "desktop",
+  );
+
+  useEffect(() => {
+    const updateLayout = () => {
+      const width = window.innerWidth;
+      if (width <= 768) {
+        setLayout("mobile");
+      } else if (width <= 1024) {
+        setLayout("tablet");
+      } else {
+        setLayout("desktop");
+      }
+    };
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
+
+  return layout;
+}
 
 function toActivityLog(log: GuildActivityLog): ActivityLog {
   const prefix = log.type === "pull_request" ? "PR" : "Commit";
@@ -45,15 +97,21 @@ function toActivityLog(log: GuildActivityLog): ActivityLog {
 }
 
 export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
+  const deviceLayout = useDeviceLayout();
+  const currentLayoutProps = DASHBOARD_LAYOUTS[deviceLayout];
+
   const { isSeEnabled } = useAudioSettings();
   const [activeTab, setActiveTab] = useState<GuildTab>("activity");
   const [chatView, setChatView] = useState<ChatView>("closed");
-  const [logs, setLogs] = useState<ActivityLog[]>(import.meta.env.DEV ? INITIAL_LOGS : []);
+  const [logs, setLogs] = useState<ActivityLog[]>(
+    import.meta.env.DEV ? INITIAL_LOGS : [],
+  );
   const [currentGuild, setCurrentGuild] = useState<DisplayGuild | null>(null);
   const [isCurrentGuildLoaded, setIsCurrentGuildLoaded] = useState(false);
   const [chatMessages, setChatMessages] = useState<GuildChatMessage[]>([]);
   const chatConnectionRef = useRef<ChatConnection | null>(null);
-  const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
+  const { backNavigationSeRef, navigateBackWithSe } =
+    useBackNavigationSe(onNavigate);
   const tabSwitchSeRef = useRef<HTMLAudioElement | null>(null);
 
   const playTabSwitchSe = useCallback(() => {
@@ -62,7 +120,10 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
       return;
     }
 
-    if (audio.preload === "none" && audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+    if (
+      audio.preload === "none" &&
+      audio.readyState === HTMLMediaElement.HAVE_NOTHING
+    ) {
       audio.load();
     }
 
@@ -238,13 +299,13 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
           position: "absolute",
           left: "50%",
           top: "50%",
-          width: "max(100vw, calc(100svh * 1672 / 941))",
-          height: "max(100svh, calc(100vw * 941 / 1672))",
+          width: `max(100vw, calc(100svh * ${currentLayoutProps.aspectW} / ${currentLayoutProps.aspectH}))`,
+          height: `max(100svh, calc(100vw * ${currentLayoutProps.aspectH} / ${currentLayoutProps.aspectW}))`,
           transform: "translate(-50%, -50%)",
         }}
       >
         <img
-          src="/dashboard.png"
+          src={currentLayoutProps.src}
           alt=""
           aria-hidden="true"
           style={{
@@ -264,6 +325,8 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
           logs={logs}
           onSwitchTab={switchTab}
           tabs={GUILD_TABS}
+          layoutStyle={currentLayoutProps.monitor}
+          isMobile={deviceLayout === "mobile"}
         />
       </div>
 
@@ -276,10 +339,16 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
         transition={{ delay: 0.14, duration: 0.28, ease: steppedEase(5) }}
         whileHover={{ y: -2, scale: 1.02 }}
         whileTap={{ y: 1, scale: 0.98 }}
-        onClick={() => setChatView((current) => (current === "closed" ? "compact" : "closed"))}
+        onClick={() =>
+          setChatView((current) =>
+            current === "closed" ? "compact" : "closed",
+          )
+        }
         aria-expanded={chatView !== "closed"}
         aria-controls={
-          chatView === "expanded" ? "guild-chat-expanded-title" : "guild-chat-overlay-title"
+          chatView === "expanded"
+            ? "guild-chat-expanded-title"
+            : "guild-chat-overlay-title"
         }
         style={{
           position: "fixed",

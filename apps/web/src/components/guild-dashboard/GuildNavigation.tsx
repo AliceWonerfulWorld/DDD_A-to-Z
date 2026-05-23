@@ -70,20 +70,19 @@ export function GuildNavigation({ onNavigate }: GuildNavigationProps) {
 
   return (
     <motion.nav
-      initial={{ opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, x: "-50%", y: 18 }}
+      animate={{ opacity: 1, x: "-50%", y: 0 }}
       transition={{ delay: 0.12, duration: 0.34, ease: steppedEase(6) }}
       aria-label="Guild navigation"
       style={{
         position: "fixed",
-        left: "calc(50% - clamp(120px, 10vw, 168px))",
+        left: "50%",
         bottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(18px, 5.2vh, 54px))",
         zIndex: 3,
         display: "grid",
         gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
         gap: "clamp(10px, 2vw, 18px)",
         width: "min(calc(100vw - 28px), 600px)",
-        transform: "translateX(-50%)",
       }}
     >
       <audio
