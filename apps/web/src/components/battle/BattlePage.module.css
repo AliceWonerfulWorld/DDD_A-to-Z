@@ -59,6 +59,21 @@
   padding: 8px 12px;
 }
 
+.nextButton {
+  min-height: 34px;
+  border: 2px solid rgba(116, 247, 161, 0.78);
+  border-bottom-color: rgba(8, 40, 22, 0.96);
+  border-right-color: rgba(8, 40, 22, 0.96);
+  background: rgba(4, 22, 16, 0.92);
+  color: #f7ffe4;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.56rem;
+  line-height: 1.4;
+  padding: 6px 14px;
+  box-shadow: 0 0 14px rgba(116, 247, 161, 0.18);
+}
+
 .hud {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -164,6 +179,29 @@
   white-space: nowrap;
 }
 
+.outcomeBanner {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  z-index: 7;
+  translate: -50% 0;
+  color: #74f7a1;
+  font-size: clamp(1.8rem, 7vw, 5rem);
+  line-height: 1.2;
+  pointer-events: none;
+  text-shadow:
+    4px 4px 0 rgba(0, 0, 0, 0.82),
+    0 0 24px rgba(116, 247, 161, 0.75);
+  white-space: nowrap;
+}
+
+.outcomeLose {
+  color: #ff5f56;
+  text-shadow:
+    4px 4px 0 rgba(0, 0, 0, 0.82),
+    0 0 24px rgba(255, 95, 86, 0.76);
+}
+
 .fighter {
   position: relative;
   z-index: 2;
@@ -234,6 +272,18 @@
   line-height: 1.4;
 }
 
+.terminalHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.terminalHeader .terminalTitle {
+  margin: 0;
+}
+
 .logList {
   display: grid;
   gap: 7px;
@@ -245,6 +295,93 @@
   font-family: "DotGothic16", monospace;
   font-size: 0.92rem;
   line-height: 1.45;
+}
+
+.resultPanel {
+  min-height: min(620px, 68svh);
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  border: 3px solid rgba(255, 217, 102, 0.74);
+  border-bottom-color: rgba(38, 28, 8, 0.98);
+  border-right-color: rgba(38, 28, 8, 0.98);
+  background:
+    linear-gradient(180deg, rgba(3, 10, 24, 0.88), rgba(0, 0, 0, 0.9)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.026),
+      rgba(255, 255, 255, 0.026) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.78),
+    inset 0 0 40px rgba(255, 217, 102, 0.08);
+  padding: clamp(18px, 4vw, 42px);
+}
+
+.resultTitle {
+  margin: 0;
+  color: #74f7a1;
+  font-size: clamp(2rem, 8vw, 5.4rem);
+  line-height: 1.1;
+  text-shadow:
+    5px 5px 0 rgba(0, 0, 0, 0.84),
+    0 0 28px rgba(116, 247, 161, 0.68);
+}
+
+.resultLose {
+  color: #ff5f56;
+  text-shadow:
+    5px 5px 0 rgba(0, 0, 0, 0.84),
+    0 0 28px rgba(255, 95, 86, 0.68);
+}
+
+.resultGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.resultMetric {
+  display: grid;
+  gap: 8px;
+  min-height: 82px;
+  align-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.32);
+  padding: 12px;
+}
+
+.resultMetric span {
+  color: rgba(255, 248, 215, 0.62);
+  font-size: 0.52rem;
+  line-height: 1.4;
+}
+
+.resultMetric strong {
+  color: #fff8d7;
+  font-size: clamp(0.82rem, 2vw, 1.25rem);
+  line-height: 1.4;
+}
+
+.resultSummary {
+  display: grid;
+  gap: 8px;
+  color: rgba(255, 248, 215, 0.74);
+  font-family: "DotGothic16", monospace;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.resultSummary p {
+  margin: 0;
+}
+
+.resultActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 @media (max-width: 760px) {
@@ -276,9 +413,19 @@
     padding: 18px 10px;
   }
 
+  .resultGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .fighterName {
     min-width: 0;
     width: 100%;
     font-size: 0.54rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .resultGrid {
+    grid-template-columns: 1fr;
   }
 }

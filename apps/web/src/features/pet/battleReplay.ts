@@ -41,34 +41,50 @@ export function buildSampleBattleResult(
   playerPet: PetSummary,
   opponent: BattleOpponent,
 ): BattleResult {
-  const playerHit = Math.max(4, playerPet.power + 2);
-  const enemyHit = Math.max(3, opponent.pet.power - 1);
-  const finisher = Math.max(playerHit + 2, 9);
+  let playerHP = playerPet.maxHp;
+  let enemyHP = opponent.pet.maxHp;
+  const turns: BattleTurnLog[] = [];
+  const playerStarts = playerPet.speed >= opponent.pet.speed;
+
+  const calculateDamage = (attacker: PetSummary, defender: PetSummary, turn: number) => {
+    const base = Math.max(
+      2,
+      attacker.power + Math.ceil(attacker.speed / 3) - Math.floor(defender.guard / 3),
+    );
+    const critical = turn % 4 === 0 || attacker.speed - defender.speed >= 4;
+    return critical ? base + 4 : base;
+  };
+
+  for (let round = 1; round <= 30 && playerHP > 0 && enemyHP > 0; round += 1) {
+    const playerTurn = playerStarts ? round % 2 === 1 : round % 2 === 0;
+    const attacker = playerTurn ? playerPet : opponent.pet;
+    const defender = playerTurn ? opponent.pet : playerPet;
+    const damage = calculateDamage(attacker, defender, round);
+    const defenderName = playerTurn ? opponent.pet.name : playerPet.name;
+    const attackerName = attacker.name;
+    const isCritical = damage >= attacker.power + 5;
+
+    if (playerTurn) {
+      enemyHP = Math.max(0, enemyHP - damage);
+    } else {
+      playerHP = Math.max(0, playerHP - damage);
+    }
+
+    turns.push({
+      turn: round,
+      actorPetId: attacker.id,
+      targetPetId: defender.id,
+      damage,
+      message: isCritical
+        ? `${attackerName} の会心アタック！ ${defenderName} に ${damage} ダメージ。`
+        : `${attackerName} が踏み込んだ！ ${defenderName} に ${damage} ダメージ。`,
+    });
+  }
+
+  const result = playerHP === enemyHP ? "draw" : playerHP > enemyHP ? "win" : "lose";
 
   return {
-    result: "win",
-    turns: [
-      {
-        turn: 1,
-        actorPetId: playerPet.id,
-        targetPetId: opponent.pet.id,
-        damage: playerHit,
-        message: `${playerPet.name} が踏み込んだ！ ${opponent.pet.name} に ${playerHit} ダメージ。`,
-      },
-      {
-        turn: 2,
-        actorPetId: opponent.pet.id,
-        targetPetId: playerPet.id,
-        damage: enemyHit,
-        message: `${opponent.pet.name} の反撃。${playerPet.name} は ${enemyHit} ダメージを受けた。`,
-      },
-      {
-        turn: 3,
-        actorPetId: playerPet.id,
-        targetPetId: opponent.pet.id,
-        damage: finisher,
-        message: `${playerPet.name} の会心アタック！ ${opponent.pet.name} に ${finisher} ダメージ。`,
-      },
-    ],
+    result,
+    turns,
   };
 }
