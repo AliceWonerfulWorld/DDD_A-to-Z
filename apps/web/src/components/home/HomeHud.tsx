@@ -15,6 +15,7 @@ interface PlayerSummary {
   nextLevelTotalCp: number;
   nextLevelRemainingCp: number;
   lifetimeTotalEarnedCp: number;
+  badges?: { icon: string; name: string }[];
 }
 
 export interface GuildSummary {
@@ -286,7 +287,40 @@ export function HomeHud({
           </div>
           <div className={styles.infoGrid}>
             <LabelValue label="NAME" value={player.name} />
-            <LabelValue label="TITLE" value={player.title} />
+            <div className={styles.labelRow}>
+              <span
+                style={{
+                  color: "rgba(244, 236, 208, 0.62)",
+                  fontSize: "0.62rem",
+                  lineHeight: 1.5,
+                }}
+              >
+                TITLE
+              </span>
+              <span
+                style={{
+                  color: "#fff8d7",
+                  fontSize: "clamp(0.74rem, 1.6vw, 0.95rem)",
+                  lineHeight: 1.5,
+                  overflowWrap: "anywhere",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  flexWrap: "wrap",
+                }}
+              >
+                {player.badges && player.badges.length > 0 && (
+                  <span style={{ display: "inline-flex", gap: "2px" }}>
+                    {player.badges.map((b, i) => (
+                      <span key={i} title={b.name}>
+                        {b.icon}
+                      </span>
+                    ))}
+                  </span>
+                )}
+                {player.title}
+              </span>
+            </div>
             <LabelValue label="LEVEL" value={`LV.${player.level}`} />
             <LabelValue
               label="NEXT"

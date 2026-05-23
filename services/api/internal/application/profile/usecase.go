@@ -84,11 +84,34 @@ func (u *UseCase) GetProfile(ctx context.Context, userID user.ID) (domainprofile
 	return u.profiles.FindByUserID(ctx, userID)
 }
 
+// UpdateSelectedBadgeSlugInput represents the data for updating the selected badge slug.
+type UpdateSelectedBadgeSlugInput struct {
+	SessionToken string
+	BadgeSlug    *string
+}
+
 // UpdateProfileInput represents the data for updating a profile.
 type UpdateProfileInput struct {
 	SessionToken string
 	DisplayName  string
 	AvatarURL    string
+}
+
+// UpdateSelectedBadgeSlug sets the selected badge slug for the authenticated user.
+func (u *UseCase) UpdateSelectedBadgeSlug(ctx context.Context, input UpdateSelectedBadgeSlugInput) error {
+	if input.SessionToken == "" {
+		return ErrUnauthenticated
+	}
+
+	appUser, ok, err := u.current.FindUserBySessionToken(ctx, input.SessionToken, u.now())
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrUnauthenticated
+	}
+
+	return u.profiles.UpdateSelectedBadgeSlug(ctx, appUser.ID, input.BadgeSlug)
 }
 
 // UpdateProfile updates an existing profile.

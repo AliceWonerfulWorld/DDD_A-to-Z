@@ -65,6 +65,8 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v22
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate schema source
         run: nix develop -c ./scripts/atlas.sh schema inspect --env ci --url env://src --format '{{ sql . }}' > /dev/null

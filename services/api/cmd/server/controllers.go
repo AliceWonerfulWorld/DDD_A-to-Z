@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	authapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/auth"
+	badgeapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/badge"
 	chatapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/chat"
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	githubapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/github"
@@ -84,6 +85,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 	}
 	guildTownStore := postgres.NewGuildTownStore(db)
 	chatStore := postgres.NewChatStore(db, guildStore)
+	badgeStore := postgres.NewBadgeStore(db)
 
 	authUseCase := authapp.NewUseCase(
 		oauthClient,
@@ -120,6 +122,12 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		guildStore,
 		security.NewIDGenerator("guild_town_placement"),
 	)
+	badgeUseCase := badgeapp.NewUseCase(
+		badgeStore,
+		badgeStore,
+		security.NewIDGenerator("badge"),
+		mypageStore,
+	)
 	mypageUseCase := mypageapp.NewUseCase(
 		authStore,
 		newMypageCPReader(contributionPointStore, mypageStore),
@@ -127,6 +135,9 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		repositoryClient,
 		authStore,
 		mypageapp.NewGuildMembershipReader(guildStore),
+		newMypageBadgeReader(badgeStore),
+		newMypageBadgeGrantingChecker(badgeUseCase),
+		newMypageSelectedBadgeReader(profileStore),
 		mypageapp.NewProfileReader(profileStore),
 	)
 	petUseCase := petapp.NewUseCaseWithTrainingAndBattle(
@@ -182,7 +193,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 			mypage:     httpapi.NewMypageController(mypageUseCase, logger),
 			pet:        httpapi.NewPetController(petUseCase, logger),
 			profile:    httpapi.NewProfileController(profileUseCase, logger),
-			analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), logger),
+			analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), badgeUseCase, authStore, logger),
 			home:       httpapi.NewHomeController(homeUseCase, logger),
 			sp:         httpapi.NewSPController(spUseCase, logger),
 			chat:       httpapi.NewChatController(chatUseCase, logger),

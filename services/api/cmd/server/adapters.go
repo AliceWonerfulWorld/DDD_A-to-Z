@@ -4,7 +4,10 @@ import (
 	"context"
 	"time"
 
+	badgeapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/badge"
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
+	mypageapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/mypage"
+	badgedomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/badge"
 	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
@@ -125,4 +128,52 @@ func (p *homeCPDataProvider) GetTodayEarned(ctx context.Context, userID user.ID)
 
 func (p *homeCPDataProvider) GetTotalEarned(ctx context.Context, userID user.ID) (int64, error) {
 	return p.totals.GetTotalEarned(ctx, userID)
+}
+
+type mypageBadgeReader struct {
+	inner interface {
+		FindBadgeSummariesByUser(ctx context.Context, userID user.ID) ([]mypageapp.BadgeSummary, error)
+	}
+}
+
+func newMypageBadgeReader(inner interface {
+	FindBadgeSummariesByUser(ctx context.Context, userID user.ID) ([]mypageapp.BadgeSummary, error)
+}) *mypageBadgeReader {
+	return &mypageBadgeReader{inner: inner}
+}
+
+func (r *mypageBadgeReader) ListUserBadges(ctx context.Context, userID user.ID) ([]mypageapp.BadgeSummary, error) {
+	return r.inner.FindBadgeSummariesByUser(ctx, userID)
+}
+
+type mypageBadgeGrantingChecker struct {
+	inner *badgeapp.UseCase
+}
+
+func newMypageBadgeGrantingChecker(inner *badgeapp.UseCase) *mypageBadgeGrantingChecker {
+	return &mypageBadgeGrantingChecker{inner: inner}
+}
+
+func (c *mypageBadgeGrantingChecker) CheckAndGrantBadges(ctx context.Context, userID user.ID, conditionType badgedomain.ConditionType, value int64) (int, error) {
+	results, err := c.inner.CheckAndGrantBadges(ctx, userID, conditionType, value)
+	if err != nil {
+		return 0, err
+	}
+	return len(results), nil
+}
+
+type mypageSelectedBadgeReader struct {
+	inner interface {
+		GetSelectedBadgeSlug(ctx context.Context, userID user.ID) (*string, error)
+	}
+}
+
+func newMypageSelectedBadgeReader(inner interface {
+	GetSelectedBadgeSlug(ctx context.Context, userID user.ID) (*string, error)
+}) *mypageSelectedBadgeReader {
+	return &mypageSelectedBadgeReader{inner: inner}
+}
+
+func (r *mypageSelectedBadgeReader) GetSelectedBadgeSlug(ctx context.Context, userID user.ID) (*string, error) {
+	return r.inner.GetSelectedBadgeSlug(ctx, userID)
 }

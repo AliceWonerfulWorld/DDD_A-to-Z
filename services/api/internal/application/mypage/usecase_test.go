@@ -83,6 +83,24 @@ func (s *stubGuildMembershipReader) GetTotalGuilds(_ context.Context) (int, erro
 	return s.total, s.err
 }
 
+type stubBadgeReader struct {
+	badges []mypage.BadgeSummary
+	err    error
+}
+
+func (s *stubBadgeReader) ListUserBadges(_ context.Context, _ user.ID) ([]mypage.BadgeSummary, error) {
+	return s.badges, s.err
+}
+
+type stubSelectedBadgeReader struct {
+	slug *string
+	err  error
+}
+
+func (s *stubSelectedBadgeReader) GetSelectedBadgeSlug(_ context.Context, _ user.ID) (*string, error) {
+	return s.slug, s.err
+}
+
 type stubProfileReader struct {
 	profile *mypage.ProfileInfo
 	err     error
@@ -102,6 +120,9 @@ func TestGetMyPage_EmptyToken(t *testing.T) {
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
 		&stubGuildMembershipReader{},
+		&stubBadgeReader{},
+		nil,
+		&stubSelectedBadgeReader{},
 		&stubProfileReader{},
 	)
 
@@ -119,6 +140,9 @@ func TestGetMyPage_SessionNotFound(t *testing.T) {
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
 		&stubGuildMembershipReader{},
+		&stubBadgeReader{},
+		nil,
+		&stubSelectedBadgeReader{},
 		&stubProfileReader{},
 	)
 
@@ -151,6 +175,9 @@ func TestGetMyPage_Success(t *testing.T) {
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
 		&stubGuildMembershipReader{},
+		&stubBadgeReader{},
+		nil,
+		&stubSelectedBadgeReader{},
 		&stubProfileReader{},
 	)
 
@@ -177,6 +204,12 @@ func TestGetMyPage_Success(t *testing.T) {
 	if result.Guild != nil {
 		t.Errorf("expected nil guild, got %v", result.Guild)
 	}
+	if len(result.Badges) != 0 {
+		t.Errorf("expected empty badges, got %d", len(result.Badges))
+	}
+	if result.SelectedBadgeSlug != nil {
+		t.Errorf("expected nil selected_badge_slug, got %v", result.SelectedBadgeSlug)
+	}
 }
 
 func TestGetMyPage_CPError(t *testing.T) {
@@ -190,6 +223,9 @@ func TestGetMyPage_CPError(t *testing.T) {
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
 		&stubGuildMembershipReader{},
+		&stubBadgeReader{},
+		nil,
+		&stubSelectedBadgeReader{},
 		&stubProfileReader{},
 	)
 
@@ -210,6 +246,9 @@ func TestGetMyPage_RepoError(t *testing.T) {
 		&stubGitHubStatsReader{},
 		&stubGitHubTokenRepo{},
 		&stubGuildMembershipReader{},
+		&stubBadgeReader{},
+		nil,
+		&stubSelectedBadgeReader{},
 		&stubProfileReader{},
 	)
 

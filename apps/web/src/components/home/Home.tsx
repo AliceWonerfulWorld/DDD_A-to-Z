@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { HomeHud } from "./HomeHud";
 import type { GuildSummary } from "./HomeHud";
 import { HomeFirstVisitGuide } from "./HomeFirstVisitGuide";
@@ -13,6 +13,7 @@ import { fetchMyGuild } from "../../features/guild/api";
 import { toDisplayGuild } from "../../features/guild/presentation";
 import { fetchProfile, type Profile } from "../../features/profile/api";
 import { fetchHomeCP, type HomeCPData } from "../../features/home/api";
+import { fetchMyPage, type MyPageBadge } from "../../features/mypage/api";
 import { fetchMyPets, type PetSummary } from "../../features/pet/api";
 import { readHomePetId } from "../../features/pet/homePet";
 
@@ -22,7 +23,7 @@ interface HomeProps {
 
 const defaultPlayer = {
   name: "DevSamurai",
-  title: "Consistency Master",
+  title: "",
   level: 1,
   levelTotalCp: 0,
   totalCp: 0,
@@ -88,6 +89,9 @@ export function Home({ onNavigate }: HomeProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [cpData, setCpData] = useState<HomeCPData | null>(null);
   const [homePet, setHomePet] = useState<PetSummary | null>(null);
+  const [badges, setBadges] = useState<MyPageBadge[]>([]);
+  const [selectedBadgeSlug, setSelectedBadgeSlug] = useState<string | null>(null);
+
   const lifetimeTotalEarnedCp = cpData?.lifetime_total_earned_cp ?? cpData?.total_cp ?? 0;
   const playerLevel = cpData?.player_level ?? playerLevelFromTotalEarned(lifetimeTotalEarnedCp);
   const playerLevelTotalCp =
@@ -98,6 +102,12 @@ export function Home({ onNavigate }: HomeProps) {
   const nextPlayerLevelRemainingCp =
     cpData?.next_player_level_remaining ??
     Math.max(0, nextPlayerLevelTotalCp - lifetimeTotalEarnedCp);
+
+  const selectedBadgeName = useMemo(() => {
+    if (!selectedBadgeSlug || badges.length === 0) return "";
+    const found = badges.find((b) => b.slug === selectedBadgeSlug);
+    return found ? found.name : "";
+  }, [selectedBadgeSlug, badges]);
 
   useEffect(() => {
     try {
@@ -127,6 +137,13 @@ export function Home({ onNavigate }: HomeProps) {
         console.error(error);
         setHomePet(null);
       });
+
+    fetchMyPage()
+      .then((data) => {
+        setBadges(data.badges ?? []);
+        setSelectedBadgeSlug(data.selected_badge_slug ?? null);
+      })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -269,6 +286,7 @@ export function Home({ onNavigate }: HomeProps) {
           player={{
             ...defaultPlayer,
             name: profile?.display_name || defaultPlayer.name,
+            title: selectedBadgeName || defaultPlayer.title,
             level: playerLevel,
             levelTotalCp: playerLevelTotalCp,
             totalCp: cpData?.total_cp ?? defaultPlayer.totalCp,
@@ -277,6 +295,11 @@ export function Home({ onNavigate }: HomeProps) {
             nextLevelTotalCp: nextPlayerLevelTotalCp,
             nextLevelRemainingCp: nextPlayerLevelRemainingCp,
             lifetimeTotalEarnedCp: lifetimeTotalEarnedCp,
+            badges: selectedBadgeSlug
+              ? badges
+                  .filter((b) => b.slug === selectedBadgeSlug)
+                  .map((b) => ({ icon: b.icon, name: b.name }))
+              : [],
           }}
           onReturnTitle={openReturnTitleDialog}
         />

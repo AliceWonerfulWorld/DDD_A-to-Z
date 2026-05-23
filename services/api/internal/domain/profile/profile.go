@@ -14,11 +14,12 @@ const maxDisplayNameLength = 50
 // GitHub-linked identity (user.User). It is created once during initial
 // on-boarding and can be updated later.
 type Profile struct {
-	UserID      user.ID
-	DisplayName string
-	AvatarURL   string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	UserID            user.ID
+	DisplayName       string
+	AvatarURL         string
+	SelectedBadgeSlug *string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // New creates a new Profile, validating all invariants.

@@ -2,7 +2,13 @@ import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { useGuardedNavigation } from "../../hooks/useGuardedNavigation";
-import { fetchMyPage, type MyPageResponse, type GitHubStats } from "../../features/mypage/api";
+import {
+  fetchMyPage,
+  type MyPageResponse,
+  type GitHubStats,
+  type MyPageBadge,
+} from "../../features/mypage/api";
+import { updateSelectedBadge } from "../../features/profile/api";
 import { updateProfileAPI } from "../../features/profile/api";
 import { findGuildBySlug } from "../../features/guild/guildMaster";
 import { AvatarPicker } from "../profile/AvatarPicker";
@@ -158,6 +164,8 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const guardedNavigate = useGuardedNavigation(onNavigate);
   const [mypageData, setMypageData] = useState<MyPageResponse | null>(null);
   const [apiError, setApiError] = useState(false);
+  const [selectedBadgeSlug, setSelectedBadgeSlug] = useState<string | null>(null);
+  const [badgeError, setBadgeError] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
@@ -165,13 +173,34 @@ export function MyPage({ onNavigate }: MyPageProps) {
 
   const loadMyPage = () => {
     fetchMyPage()
-      .then(setMypageData)
+      .then((data) => {
+        setMypageData(data);
+        setSelectedBadgeSlug(data.selected_badge_slug);
+        setApiError(false);
+      })
       .catch(() => setApiError(true));
   };
 
   useEffect(() => {
     loadMyPage();
   }, []);
+
+  const handleBadgeSelect = async (slug: string | null) => {
+    try {
+      await updateSelectedBadge(slug);
+      setSelectedBadgeSlug(slug);
+      setBadgeError(null);
+    } catch {
+      setBadgeError("Failed to update selected badge");
+    }
+  };
+
+  const effectiveSelectedSlug = selectedBadgeSlug;
+
+  const activeBadge = useMemo(() => {
+    if (!mypageData || !effectiveSelectedSlug) return null;
+    return mypageData.badges.find((b) => b.slug === effectiveSelectedSlug) ?? null;
+  }, [mypageData, effectiveSelectedSlug]);
 
   const handleEditProfileClick = () => {
     if (mypageData) {
@@ -396,6 +425,32 @@ export function MyPage({ onNavigate }: MyPageProps) {
                     </div>
                   </div>
                 </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "1.4rem" }}>👑</span>
+                  <span
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#f0c040",
+                      fontFamily: '"Press Start 2P", monospace',
+                    }}
+                  >
+                    {activeBadge ? activeBadge.name : "-"}
+                  </span>
+                </div>
+                {activeBadge && (
+                  <div
+                    style={{
+                      fontSize: "0.6rem",
+                      color: "rgba(232,232,208,0.5)",
+                      fontFamily: '"Press Start 2P", monospace',
+                      lineHeight: 1.4,
+                      marginTop: "4px",
+                    }}
+                  >
+                    {activeBadge.description}
+                  </div>
+                )}
 
                 <button
                   onClick={handleEditProfileClick}
@@ -868,6 +923,35 @@ export function MyPage({ onNavigate }: MyPageProps) {
             )}
           </Panel>
         </div>
+
+        {/* ═══ Badges Row ═══ */}
+        {mypageData && mypageData.badges && mypageData.badges.length > 0 && (
+          <Panel borderColor="rgba(240,192,64,0.3)">
+            <SectionTitle text="BADGES" color="#f0c040" />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+              {mypageData.badges.map((badge) => (
+                <BadgeCard
+                  key={badge.slug}
+                  badge={badge}
+                  selected={badge.slug === effectiveSelectedSlug}
+                  onSelect={handleBadgeSelect}
+                />
+              ))}
+            </div>
+            {badgeError && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontSize: "0.6rem",
+                  color: "#ff6b6b",
+                  fontFamily: '"Press Start 2P", monospace',
+                }}
+              >
+                {badgeError}
+              </div>
+            )}
+          </Panel>
+        )}
       </div>
     </div>
   );
@@ -922,5 +1006,50 @@ function GitHubStatsPanel({ stats }: { stats: GitHubStats }) {
         value={stats.yearly_contributions.toLocaleString()}
       />
     </div>
+  );
+}
+
+function BadgeCard({
+  badge,
+  selected,
+  onSelect,
+}: {
+  badge: MyPageBadge;
+  selected: boolean;
+  onSelect: (slug: string | null) => void;
+}) {
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.35, ease: steppedEase(6) }}
+      onClick={() => onSelect(selected ? null : badge.slug)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        width: "140px",
+        border: selected ? "2px solid #f0c040" : "1px solid rgba(240,192,64,0.25)",
+        background: selected ? "rgba(240,192,64,0.15)" : "rgba(240,192,64,0.06)",
+        padding: "8px 10px",
+        cursor: "pointer",
+        fontFamily: '"Press Start 2P", monospace',
+      }}
+    >
+      <span style={{ fontSize: "1.3rem" }}>{badge.icon}</span>
+      <div
+        style={{
+          fontSize: "0.7rem",
+          color: selected ? "#f0c040" : "rgba(232,232,208,0.7)",
+          fontFamily: '"Press Start 2P", monospace',
+          lineHeight: 1.4,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {badge.name}
+      </div>
+    </motion.button>
   );
 }
