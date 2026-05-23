@@ -64,9 +64,16 @@ func (s *ProfileStore) GetSelectedBadgeSlug(ctx context.Context, userID user.ID)
 
 func (s *ProfileStore) UpdateSelectedBadgeSlug(ctx context.Context, userID user.ID, badgeSlug *string) error {
 	now := time.Now()
-	return s.db.WithContext(ctx).Exec(`
+	res := s.db.WithContext(ctx).Exec(`
 		UPDATE user_profiles SET selected_badge_slug = ?, updated_at = ? WHERE user_id = ?
-	`, badgeSlug, now, userID).Error
+	`, badgeSlug, now, userID)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // レコード取得

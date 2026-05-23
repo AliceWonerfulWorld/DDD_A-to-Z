@@ -43,8 +43,10 @@ func NewBadge(
 	); err != nil {
 		return Badge{}, err
 	}
-	if conditionType == "" {
-		return Badge{}, fmt.Errorf("condition type is required")
+	switch conditionType {
+	case ConditionTypeCPEarned:
+	default:
+		return Badge{}, fmt.Errorf("invalid condition type: %s", conditionType)
 	}
 	if threshold <= 0 {
 		return Badge{}, fmt.Errorf("threshold must be positive")

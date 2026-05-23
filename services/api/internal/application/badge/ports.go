@@ -24,3 +24,11 @@ type IDGenerator interface {
 type BadgeGrantingChecker interface {
 	CheckAndGrantBadges(ctx context.Context, userID user.ID, conditionType badgedomain.ConditionType, value int64) ([]GrantResult, error)
 }
+
+type TotalEarnedReader interface {
+	GetTotalEarned(ctx context.Context, userID user.ID) (int64, error)
+}
+
+type GrantBadgesUseCase interface {
+	Execute(ctx context.Context, userID user.ID) (int, error)
+}

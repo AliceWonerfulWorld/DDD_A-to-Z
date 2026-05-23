@@ -2,6 +2,7 @@ package badge
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	badgedomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/badge"
@@ -15,23 +16,41 @@ type errBadgeAlreadyGranted struct{}
 func (errBadgeAlreadyGranted) Error() string { return "badge already granted" }
 
 type UseCase struct {
-	badges     BadgeRepository
-	userBadges UserBadgeRepository
-	ids        IDGenerator
-	now        func() time.Time
+	badges      BadgeRepository
+	userBadges  UserBadgeRepository
+	ids         IDGenerator
+	totalEarned TotalEarnedReader
+	now         func() time.Time
 }
 
 func NewUseCase(
 	badges BadgeRepository,
 	userBadges UserBadgeRepository,
 	ids IDGenerator,
+	totalEarned TotalEarnedReader,
 ) *UseCase {
 	return &UseCase{
-		badges:     badges,
-		userBadges: userBadges,
-		ids:        ids,
-		now:        time.Now,
+		badges:      badges,
+		userBadges:  userBadges,
+		ids:         ids,
+		totalEarned: totalEarned,
+		now:         time.Now,
 	}
+}
+
+func (u *UseCase) Execute(ctx context.Context, userID user.ID) (int, error) {
+	totalEarned, err := u.totalEarned.GetTotalEarned(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	if totalEarned <= 0 {
+		return 0, nil
+	}
+	results, err := u.CheckAndGrantBadges(ctx, userID, badgedomain.ConditionTypeCPEarned, totalEarned)
+	if err != nil {
+		return 0, err
+	}
+	return len(results), nil
 }
 
 type GrantResult struct {
@@ -92,6 +111,9 @@ func (u *UseCase) CheckAndGrantBadges(ctx context.Context, userID user.ID, condi
 
 		saved, err := u.userBadges.Save(ctx, ub)
 		if err != nil {
+			if errors.Is(err, ErrBadgeAlreadyGranted) {
+				continue
+			}
 			return nil, err
 		}
 
