@@ -20,4 +20,6 @@ type ProfileRepository interface {
 	Save(ctx context.Context, p domainprofile.Profile) error
 	// FindByUserID returns the profile for the given user, or (_, false, nil) if not found.
 	FindByUserID(ctx context.Context, userID user.ID) (domainprofile.Profile, bool, error)
+	// UpdateSelectedBadgeSlug sets the selected badge slug for the user.
+	UpdateSelectedBadgeSlug(ctx context.Context, userID user.ID, badgeSlug *string) error
 }

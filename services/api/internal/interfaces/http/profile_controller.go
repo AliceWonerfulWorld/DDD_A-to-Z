@@ -1,31 +1,22 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	stdhttp "net/http"
 
 	profileapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/profile"
-	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
-
-// プロフィールコントローラー本体
-type SelectedBadgeSlugUpdater interface {
-	UpdateSelectedBadgeSlug(ctx context.Context, userID user.ID, badgeSlug *string) error
-}
 
 type ProfileController struct {
 	usecase *profileapp.UseCase
-	badges  SelectedBadgeSlugUpdater
 	logger  *slog.Logger
 }
 
-func NewProfileController(usecase *profileapp.UseCase, badges SelectedBadgeSlugUpdater, logger *slog.Logger) *ProfileController {
+func NewProfileController(usecase *profileapp.UseCase, logger *slog.Logger) *ProfileController {
 	return &ProfileController{
 		usecase: usecase,
-		badges:  badges,
 		logger:  logger,
 	}
 }
@@ -173,21 +164,28 @@ func (c *ProfileController) updateBadge(w stdhttp.ResponseWriter, r *stdhttp.Req
 		return
 	}
 
-	appUser, ok, err := c.usecase.FindUser(r.Context(), cookie.Value)
-	if err != nil || !ok {
-		writeAPIError(w, stdhttp.StatusUnauthorized, "unauthenticated", "unauthenticated", 0, nil)
-		return
-	}
-
 	var req updateBadgeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_request", "invalid json body", 0, nil)
 		return
 	}
 
-	if err := c.badges.UpdateSelectedBadgeSlug(r.Context(), appUser.ID, req.BadgeSlug); err != nil {
-		c.logger.Error("failed to update badge", "error", err)
-		writeAPIError(w, stdhttp.StatusInternalServerError, "internal_error", "Internal Server Error", 0, nil)
+	if req.BadgeSlug != nil && *req.BadgeSlug == "" {
+		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_request", "badge_slug must not be empty", 0, nil)
+		return
+	}
+
+	if err := c.usecase.UpdateSelectedBadgeSlug(r.Context(), profileapp.UpdateSelectedBadgeSlugInput{
+		SessionToken: cookie.Value,
+		BadgeSlug:    req.BadgeSlug,
+	}); err != nil {
+		switch {
+		case errors.Is(err, profileapp.ErrUnauthenticated):
+			writeAPIError(w, stdhttp.StatusUnauthorized, "unauthenticated", "unauthenticated", 0, nil)
+		default:
+			c.logger.Error("failed to update badge", "error", err)
+			writeAPIError(w, stdhttp.StatusInternalServerError, "internal_error", "Internal Server Error", 0, nil)
+		}
 		return
 	}
 
