@@ -127,6 +127,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		repositoryClient,
 		authStore,
 		mypageapp.NewGuildMembershipReader(guildStore),
+		mypageapp.NewProfileReader(profileStore),
 	)
 	petUseCase := petapp.NewUseCase(
 		authStore,
