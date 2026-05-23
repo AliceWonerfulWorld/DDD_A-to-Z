@@ -13,6 +13,7 @@ import { fetchMyGuild } from "../../features/guild/api";
 import { toDisplayGuild } from "../../features/guild/presentation";
 import { fetchProfile, type Profile } from "../../features/profile/api";
 import { fetchHomeCP, type HomeCPData } from "../../features/home/api";
+import { fetchMyPage, type MyPageBadge } from "../../features/mypage/api";
 
 interface HomeProps {
   onNavigate: (path: string) => void | Promise<void>;
@@ -83,6 +84,7 @@ export function Home({ onNavigate }: HomeProps) {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [cpData, setCpData] = useState<HomeCPData | null>(null);
+  const [badges, setBadges] = useState<MyPageBadge[]>([]);
   const lifetimeTotalEarnedCp = cpData?.lifetime_total_earned_cp ?? cpData?.total_cp ?? 0;
   const playerLevel = cpData?.player_level ?? playerLevelFromTotalEarned(lifetimeTotalEarnedCp);
   const playerLevelTotalCp =
@@ -108,6 +110,12 @@ export function Home({ onNavigate }: HomeProps) {
 
   useEffect(() => {
     fetchHomeCP().then(setCpData).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    fetchMyPage()
+      .then((data) => setBadges(data.badges ?? []))
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -251,6 +259,7 @@ export function Home({ onNavigate }: HomeProps) {
             nextLevelTotalCp: nextPlayerLevelTotalCp,
             nextLevelRemainingCp: nextPlayerLevelRemainingCp,
             lifetimeTotalEarnedCp: lifetimeTotalEarnedCp,
+            badges: badges.map((b) => ({ icon: b.icon, name: b.name })),
           }}
           onReturnTitle={openReturnTitleDialog}
         />
