@@ -11,6 +11,7 @@ import (
 	guildtownapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guildtown"
 	homeapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/home"
 	mypageapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/mypage"
+	petapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/pet"
 	profileapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/profile"
 	analysisapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/repositoryanalysis"
 	spapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/sp"
@@ -33,6 +34,7 @@ type controllerSet struct {
 	guild      *httpapi.GuildController
 	guildTown  *httpapi.GuildTownController
 	mypage     *httpapi.MypageController
+	pet        *httpapi.PetController
 	profile    *httpapi.ProfileController
 	analysis   *httpapi.AnalysisController
 	home       *httpapi.HomeController
@@ -47,6 +49,7 @@ func (c controllerSet) registrars() []httpapi.RouteRegistrar {
 		c.guild,
 		c.guildTown,
 		c.mypage,
+		c.pet,
 		c.profile,
 		c.analysis,
 		c.home,
@@ -73,6 +76,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 	repositoryStore := postgres.NewRepositoryStore(db)
 	contributionPointStore := postgres.NewContributionPointStore(db)
 	mypageStore := postgres.NewMyPageStore(db)
+	petStore := postgres.NewPetStore(db)
 	profileStore := postgres.NewProfileStore(db)
 	guildStore, err := postgres.NewGuildStore(db)
 	if err != nil {
@@ -124,6 +128,12 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		authStore,
 		mypageapp.NewGuildMembershipReader(guildStore),
 	)
+	petUseCase := petapp.NewUseCase(
+		authStore,
+		newMypageCPReader(contributionPointStore, mypageStore),
+		petStore,
+		guildStore,
+	)
 	spUseCase := spapp.NewUseCase(authStore, contributionPointStore)
 	homeCPProvider := newHomeCPDataProvider(contributionPointStore, mypageStore)
 	homeUseCase := homeapp.NewUseCase(authStore, homeCPProvider)
@@ -164,6 +174,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 			guild:      httpapi.NewGuildController(guildUseCase, logger),
 			guildTown:  httpapi.NewGuildTownController(guildTownUseCase, logger),
 			mypage:     httpapi.NewMypageController(mypageUseCase, logger),
+			pet:        httpapi.NewPetController(petUseCase, logger),
 			profile:    httpapi.NewProfileController(profileUseCase, logger),
 			analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), logger),
 			home:       httpapi.NewHomeController(homeUseCase, logger),
