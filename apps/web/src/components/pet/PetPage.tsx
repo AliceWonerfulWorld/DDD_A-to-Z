@@ -370,7 +370,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
             <h2 className={styles.panelTitle} id="battle-title">
               AUTO BATTLE
             </h2>
-            <div className={styles.list}>
+            <div className={styles.opponentList}>
               {opponents.length === 0 && (
                 <p className={styles.message}>対戦相手候補はまだありません。</p>
               )}
@@ -388,6 +388,8 @@ export function PetPage({ onNavigate }: PetPageProps) {
                   </span>
                 </button>
               ))}
+            </div>
+            <div className={styles.battleActions}>
               <button
                 className={styles.battleButton}
                 disabled={!selectedOpponent || !selectedPet || isBattling}

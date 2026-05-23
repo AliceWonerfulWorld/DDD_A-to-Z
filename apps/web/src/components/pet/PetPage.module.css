@@ -94,9 +94,9 @@
   display: grid;
   grid-template-areas:
     "training owned"
-    "battle owned";
-  grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.9fr);
-  grid-template-rows: minmax(0, 1fr) minmax(154px, 0.42fr);
+    "training battle";
+  grid-template-columns: minmax(0, 1.24fr) minmax(360px, 0.86fr);
+  grid-template-rows: minmax(0, 0.58fr) minmax(218px, 0.42fr);
   gap: clamp(10px, 1.7svh, 16px);
   min-height: 0;
   align-items: stretch;
@@ -128,6 +128,9 @@
 
 .battlePanel {
   grid-area: battle;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(8px, 1.2svh, 12px);
 }
 
 .panelTitle {
@@ -306,9 +309,17 @@
   min-height: 0;
 }
 
-.ownedPanel .list,
-.battlePanel .list {
+.ownedPanel .list {
   max-height: calc(100% - 42px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.opponentList {
+  display: grid;
+  align-content: start;
+  gap: clamp(8px, 1.2svh, 10px);
+  min-height: 0;
   overflow: auto;
   padding-right: 4px;
 }
@@ -366,6 +377,7 @@
 .opponentItem {
   display: grid;
   gap: 10px;
+  min-height: 74px;
   color: #fff8d7;
   cursor: pointer;
   font-family: inherit;
@@ -382,6 +394,10 @@
 
 .battleResult {
   margin-top: 12px;
+}
+
+.battleActions {
+  display: grid;
 }
 
 @media (max-width: 860px) {
@@ -411,7 +427,7 @@
   }
 
   .ownedPanel .list,
-  .battlePanel .list {
+  .opponentList {
     max-height: none;
     overflow: visible;
     padding-right: 0;
