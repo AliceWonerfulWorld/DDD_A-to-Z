@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminLog;
 use App\Models\PointType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,8 @@ class PointTypeController
 
         PointType::create($validated);
 
+        AdminLog::record('created', 'point_type', "{$validated['code']}:{$validated['language']}", $validated);
+
         return redirect()->route('point-types.index')->with('success', 'ポイントタイプを作成しました');
     }
 
@@ -73,6 +76,8 @@ class PointTypeController
 
         // code・language は immutable なので label のみ更新
         $pointType->update(['label' => $validated['label']]);
+
+        AdminLog::record('updated', 'point_type', "{$code}:{$language}", $validated);
 
         return redirect()->route('point-types.index')->with('success', 'ポイントタイプを更新しました');
     }

@@ -10,6 +10,7 @@ const page = usePage<{ flash: { success?: string; error?: string } }>();
       <span class="font-bold text-lg">Lang War Admin</span>
       <Link href="/guilds" class="hover:text-gray-300">ギルド</Link>
       <Link href="/point-types" class="hover:text-gray-300">ポイントタイプ</Link>
+      <Link href="/logs" class="hover:text-gray-300 ml-auto">ログ</Link>
     </nav>
 
     <div v-if="page.props.flash.success" class="bg-green-100 border border-green-400 text-green-800 px-6 py-3 m-4 rounded">

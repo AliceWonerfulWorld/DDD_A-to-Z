@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminLog;
 use App\Models\Guild;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,11 +37,13 @@ class GuildController
             'sort_order'  => ['required', 'integer', 'min:0'],
         ]);
 
-        Guild::create(array_merge($validated, [
+        $guild = Guild::create(array_merge($validated, [
             'id'         => Str::ulid(),
             'created_at' => now(),
             'updated_at' => now(),
         ]));
+
+        AdminLog::record('created', 'guild', $validated['slug'], $validated);
 
         return redirect()->route('guilds.index')->with('success', 'ギルドを作成しました');
     }
@@ -63,6 +66,8 @@ class GuildController
         ]);
 
         $guild->update($validated);
+
+        AdminLog::record('updated', 'guild', $guild->slug, $validated);
 
         return redirect()->route('guilds.index')->with('success', 'ギルドを更新しました');
     }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\GuildController;
+use App\Http\Controllers\LogController;
 use App\Http\Controllers\PointTypeController;
 use App\Http\Middleware\BasicAuthMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -14,6 +15,8 @@ Route::middleware(BasicAuthMiddleware::class)->group(function () {
     Route::post('/guilds', [GuildController::class, 'store'])->name('guilds.store');
     Route::get('/guilds/{guild}/edit', [GuildController::class, 'edit'])->name('guilds.edit');
     Route::put('/guilds/{guild}', [GuildController::class, 'update'])->name('guilds.update');
+
+    Route::get('/logs', [LogController::class, 'index'])->name('logs.index');
 
     Route::get('/point-types', [PointTypeController::class, 'index'])->name('point-types.index');
     Route::get('/point-types/create', [PointTypeController::class, 'create'])->name('point-types.create');
