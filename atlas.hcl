@@ -33,16 +33,11 @@ env "ci" {
 
 env "prod" {
   url = getenv("NEON_DATABASE_URL")
-  src = "file://db/schema"
   schemas = ["public"]
   dev = "docker://postgres/17/dev?search_path=public"
 
   migration {
     dir = "file://db/migrations"
     revisions_schema = "public"
-  }
-
-  schema {
-    src = "file://db/schema"
   }
 }
