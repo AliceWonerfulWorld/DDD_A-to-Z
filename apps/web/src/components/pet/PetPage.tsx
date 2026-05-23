@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useMachine } from "@xstate/react";
 import { motion, type Variants } from "framer-motion";
 import { SPRITE_ASSETS } from "../../constants/assets";
 import { PATHS } from "../../constants/paths";
+import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { useAudioSettings } from "../../features/audio/useAudioSettings";
 import { ApiError } from "../../lib/api/client";
 import { GopherSprite } from "../shared/GopherSprite";
 import {
@@ -134,6 +136,8 @@ function apiWaitingMessage(error: unknown, fallback: string) {
 
 export function PetPage({ onNavigate }: PetPageProps) {
   const isMountedRef = useRef(false);
+  const buttonClickSeRef = useRef<HTMLAudioElement | null>(null);
+  const { isSeEnabled } = useAudioSettings();
   const [grantedPetNotice, setGrantedPetNotice] = useState<GrantedPet | null>(null);
   const [homePetId, setHomePetId] = useState<string | null>(() =>
     typeof window === "undefined" ? null : readHomePetId(),
@@ -145,6 +149,17 @@ export function PetPage({ onNavigate }: PetPageProps) {
   const isLoading = snapshot.matches("loading");
   const isTraining = snapshot.matches("training");
   const isBattling = snapshot.matches("battling");
+
+  const playButtonClick = useCallback(() => {
+    const audio = buttonClickSeRef.current;
+    if (!audio || !isSeEnabled) return;
+
+    if (audio.preload === "none" && audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+      audio.load();
+    }
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  }, [isSeEnabled]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -249,6 +264,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
       return;
     }
 
+    playButtonClick();
     send({ type: "TRAIN", stat });
     try {
       const result = await trainPet(selectedPet.id, stat);
@@ -272,6 +288,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
   const battle = async () => {
     if (!selectedOpponent || !selectedPet || isBattling) return;
 
+    playButtonClick();
     send({ type: "BATTLE" });
     try {
       const result =
@@ -304,11 +321,13 @@ export function PetPage({ onNavigate }: PetPageProps) {
     const opponent = sampleOpponents[0];
     if (!opponent) return;
 
+    playButtonClick();
     saveBattleSession({ playerPet: sampleCurrentPet, opponent, result: sampleBattleResult });
     onNavigate(PATHS.BATTLE);
   };
 
   const setHomePet = (pet: PetSummary) => {
+    playButtonClick();
     saveHomePetId(pet.id);
     setHomePetId(pet.id);
     setHomePetMessage(`${petDisplayName(pet)} をホームに表示します。`);
@@ -322,6 +341,13 @@ export function PetPage({ onNavigate }: PetPageProps) {
       variants={pageVariants}
     >
       <motion.div className={styles.shell} variants={pageVariants}>
+        <audio
+          ref={buttonClickSeRef}
+          src={AUDIO_ASSETS.se.buttonClick}
+          preload="none"
+          muted={!isSeEnabled}
+          aria-hidden="true"
+        />
         <motion.header className={styles.header} variants={panelVariants}>
           <div>
             <p className={styles.eyebrow}>PET TERMINAL</p>
@@ -330,7 +356,10 @@ export function PetPage({ onNavigate }: PetPageProps) {
           <button
             className={styles.backButton}
             type="button"
-            onClick={() => onNavigate(PATHS.HOME)}
+            onClick={() => {
+              playButtonClick();
+              onNavigate(PATHS.HOME);
+            }}
           >
             HOME
           </button>
@@ -438,7 +467,10 @@ export function PetPage({ onNavigate }: PetPageProps) {
                   className={styles.petListItem}
                   key={pet.id}
                   type="button"
-                  onClick={() => send({ type: "SELECT_PET", petId: pet.id })}
+                  onClick={() => {
+                    playButtonClick();
+                    send({ type: "SELECT_PET", petId: pet.id });
+                  }}
                 >
                   <div>
                     <h3 className={styles.itemTitle}>{petDisplayName(pet)}</h3>
@@ -477,7 +509,10 @@ export function PetPage({ onNavigate }: PetPageProps) {
                   className={styles.opponentItem}
                   key={opponent.userId}
                   type="button"
-                  onClick={() => send({ type: "SELECT_OPPONENT", userId: opponent.userId })}
+                  onClick={() => {
+                    playButtonClick();
+                    send({ type: "SELECT_OPPONENT", userId: opponent.userId });
+                  }}
                 >
                   <span className={styles.itemTitle}>{opponent.playerName}</span>
                   <span className={styles.itemText}>
