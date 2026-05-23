@@ -1,0 +1,1 @@
+ALTER TABLE user_profiles ADD COLUMN selected_badge_slug TEXT REFERENCES badges(slug);

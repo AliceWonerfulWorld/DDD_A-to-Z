@@ -292,6 +292,7 @@ CREATE INDEX repository_analysis_contributions_user_id_occurred_at_idx ON reposi
 CREATE TABLE user_profiles (
   user_id TEXT PRIMARY KEY REFERENCES users(id),
   display_name TEXT NOT NULL CHECK (length(display_name) > 0 AND length(display_name) <= 50),
+  selected_badge_slug TEXT REFERENCES badges(slug),
   created_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
 );

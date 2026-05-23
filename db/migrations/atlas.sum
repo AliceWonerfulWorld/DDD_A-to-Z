@@ -1,4 +1,4 @@
-h1:tu2zlQUEqxUg/XqZD0Hp1HyKBrZhnBN/98C+I/6RKE8=
+h1:l0u69FBW2bnrU1D2CLBOz7R9VxXOFsG02b8lTMS7KZU=
 20260511165019_create_auth_tables.sql h1:xBhU31KhHPurVx2RqVxMmiyIjEg1sqKV3RUJyU6gr9Y=
 20260513090000_create_cp_tables.sql h1:3Ax1icNsujVhIX3ObVtWMEbIP/a3XPD2JQHeLhQG5Mg=
 20260514113146_contribution_point.sql h1:ZUdMX0wLF3+SpmuKtFVvhtIdFQSC+P0fjO8k/eYmEhA=
@@ -20,3 +20,4 @@ h1:tu2zlQUEqxUg/XqZD0Hp1HyKBrZhnBN/98C+I/6RKE8=
 20260524000000_tech_news_cache.sql h1:V2UGIVM37DfUT30P3WSEfn0QUcPX23WlRF032tKe5Ys=
 20260524000001_add_admin_logs.sql h1:0Wfrkw9fxy83ocoMuFTeGGtzLWxV7inuLvDt4J+9JpQ=
 20260524000002_create_badges.sql h1:fimIVlzxhk+wlw31H4FTgwcSiZz1MOZ3GfyYQvLAjJo=
+20260524000003_add_selected_badge_slug_to_user_profiles.sql h1:1U0sJN2/eJKCRuyGvHxsuSjzRo98NS6BUHUxZyPrZW0=
