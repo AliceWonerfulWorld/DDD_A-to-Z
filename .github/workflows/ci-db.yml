@@ -72,5 +72,5 @@ jobs:
             *\?*) export NEON_DATABASE_URL="${NEON_DATABASE_URL}&statement_cache_capacity=0" ;;
             *)    export NEON_DATABASE_URL="${NEON_DATABASE_URL}?statement_cache_capacity=0" ;;
           esac
-          atlas migrate apply --env prod --dry-run --config file://atlas.hcl
+          atlas migrate apply --env prod --dry-run --tx-mode=no-tx --config file://atlas.hcl
 
