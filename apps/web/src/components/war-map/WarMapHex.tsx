@@ -1,6 +1,7 @@
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 import { steppedEase } from "../../lib/animationUtils";
 import type { WarGuild } from "./WarMapData";
+import { useTransformEffect } from "react-zoom-pan-pinch";
 
 interface WarMapHexProps {
   guild: WarGuild;
@@ -10,6 +11,13 @@ interface WarMapHexProps {
 }
 
 export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMapHexProps) {
+  const zoomScale = useMotionValue(1);
+  const inverseScale = useTransform(zoomScale, (s) => (s < 1 ? 1 / s : 1));
+
+  useTransformEffect(({ state }) => {
+    zoomScale.set(state.scale);
+  });
+
   return (
     <motion.button
       type="button"
@@ -37,12 +45,14 @@ export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMa
         cursor: "pointer",
         fontFamily: "inherit",
         padding: 0,
-        transform: "translate(-50%, -50%)",
         transformOrigin: "50% 50%",
         zIndex: isSelected ? 8 : 6,
         touchAction: "none",
+        x: "-50%",
+        y: "-50%",
       }}
     >
+      <motion.div style={{ width: "100%", height: "100%", scale: inverseScale }}>
       {isCurrentGuild && (
         <span
           style={{
@@ -134,6 +144,7 @@ export function WarMapHex({ guild, isCurrentGuild, isSelected, onSelect }: WarMa
       >
         {guild.name}
       </span>
+      </motion.div>
     </motion.button>
   );
 }
