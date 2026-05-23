@@ -61,4 +61,5 @@ jobs:
       - name: Lint migrations
         run: nix develop -c ./scripts/atlas.sh migrate lint --env ci
 
-
+      - name: Test migrations against ephemeral DB
+        run: nix develop -c ./scripts/atlas.sh migrate apply --env ci
