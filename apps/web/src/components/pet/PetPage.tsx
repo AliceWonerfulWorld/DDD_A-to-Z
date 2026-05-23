@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useMachine } from "@xstate/react";
 import { motion, type Variants } from "framer-motion";
 import { PATHS } from "../../constants/paths";
@@ -10,6 +10,7 @@ import {
   PET_TRAINING_COSTS,
   startPetBattle,
   trainPet,
+  type GrantedPet,
   type PetSummary,
   type PetTrainingStat,
 } from "../../features/pet/api";
@@ -45,6 +46,20 @@ async function fetchPetPageBootstrap() {
 function petDisplayName(pet: PetSummary | null | undefined) {
   if (!pet) return "相棒未選択";
   return pet.attribute.toLowerCase() === "go" ? "Gopher" : pet.name;
+}
+
+function grantedPetAttributeLabel(attribute: string) {
+  const normalized = attribute.toLowerCase();
+  const labels: Record<string, string> = {
+    go: "Go",
+    rust: "Rust",
+    python: "Python",
+    java: "Java",
+    typescript: "TypeScript",
+    haskell: "Haskell",
+    zig: "Zig",
+  };
+  return labels[normalized] ?? attribute;
 }
 
 const petPortraits: Record<string, { label: string; tone: string }> = {
@@ -103,16 +118,10 @@ function apiWaitingMessage(error: unknown, fallback: string) {
 
 export function PetPage({ onNavigate }: PetPageProps) {
   const isMountedRef = useRef(false);
+  const [grantedPetNotice, setGrantedPetNotice] = useState<GrantedPet | null>(null);
   const [snapshot, send] = useMachine(petPageMachine);
-  const {
-    data,
-    selectedPetId,
-    opponents,
-    selectedOpponentId,
-    statusMessage,
-    noticeMessage,
-    trainingStat,
-  } = snapshot.context;
+  const { data, selectedPetId, opponents, selectedOpponentId, statusMessage, trainingStat } =
+    snapshot.context;
   const isLoading = snapshot.matches("loading");
   const isTraining = snapshot.matches("training");
   const isBattling = snapshot.matches("battling");
@@ -127,11 +136,9 @@ export function PetPage({ onNavigate }: PetPageProps) {
   useEffect(() => {
     const grantedPet = consumeGrantedPet();
     if (grantedPet) {
-      const guildName = grantedPet.guildId === "guild_go" ? "Goギルド" : "所属ギルド";
-      const petName = grantedPet.attribute.toLowerCase() === "go" ? "Gopher" : grantedPet.attribute;
-      send({ type: "NOTICE", message: `${guildName}の相棒「${petName}」が仲間になった！` });
+      setGrantedPetNotice(grantedPet);
     }
-  }, [send]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -296,7 +303,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
           </button>
         </motion.header>
 
-        {noticeMessage && <div className={styles.notice}>{noticeMessage}</div>}
+        {grantedPetNotice && <GrantedPetCelebration grantedPet={grantedPetNotice} />}
 
         <motion.div className={styles.layout} variants={pageVariants}>
           <motion.section
@@ -450,6 +457,44 @@ export function PetPage({ onNavigate }: PetPageProps) {
         </motion.div>
       </motion.div>
     </motion.main>
+  );
+}
+
+function GrantedPetCelebration({ grantedPet }: { grantedPet: GrantedPet }) {
+  const attribute = grantedPetAttributeLabel(grantedPet.attribute);
+  const guildName = grantedPet.guildId === "guild_go" ? "Go Guild" : "New Guild";
+  const pet: PetSummary = {
+    id: grantedPet.id,
+    guildId: grantedPet.guildId,
+    guildName,
+    name: attribute.toLowerCase() === "go" ? "Gopher" : attribute,
+    species: attribute.toLowerCase(),
+    attribute,
+    level: 1,
+    exp: 0,
+    maxHp: 1,
+    power: 1,
+    guard: 1,
+    speed: 1,
+    acquiredAt: grantedPet.createdAt,
+  };
+
+  return (
+    <motion.aside
+      animate={{ opacity: [0, 1, 1, 0], y: [16, 0, 0, -12], scale: [0.98, 1, 1, 0.99] }}
+      className={styles.grantToast}
+      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+      transition={{ duration: 5.2, times: [0, 0.16, 0.82, 1], ease: "easeOut" }}
+    >
+      <div className={styles.grantPortrait} aria-hidden="true">
+        <PetPortrait pet={pet} />
+      </div>
+      <div>
+        <span className={styles.grantLabel}>NEW COMPANION</span>
+        <h3 className={styles.grantTitle}>{petDisplayName(pet)} joined!</h3>
+        <p className={styles.grantText}>{guildName} の相棒が仲間になりました。</p>
+      </div>
+    </motion.aside>
   );
 }
 

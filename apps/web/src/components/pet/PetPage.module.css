@@ -13,6 +13,7 @@
 }
 
 .shell {
+  position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: clamp(10px, 1.8svh, 18px);
@@ -75,19 +76,85 @@
   box-shadow: 0 0 16px rgba(255, 248, 215, 0.14);
 }
 
-.notice {
-  border: 3px solid rgba(116, 247, 161, 0.8);
-  border-bottom-color: rgba(8, 40, 22, 0.96);
-  border-right-color: rgba(8, 40, 22, 0.96);
-  background: rgba(4, 22, 16, 0.9);
+.grantToast {
+  position: absolute;
+  top: clamp(88px, 13svh, 116px);
+  right: 0;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  width: min(440px, calc(100% - 24px));
+  pointer-events: none;
+  border: 2px solid rgba(116, 247, 161, 0.74);
+  background:
+    linear-gradient(90deg, rgba(116, 247, 161, 0.2), rgba(107, 183, 255, 0.1)),
+    linear-gradient(180deg, rgba(8, 32, 34, 0.96), rgba(6, 16, 30, 0.97));
   box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.76),
-    7px 7px 0 rgba(0, 0, 0, 0.34);
-  color: #f7ffe4;
-  font-size: 0.68rem;
-  line-height: 1.75;
-  margin-bottom: 18px;
-  padding: 14px 16px;
+    inset 0 0 24px rgba(116, 247, 161, 0.1),
+    0 0 24px rgba(116, 247, 161, 0.24),
+    6px 6px 0 rgba(0, 0, 0, 0.32);
+  padding: 12px 14px;
+}
+
+.grantToast::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(255, 248, 215, 0.08);
+}
+
+.grantPortrait {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 86px;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid rgba(255, 248, 215, 0.24);
+  background:
+    radial-gradient(circle at 50% 70%, rgba(116, 247, 161, 0.18), transparent 58%),
+    rgba(3, 10, 18, 0.38);
+}
+
+.grantPortrait > * {
+  transform: scale(0.62);
+}
+
+.grantLabel,
+.grantTitle,
+.grantText {
+  position: relative;
+  z-index: 1;
+}
+
+.grantLabel {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: #74f7a1;
+  font-size: 0.46rem;
+  line-height: 1.4;
+  text-shadow: 0 0 12px rgba(116, 247, 161, 0.34);
+}
+
+.grantTitle {
+  margin: 0;
+  color: #fff8d7;
+  font-size: clamp(0.72rem, 1.3vw, 0.9rem);
+  line-height: 1.45;
+  text-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.64),
+    0 0 16px rgba(255, 248, 215, 0.18);
+}
+
+.grantText {
+  margin: 5px 0 0;
+  color: rgba(255, 248, 215, 0.78);
+  font-family: "DotGothic16", monospace;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .layout {
@@ -797,5 +864,17 @@
     right: 12px;
     bottom: 12px;
     width: calc(100% - 24px);
+  }
+
+  .grantToast {
+    top: 96px;
+    left: 12px;
+    right: 12px;
+    grid-template-columns: 72px minmax(0, 1fr);
+    width: auto;
+  }
+
+  .grantPortrait {
+    width: 72px;
   }
 }
