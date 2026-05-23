@@ -314,6 +314,68 @@ func TestGuildControllerJoinGuild(t *testing.T) {
 	}
 }
 
+func TestGuildControllerJoinGuildPetAlreadyOwned(t *testing.T) {
+	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
+	existingPet := petdomain.Pet{
+		ID:        "pet_existing",
+		UserID:    "user_1",
+		GuildID:   "guild_go",
+		Attribute: petdomain.AttributeGo,
+		Stats:     petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7},
+		CreatedAt: now.Add(-time.Hour),
+		UpdatedAt: now.Add(-time.Hour),
+	}
+	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
+		guilds: []guilddomain.Guild{{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			MemberCount: 1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}},
+		pet: &existingPet,
+	}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodPost, "/guilds/guild_go/join", nil)
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusCreated {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusCreated)
+	}
+
+	var body struct {
+		Membership struct {
+			JoinedAt string `json:"joined_at"`
+		} `json:"membership"`
+		GrantedPet      *struct{} `json:"granted_pet"`
+		PetAlreadyOwned bool      `json:"pet_already_owned"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
+	}
+	if body.Membership.JoinedAt == "" {
+		t.Fatal("joined_at が設定されている必要があります")
+	}
+	if body.GrantedPet != nil {
+		t.Fatalf("granted_pet = %#v, 期待値 nil", body.GrantedPet)
+	}
+	if !body.PetAlreadyOwned {
+		t.Fatal("pet_already_owned = false, 期待値 true")
+	}
+}
+
 func TestGuildControllerGetMyGuild(t *testing.T) {
 	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
 	activeMembership := guilddomain.MembershipWithGuild{

@@ -361,6 +361,54 @@ func TestUseCaseJoinGuildRejectsAlreadyJoinedUser(t *testing.T) {
 	}
 }
 
+func TestUseCaseJoinGuildGrantsMissingPetForAlreadyJoinedUser(t *testing.T) {
+	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
+	existing := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	repository := &testRepository{activeMembership: &existing}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "pet_repair_1"})
+	usecase.now = func() time.Time { return now }
+
+	result, err := usecase.JoinGuild(context.Background(), "session-token", "guild_go")
+	if !errors.Is(err, ErrAlreadyJoined) {
+		t.Fatalf("JoinGuild() error = %v, 期待値 ErrAlreadyJoined", err)
+	}
+	if repository.createdPet == nil {
+		t.Fatal("CreatePet() が呼ばれる必要があります")
+	}
+	if repository.createdPet.UserID != "user_1" || repository.createdPet.GuildID != "guild_go" {
+		t.Fatalf("created pet owner = %q/%q, 期待値 user_1/guild_go", repository.createdPet.UserID, repository.createdPet.GuildID)
+	}
+	if result.GrantedPet == nil {
+		t.Fatal("GrantedPet が設定されている必要があります")
+	}
+	if result.PetAlreadyOwned {
+		t.Fatal("PetAlreadyOwned = true, 期待値 false")
+	}
+}
+
 func TestUseCaseJoinGuildRejectsUnknownGuild(t *testing.T) {
 	usecase := NewUseCase(&testRepository{}, testCurrentUserRepository{
 		appUser: user.User{ID: "user_1"},

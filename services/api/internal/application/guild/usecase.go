@@ -144,7 +144,11 @@ func (u *UseCase) JoinGuild(ctx context.Context, sessionToken string, guildID gu
 	if membership, ok, err := u.repository.FindActiveMembershipByUserID(ctx, appUser.ID); err != nil {
 		return JoinGuildResult{}, err
 	} else if ok {
-		return JoinGuildResult{Membership: membership}, ErrAlreadyJoined
+		result, grantErr := u.joinGuildResultWithPet(ctx, membership, now)
+		if grantErr != nil {
+			return JoinGuildResult{}, grantErr
+		}
+		return result, ErrAlreadyJoined
 	}
 
 	foundGuild, ok, err := u.repository.FindGuildByID(ctx, guildID)
@@ -176,7 +180,11 @@ func (u *UseCase) JoinGuild(ctx context.Context, sessionToken string, guildID gu
 			if existing, ok, findErr := u.repository.FindActiveMembershipByUserID(ctx, appUser.ID); findErr != nil {
 				return JoinGuildResult{}, findErr
 			} else if ok {
-				return JoinGuildResult{Membership: existing}, ErrAlreadyJoined
+				result, grantErr := u.joinGuildResultWithPet(ctx, existing, now)
+				if grantErr != nil {
+					return JoinGuildResult{}, grantErr
+				}
+				return result, ErrAlreadyJoined
 			}
 		}
 		return JoinGuildResult{}, err
@@ -196,6 +204,19 @@ func (u *UseCase) JoinGuild(ctx context.Context, sessionToken string, guildID gu
 	result.PetAlreadyOwned = alreadyOwned
 
 	return result, nil
+}
+
+func (u *UseCase) joinGuildResultWithPet(ctx context.Context, membership guilddomain.MembershipWithGuild, now time.Time) (JoinGuildResult, error) {
+	grantedPet, alreadyOwned, err := u.grantGuildPet(ctx, membership.Membership.UserID, membership.Membership.GuildID, now)
+	if err != nil {
+		return JoinGuildResult{}, err
+	}
+
+	return JoinGuildResult{
+		Membership:      membership,
+		GrantedPet:      grantedPet,
+		PetAlreadyOwned: alreadyOwned,
+	}, nil
 }
 
 func (u *UseCase) grantGuildPet(ctx context.Context, userID user.ID, guildID guilddomain.ID, now time.Time) (*petdomain.Pet, bool, error) {
