@@ -14,11 +14,12 @@ import (
 )
 
 var (
-	ErrUnauthenticated   = errors.New("unauthenticated")
-	ErrPetNotFound       = errors.New("pet not found")
-	ErrInvalidTrainStat  = errors.New("invalid training stat")
-	ErrInsufficientCP    = errors.New("insufficient cp")
-	ErrTrainingIDMissing = errors.New("pet training id generator is required")
+	ErrUnauthenticated     = errors.New("unauthenticated")
+	ErrPetNotFound         = errors.New("pet not found")
+	ErrInvalidTrainStat    = errors.New("invalid training stat")
+	ErrInsufficientCP      = errors.New("insufficient cp")
+	ErrTrainingIDMissing   = errors.New("pet training id generator is required")
+	ErrTrainingUnavailable = errors.New("pet training dependencies are unavailable")
 )
 
 // UseCase handles pet data retrieval for the authenticated user.
@@ -199,6 +200,9 @@ func (u *UseCase) withTrainingTransaction(
 ) error {
 	if u.transaction != nil {
 		return u.transaction.WithinPetTraining(ctx, run)
+	}
+	if u.trainingPets == nil || u.trainingCP == nil {
+		return ErrTrainingUnavailable
 	}
 	return run(ctx, u.trainingPets, u.trainingCP)
 }

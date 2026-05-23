@@ -204,39 +204,128 @@ func TestTrainPetSuccess(t *testing.T) {
 	now := time.Date(2026, 5, 23, 0, 0, 0, 0, time.UTC)
 	testUser := user.User{ID: "user_1"}
 	goGuild := mustGuild(t, "guild_go", "go", "Go", now)
-	goPet := mustPet(t, "pet_go", testUser.ID, "guild_go", petdomain.AttributeGo, petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7}, now)
-	pets := &stubPetTrainingRepository{petWithGuild: petapp.PetWithGuild{Pet: goPet, Guild: goGuild}, found: true}
-	cp := &stubCPSpender{balance: 120}
-	uc := petapp.NewUseCaseWithTraining(
-		&stubCurrentUser{user: testUser, found: true},
-		&stubCPBalanceReader{},
-		&stubPetReader{},
-		&stubCurrentGuildReader{},
-		pets,
-		cp,
-		stubIDGenerator{id: "pet_training_1"},
-		nil,
-	)
 
-	result, err := uc.TrainPet(context.Background(), petapp.TrainPetCommand{
-		SessionToken: "valid-token",
-		PetID:        "pet_go",
-		Stat:         "power",
-	})
-	if err != nil {
-		t.Fatalf("TrainPet() error = %v", err)
+	tests := []struct {
+		stat            string
+		spentCP         int64
+		expectedBalance int64
+		reason          string
+		assertResult    func(t *testing.T, result petapp.TrainPetResult)
+		assertUpdated   func(t *testing.T, pet petdomain.Pet)
+	}{
+		{
+			stat:            "power",
+			spentCP:         10,
+			expectedBalance: 110,
+			reason:          "pet_training_power",
+			assertResult: func(t *testing.T, result petapp.TrainPetResult) {
+				t.Helper()
+				if result.Pet.Power != 7 {
+					t.Fatalf("Power = %d, 期待値 7", result.Pet.Power)
+				}
+			},
+			assertUpdated: func(t *testing.T, pet petdomain.Pet) {
+				t.Helper()
+				if pet.Stats.Strength != 8 {
+					t.Fatalf("updated Strength = %d, 期待値 8", pet.Stats.Strength)
+				}
+			},
+		},
+		{
+			stat:            "hp",
+			spentCP:         20,
+			expectedBalance: 100,
+			reason:          "pet_training_hp",
+			assertResult: func(t *testing.T, result petapp.TrainPetResult) {
+				t.Helper()
+				if result.Pet.MaxHP != 40 {
+					t.Fatalf("MaxHP = %d, 期待値 40", result.Pet.MaxHP)
+				}
+			},
+			assertUpdated: func(t *testing.T, pet petdomain.Pet) {
+				t.Helper()
+				if pet.Stats.Vitality != 7 {
+					t.Fatalf("updated Vitality = %d, 期待値 7", pet.Stats.Vitality)
+				}
+			},
+		},
+		{
+			stat:            "guard",
+			spentCP:         10,
+			expectedBalance: 110,
+			reason:          "pet_training_guard",
+			assertResult: func(t *testing.T, result petapp.TrainPetResult) {
+				t.Helper()
+				if result.Pet.Guard != 6 {
+					t.Fatalf("Guard = %d, 期待値 6", result.Pet.Guard)
+				}
+			},
+			assertUpdated: func(t *testing.T, pet petdomain.Pet) {
+				t.Helper()
+				if pet.Stats.Vitality != 7 {
+					t.Fatalf("updated Vitality = %d, 期待値 7", pet.Stats.Vitality)
+				}
+			},
+		},
+		{
+			stat:            "speed",
+			spentCP:         10,
+			expectedBalance: 110,
+			reason:          "pet_training_speed",
+			assertResult: func(t *testing.T, result petapp.TrainPetResult) {
+				t.Helper()
+				if result.Pet.Speed != 7 {
+					t.Fatalf("Speed = %d, 期待値 7", result.Pet.Speed)
+				}
+			},
+			assertUpdated: func(t *testing.T, pet petdomain.Pet) {
+				t.Helper()
+				if pet.Stats.Agility != 8 {
+					t.Fatalf("updated Agility = %d, 期待値 8", pet.Stats.Agility)
+				}
+			},
+		},
 	}
-	if result.SpentCP != 10 || result.CPBalance != 110 {
-		t.Fatalf("result = %+v, 期待値 spent 10 balance 110", result)
-	}
-	if result.Pet.Power != 7 {
-		t.Fatalf("Power = %d, 期待値 7", result.Pet.Power)
-	}
-	if pets.updated == nil || pets.updated.Stats.Strength != 8 {
-		t.Fatalf("updated pet = %+v, 期待値 strength 8", pets.updated)
-	}
-	if cp.spent == nil || cp.spent.Reason != "pet_training_power" || cp.spent.SourceID != "pet_training_1" {
-		t.Fatalf("spent command = %+v", cp.spent)
+
+	for _, tt := range tests {
+		t.Run(tt.stat, func(t *testing.T) {
+			goPet := mustPet(t, "pet_go", testUser.ID, "guild_go", petdomain.AttributeGo, petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7}, now)
+			pets := &stubPetTrainingRepository{petWithGuild: petapp.PetWithGuild{Pet: goPet, Guild: goGuild}, found: true}
+			cp := &stubCPSpender{balance: 120}
+			uc := petapp.NewUseCaseWithTraining(
+				&stubCurrentUser{user: testUser, found: true},
+				&stubCPBalanceReader{},
+				&stubPetReader{},
+				&stubCurrentGuildReader{},
+				pets,
+				cp,
+				stubIDGenerator{id: "pet_training_1"},
+				nil,
+			)
+
+			result, err := uc.TrainPet(context.Background(), petapp.TrainPetCommand{
+				SessionToken: "valid-token",
+				PetID:        "pet_go",
+				Stat:         tt.stat,
+			})
+			if err != nil {
+				t.Fatalf("TrainPet() error = %v", err)
+			}
+			if result.SpentCP != tt.spentCP || result.CPBalance != tt.expectedBalance {
+				t.Fatalf("result = %+v, 期待値 spent %d balance %d", result, tt.spentCP, tt.expectedBalance)
+			}
+			tt.assertResult(t, result)
+			if pets.updated == nil {
+				t.Fatal("updated pet = nil")
+			}
+			tt.assertUpdated(t, *pets.updated)
+			if cp.spent == nil {
+				t.Fatal("spent command = nil")
+			}
+			if cp.spent.Amount != tt.spentCP || cp.spent.Reason != tt.reason || cp.spent.SourceID != "pet_training_1" {
+				t.Fatalf("spent command = %+v", cp.spent)
+			}
+		})
 	}
 }
 
@@ -280,13 +369,14 @@ func TestTrainPetCannotTrainOtherUsersPet(t *testing.T) {
 	testUser := user.User{ID: "user_1"}
 	otherPet := mustPet(t, "pet_go", "user_2", "guild_go", petdomain.AttributeGo, petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7}, now)
 	pets := &stubPetTrainingRepository{petWithGuild: petapp.PetWithGuild{Pet: otherPet, Guild: mustGuild(t, "guild_go", "go", "Go", now)}, found: true}
+	cp := &stubCPSpender{balance: 120}
 	uc := petapp.NewUseCaseWithTraining(
 		&stubCurrentUser{user: testUser, found: true},
 		&stubCPBalanceReader{},
 		&stubPetReader{},
 		&stubCurrentGuildReader{},
 		pets,
-		&stubCPSpender{balance: 120},
+		cp,
 		stubIDGenerator{id: "pet_training_1"},
 		nil,
 	)
@@ -294,6 +384,9 @@ func TestTrainPetCannotTrainOtherUsersPet(t *testing.T) {
 	_, err := uc.TrainPet(context.Background(), petapp.TrainPetCommand{SessionToken: "valid-token", PetID: "pet_go", Stat: "power"})
 	if !errors.Is(err, petapp.ErrPetNotFound) {
 		t.Fatalf("error = %v, 期待値 ErrPetNotFound", err)
+	}
+	if cp.spent != nil || cp.balance != 120 {
+		t.Fatalf("cp spender = %+v balance %d, 期待値 未消費 balance 120", cp.spent, cp.balance)
 	}
 	if pets.updated != nil {
 		t.Fatalf("updated pet = %+v, 期待値 nil", pets.updated)
