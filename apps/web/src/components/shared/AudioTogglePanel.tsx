@@ -123,9 +123,9 @@ export function AudioTogglePanel({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            initial={!isPcSize ? { opacity: 0, scale: 0.95 } : false}
-            animate={!isPcSize ? { opacity: 1, scale: 1 } : false}
-            exit={!isPcSize ? { opacity: 0, scale: 0.95 } : false}
+            initial={!isPcSize ? { opacity: 0, scale: 0.95 } : undefined}
+            animate={!isPcSize ? { opacity: 1, scale: 1 } : undefined}
+            exit={!isPcSize ? { opacity: 0, scale: 0.95 } : undefined}
             transition={{ duration: 0.2 }}
             style={{
               display: "flex",
