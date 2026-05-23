@@ -270,7 +270,11 @@ export function Home({ onNavigate }: HomeProps) {
             nextLevelTotalCp: nextPlayerLevelTotalCp,
             nextLevelRemainingCp: nextPlayerLevelRemainingCp,
             lifetimeTotalEarnedCp: lifetimeTotalEarnedCp,
-            badges: badges.map((b) => ({ icon: b.icon, name: b.name })),
+            badges: selectedBadgeSlug
+              ? badges
+                  .filter((b) => b.slug === selectedBadgeSlug)
+                  .map((b) => ({ icon: b.icon, name: b.name }))
+              : [],
           }}
           onReturnTitle={openReturnTitleDialog}
         />
