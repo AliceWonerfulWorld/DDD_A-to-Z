@@ -20,21 +20,30 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  align-items: flex-start;
+  align-items: center;
+  border: 3px solid rgba(255, 217, 102, 0.74);
+  border-bottom-color: rgba(92, 76, 34, 0.96);
+  border-right-color: rgba(92, 76, 34, 0.96);
+  background: linear-gradient(180deg, rgba(21, 37, 58, 0.9), rgba(10, 22, 39, 0.94));
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.5),
+    6px 6px 0 rgba(0, 0, 0, 0.22);
   margin-bottom: 18px;
+  padding: 14px clamp(14px, 2.4vw, 22px);
+  backdrop-filter: blur(2px);
 }
 
 .eyebrow {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   color: #74f7a1;
-  font-size: 0.56rem;
+  font-size: 0.52rem;
   line-height: 1.5;
 }
 
 .title {
   margin: 0;
-  font-size: clamp(1rem, 2.1vw, 1.45rem);
-  line-height: 1.7;
+  font-size: clamp(0.95rem, 1.6vw, 1.24rem);
+  line-height: 1.5;
   text-shadow:
     2px 2px 0 rgba(0, 0, 0, 0.72),
     0 0 14px rgba(255, 248, 215, 0.32);
@@ -303,6 +312,7 @@
 @media (max-width: 520px) {
   .header {
     display: grid;
+    gap: 12px;
   }
 
   .statsGrid,
