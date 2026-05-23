@@ -316,7 +316,8 @@ export function HomeHud({
           CONTRIBUTION POINT
         </div>
         <div className={styles.infoGrid}>
-          <LabelValue label="TOTAL CP" value={player.totalCp.toLocaleString()} />
+          <LabelValue label="CURRENT CP" value={player.totalCp.toLocaleString()} />
+          <LabelValue label="TOTAL EARNED" value={player.lifetimeTotalEarnedCp.toLocaleString()} />
           <LabelValue label="TODAY CP" value={`+${player.todayCp.toLocaleString()}`} />
           <LabelValue
             label="EXP"
