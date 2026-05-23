@@ -44,5 +44,6 @@ export interface TechNewsItem {
   source: string;
   summary: string;
   publishedAt: string;
-  slug: string;
+  fetchedAt?: string;
+  slug: GuildSlug;
 }
