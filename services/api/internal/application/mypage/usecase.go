@@ -23,6 +23,7 @@ type UseCase struct {
 	badges               BadgeReader
 	badgeGrantingChecker BadgeGrantingChecker
 	selectedBadge        SelectedBadgeReader
+	profiles             ProfileReader
 	now                  func() time.Time
 }
 
@@ -36,6 +37,7 @@ func NewUseCase(
 	badges BadgeReader,
 	badgeGrantingChecker BadgeGrantingChecker,
 	selectedBadge SelectedBadgeReader,
+	profiles ProfileReader,
 ) *UseCase {
 	return &UseCase{
 		current:              current,
@@ -47,6 +49,7 @@ func NewUseCase(
 		badges:               badges,
 		badgeGrantingChecker: badgeGrantingChecker,
 		selectedBadge:        selectedBadge,
+		profiles:             profiles,
 		now:                  time.Now,
 	}
 }
@@ -139,6 +142,14 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 		}
 	}
 
+	var profileInfo *ProfileInfo
+	if u.profiles != nil {
+		p, err := u.profiles.GetProfile(ctx, appUser.ID)
+		if err == nil {
+			profileInfo = p
+		}
+	}
+
 	return MyPageData{
 		User: appUser,
 		CP: CPSummary{
@@ -151,5 +162,6 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 		Guild:             guildInfo,
 		Badges:            badgeSummaries,
 		SelectedBadgeSlug: selectedBadgeSlug,
+		Profile:           profileInfo,
 	}, nil
 }

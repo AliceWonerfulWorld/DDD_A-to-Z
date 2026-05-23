@@ -101,6 +101,15 @@ func (s *stubSelectedBadgeReader) GetSelectedBadgeSlug(_ context.Context, _ user
 	return s.slug, s.err
 }
 
+type stubProfileReader struct {
+	profile *mypage.ProfileInfo
+	err     error
+}
+
+func (s *stubProfileReader) GetProfile(_ context.Context, _ user.ID) (*mypage.ProfileInfo, error) {
+	return s.profile, s.err
+}
+
 // --- tests ---
 
 func TestGetMyPage_EmptyToken(t *testing.T) {
@@ -114,6 +123,7 @@ func TestGetMyPage_EmptyToken(t *testing.T) {
 		&stubBadgeReader{},
 		nil,
 		&stubSelectedBadgeReader{},
+		&stubProfileReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "")
@@ -133,6 +143,7 @@ func TestGetMyPage_SessionNotFound(t *testing.T) {
 		&stubBadgeReader{},
 		nil,
 		&stubSelectedBadgeReader{},
+		&stubProfileReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "invalid-token")
@@ -167,6 +178,7 @@ func TestGetMyPage_Success(t *testing.T) {
 		&stubBadgeReader{},
 		nil,
 		&stubSelectedBadgeReader{},
+		&stubProfileReader{},
 	)
 
 	result, err := uc.GetMyPage(context.Background(), "valid-token")
@@ -208,6 +220,7 @@ func TestGetMyPage_CPError(t *testing.T) {
 		&stubBadgeReader{},
 		nil,
 		&stubSelectedBadgeReader{},
+		&stubProfileReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "valid-token")
@@ -230,6 +243,7 @@ func TestGetMyPage_RepoError(t *testing.T) {
 		&stubBadgeReader{},
 		nil,
 		&stubSelectedBadgeReader{},
+		&stubProfileReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "valid-token")

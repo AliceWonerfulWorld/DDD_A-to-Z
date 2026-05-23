@@ -21,6 +21,7 @@ func NewProfileStore(db *gorm.DB) *ProfileStore {
 type profileRecord struct {
 	UserID            user.ID   `gorm:"column:user_id"`
 	DisplayName       string    `gorm:"column:display_name"`
+	AvatarURL         string    `gorm:"column:avatar_url"`
 	SelectedBadgeSlug *string   `gorm:"column:selected_badge_slug"`
 	CreatedAt         time.Time `gorm:"column:created_at"`
 	UpdatedAt         time.Time `gorm:"column:updated_at"`
@@ -30,6 +31,7 @@ func (r profileRecord) toDomain() domainprofile.Profile {
 	return domainprofile.Profile{
 		UserID:            r.UserID,
 		DisplayName:       r.DisplayName,
+		AvatarURL:         r.AvatarURL,
 		SelectedBadgeSlug: r.SelectedBadgeSlug,
 		CreatedAt:         r.CreatedAt,
 		UpdatedAt:         r.UpdatedAt,
@@ -39,13 +41,14 @@ func (r profileRecord) toDomain() domainprofile.Profile {
 // レコード保存(Upsert)
 func (s *ProfileStore) Save(ctx context.Context, p domainprofile.Profile) error {
 	return s.db.WithContext(ctx).Exec(`
-		INSERT INTO user_profiles (user_id, display_name, selected_badge_slug, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO user_profiles (user_id, display_name, avatar_url, selected_badge_slug, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT (user_id) DO UPDATE
 		SET display_name = EXCLUDED.display_name,
+		    avatar_url   = EXCLUDED.avatar_url,
 		    selected_badge_slug = EXCLUDED.selected_badge_slug,
 		    updated_at   = EXCLUDED.updated_at
-	`, p.UserID, p.DisplayName, p.SelectedBadgeSlug, p.CreatedAt, p.UpdatedAt).Error
+	`, p.UserID, p.DisplayName, p.AvatarURL, p.SelectedBadgeSlug, p.CreatedAt, p.UpdatedAt).Error
 }
 
 func (s *ProfileStore) GetSelectedBadgeSlug(ctx context.Context, userID user.ID) (*string, error) {
@@ -70,7 +73,7 @@ func (s *ProfileStore) UpdateSelectedBadgeSlug(ctx context.Context, userID user.
 func (s *ProfileStore) FindByUserID(ctx context.Context, userID user.ID) (domainprofile.Profile, bool, error) {
 	var rec profileRecord
 	result := s.db.WithContext(ctx).Raw(`
-		SELECT user_id, display_name, selected_badge_slug, created_at, updated_at
+SELECT user_id, display_name, avatar_url, selected_badge_slug, created_at, updated_at
 		FROM user_profiles
 		WHERE user_id = ?
 	`, userID).Scan(&rec)

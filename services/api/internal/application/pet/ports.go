@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
+	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
@@ -22,6 +24,23 @@ type CPBalanceReader interface {
 // PetReader provides read-only player pet data.
 type PetReader interface {
 	ListPetsByUser(ctx context.Context, userID user.ID) ([]PetWithGuild, error)
+}
+
+type PetTrainingRepository interface {
+	FindPetByIDForUser(ctx context.Context, petID petdomain.ID, userID user.ID) (PetWithGuild, bool, error)
+	UpdatePet(ctx context.Context, pet petdomain.Pet) error
+}
+
+type CPSpender interface {
+	Spend(ctx context.Context, command contributionpointapp.SpendCommand) (contributionpointdomain.LedgerEntry, error)
+}
+
+type IDGenerator interface {
+	NewID() (string, error)
+}
+
+type TrainingTransactioner interface {
+	WithinPetTraining(ctx context.Context, run func(ctx context.Context, pets PetTrainingRepository, cp CPSpender) error) error
 }
 
 // CurrentGuildReader provides the user's active guild membership.

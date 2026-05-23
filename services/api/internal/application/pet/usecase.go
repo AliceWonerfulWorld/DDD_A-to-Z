@@ -3,31 +3,63 @@ package pet
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
+	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 )
 
-var ErrUnauthenticated = errors.New("unauthenticated")
+var (
+	ErrUnauthenticated     = errors.New("unauthenticated")
+	ErrPetNotFound         = errors.New("pet not found")
+	ErrInvalidTrainStat    = errors.New("invalid training stat")
+	ErrInsufficientCP      = errors.New("insufficient cp")
+	ErrTrainingIDMissing   = errors.New("pet training id generator is required")
+	ErrTrainingUnavailable = errors.New("pet training dependencies are unavailable")
+)
 
 // UseCase handles pet data retrieval for the authenticated user.
 type UseCase struct {
-	current CurrentUserRepository
-	cp      CPBalanceReader
-	pets    PetReader
-	guild   CurrentGuildReader
-	now     func() time.Time
+	current      CurrentUserRepository
+	cp           CPBalanceReader
+	pets         PetReader
+	guild        CurrentGuildReader
+	trainingPets PetTrainingRepository
+	trainingCP   CPSpender
+	trainingIDs  IDGenerator
+	transaction  TrainingTransactioner
+	now          func() time.Time
 }
 
 // NewUseCase creates a new pet use case.
 func NewUseCase(current CurrentUserRepository, cp CPBalanceReader, pets PetReader, guild CurrentGuildReader) *UseCase {
+	return NewUseCaseWithTraining(current, cp, pets, guild, nil, nil, nil, nil)
+}
+
+func NewUseCaseWithTraining(
+	current CurrentUserRepository,
+	cp CPBalanceReader,
+	pets PetReader,
+	guild CurrentGuildReader,
+	trainingPets PetTrainingRepository,
+	trainingCP CPSpender,
+	trainingIDs IDGenerator,
+	transaction TrainingTransactioner,
+) *UseCase {
 	return &UseCase{
-		current: current,
-		cp:      cp,
-		pets:    pets,
-		guild:   guild,
-		now:     time.Now,
+		current:      current,
+		cp:           cp,
+		pets:         pets,
+		guild:        guild,
+		trainingPets: trainingPets,
+		trainingCP:   trainingCP,
+		trainingIDs:  trainingIDs,
+		transaction:  transaction,
+		now:          time.Now,
 	}
 }
 
@@ -82,6 +114,104 @@ func (u *UseCase) GetMyPets(ctx context.Context, sessionToken string) (MyPetsDat
 		CurrentGuildPet: currentGuildPet,
 		Pets:            summaries,
 	}, nil
+}
+
+func (u *UseCase) TrainPet(ctx context.Context, command TrainPetCommand) (TrainPetResult, error) {
+	if err := ctx.Err(); err != nil {
+		return TrainPetResult{}, err
+	}
+	if strings.TrimSpace(command.SessionToken) == "" {
+		return TrainPetResult{}, ErrUnauthenticated
+	}
+	if strings.TrimSpace(command.PetID) == "" {
+		return TrainPetResult{}, ErrPetNotFound
+	}
+	stat, err := petdomain.ParseTrainingStat(command.Stat)
+	if err != nil {
+		return TrainPetResult{}, ErrInvalidTrainStat
+	}
+	cost := trainingCost(stat)
+
+	appUser, ok, err := u.current.FindUserBySessionToken(ctx, command.SessionToken, u.now())
+	if err != nil {
+		return TrainPetResult{}, err
+	}
+	if !ok {
+		return TrainPetResult{}, ErrUnauthenticated
+	}
+	if u.trainingIDs == nil {
+		return TrainPetResult{}, ErrTrainingIDMissing
+	}
+	trainingID, err := u.trainingIDs.NewID()
+	if err != nil {
+		return TrainPetResult{}, err
+	}
+
+	var result TrainPetResult
+	err = u.withTrainingTransaction(ctx, func(ctx context.Context, pets PetTrainingRepository, cp CPSpender) error {
+		petWithGuild, found, err := pets.FindPetByIDForUser(ctx, petdomain.ID(command.PetID), appUser.ID)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return ErrPetNotFound
+		}
+
+		ledger, err := cp.Spend(ctx, contributionpointapp.SpendCommand{
+			UserID:     appUser.ID,
+			PointType:  contributionpointdomain.PointTypeCP,
+			Amount:     cost,
+			Reason:     fmt.Sprintf("pet_training_%s", stat),
+			SourceType: "pet_training",
+			SourceID:   trainingID,
+		})
+		if err != nil {
+			if errors.Is(err, contributionpointapp.ErrInsufficientBalance) {
+				return ErrInsufficientCP
+			}
+			return err
+		}
+
+		trainedPet, err := petWithGuild.Pet.Train(stat, ledger.CreatedAt)
+		if err != nil {
+			return err
+		}
+		if err := pets.UpdatePet(ctx, trainedPet); err != nil {
+			return err
+		}
+		petWithGuild.Pet = trainedPet
+		result = TrainPetResult{
+			Pet:       toPetSummary(petWithGuild),
+			SpentCP:   cost,
+			CPBalance: ledger.BalanceAfter,
+		}
+		return nil
+	})
+	if err != nil {
+		return TrainPetResult{}, err
+	}
+
+	return result, nil
+}
+
+func (u *UseCase) withTrainingTransaction(
+	ctx context.Context,
+	run func(ctx context.Context, pets PetTrainingRepository, cp CPSpender) error,
+) error {
+	if u.transaction != nil {
+		return u.transaction.WithinPetTraining(ctx, run)
+	}
+	if u.trainingPets == nil || u.trainingCP == nil {
+		return ErrTrainingUnavailable
+	}
+	return run(ctx, u.trainingPets, u.trainingCP)
+}
+
+func trainingCost(stat petdomain.TrainingStat) int64 {
+	if stat == petdomain.TrainingStatHP {
+		return 20
+	}
+	return 10
 }
 
 func toPetSummary(petWithGuild PetWithGuild) PetSummary {

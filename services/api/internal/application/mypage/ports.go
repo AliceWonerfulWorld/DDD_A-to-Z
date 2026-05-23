@@ -59,3 +59,8 @@ type BadgeGrantingChecker interface {
 type SelectedBadgeReader interface {
 	GetSelectedBadgeSlug(ctx context.Context, userID user.ID) (*string, error)
 }
+
+// ProfileReader provides the user's custom profile settings.
+type ProfileReader interface {
+	GetProfile(ctx context.Context, userID user.ID) (*ProfileInfo, error)
+}

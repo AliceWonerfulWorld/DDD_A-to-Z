@@ -37,6 +37,7 @@ func NewUseCase(current CurrentUserRepository, profiles ProfileRepository) *UseC
 type CompleteInitialProfileInput struct {
 	SessionToken string
 	DisplayName  string
+	AvatarURL    string
 }
 
 // 認可済みユーザーのプロフィールを初期設定する(プロフィールが既に存在する場合はErrProfileExistsを返す)
@@ -64,7 +65,7 @@ func (u *UseCase) CompleteInitialProfile(ctx context.Context, input CompleteInit
 	}
 
 	// ドメインエンティティを作成(表示名を検証)
-	p, err := domainprofile.New(appUser.ID, input.DisplayName, u.now())
+	p, err := domainprofile.New(appUser.ID, input.DisplayName, input.AvatarURL, u.now())
 	if err != nil {
 		return errors.Join(ErrInvalidDisplayName, err)
 	}
@@ -81,4 +82,34 @@ func (u *UseCase) FindUser(ctx context.Context, sessionToken string) (user.User,
 // GetProfile returns the profile for the given user ID.
 func (u *UseCase) GetProfile(ctx context.Context, userID user.ID) (domainprofile.Profile, bool, error) {
 	return u.profiles.FindByUserID(ctx, userID)
+}
+
+// UpdateProfileInput represents the data for updating a profile.
+type UpdateProfileInput struct {
+	SessionToken string
+	DisplayName  string
+	AvatarURL    string
+}
+
+// UpdateProfile updates an existing profile.
+func (u *UseCase) UpdateProfile(ctx context.Context, input UpdateProfileInput) error {
+	if input.SessionToken == "" {
+		return ErrUnauthenticated
+	}
+
+	appUser, ok, err := u.current.FindUserBySessionToken(ctx, input.SessionToken, u.now())
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrUnauthenticated
+	}
+
+	// Create a new profile entity to validate inputs and update timestamp.
+	p, err := domainprofile.New(appUser.ID, input.DisplayName, input.AvatarURL, u.now())
+	if err != nil {
+		return errors.Join(ErrInvalidDisplayName, err)
+	}
+
+	return u.profiles.Save(ctx, p)
 }
