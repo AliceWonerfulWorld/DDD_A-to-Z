@@ -23,7 +23,9 @@
   border-bottom-color: rgba(111, 79, 28, 0.95);
   border-right-color: rgba(111, 79, 28, 0.95);
   background: rgba(3, 10, 24, 0.72);
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.78), 8px 8px 0 rgba(0, 0, 0, 0.45);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.78),
+    8px 8px 0 rgba(0, 0, 0, 0.45);
   color: #f4ecd0;
   padding: 14px 16px;
   backdrop-filter: blur(2px);
@@ -113,7 +115,9 @@
   .hudPanel {
     width: 100%;
     padding: 8px 10px;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.78), 4px 4px 0 rgba(0, 0, 0, 0.45);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.78),
+      4px 4px 0 rgba(0, 0, 0, 0.45);
   }
 
   .sectionHeader {

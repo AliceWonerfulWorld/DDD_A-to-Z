@@ -4,11 +4,7 @@ import type { CSSProperties } from "react";
 import { useAudioSettings } from "../../features/audio/useAudioSettings";
 import { PixelSpeakerIcon } from "./PixelSpeakerIcon";
 
-type AudioTogglePanelPosition =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
+type AudioTogglePanelPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 interface AudioTogglePanelProps {
   position?: AudioTogglePanelPosition;
@@ -107,8 +103,7 @@ export function AudioTogglePanel({
             minHeight: "44px",
             minWidth: "44px",
             border: "2px solid #00f5ff",
-            boxShadow:
-              "3px 3px 0 rgba(0,0,0,0.72), 0 0 14px rgba(0,245,255,0.3)",
+            boxShadow: "3px 3px 0 rgba(0,0,0,0.72), 0 0 14px rgba(0,245,255,0.3)",
             background: "rgba(8, 12, 18, 0.82)",
             backdropFilter: "blur(2px)",
             color: "#00f5ff",
@@ -156,9 +151,7 @@ export function AudioTogglePanel({
                 minHeight: "40px",
                 border: `2px solid ${isBgmEnabled ? "#ffd700" : "#ffffff66"}`,
                 boxShadow: `3px 3px 0 rgba(0,0,0,0.72), 0 0 14px ${
-                  isBgmEnabled
-                    ? "rgba(255,215,0,0.3)"
-                    : "rgba(255,255,255,0.12)"
+                  isBgmEnabled ? "rgba(255,215,0,0.3)" : "rgba(255,255,255,0.12)"
                 }`,
                 background: "rgba(8, 12, 18, 0.82)",
                 backdropFilter: "blur(2px)",
@@ -219,9 +212,7 @@ export function AudioTogglePanel({
                 minHeight: "40px",
                 border: `2px solid ${isSeEnabled ? "#00f5ff" : "#ffffff66"}`,
                 boxShadow: `3px 3px 0 rgba(0,0,0,0.72), 0 0 14px ${
-                  isSeEnabled
-                    ? "rgba(0,245,255,0.28)"
-                    : "rgba(255,255,255,0.12)"
+                  isSeEnabled ? "rgba(0,245,255,0.28)" : "rgba(255,255,255,0.12)"
                 }`,
                 background: "rgba(8, 12, 18, 0.82)",
                 backdropFilter: "blur(2px)",

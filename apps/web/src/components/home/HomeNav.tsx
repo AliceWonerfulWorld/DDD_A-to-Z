@@ -26,10 +26,7 @@ export function HomeNav({
   onNavigate: (path: string) => void;
 }) {
   return (
-    <nav
-      aria-label="Main navigation"
-      className={styles.nav}
-    >
+    <nav aria-label="Main navigation" className={styles.nav}>
       {items.map((item, index) => (
         <motion.button
           key={item.label}

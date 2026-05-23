@@ -34,7 +34,9 @@ export function ActivityLogPanel({ logs, isMobile }: { logs: ActivityLog[]; isMo
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
-        border: isMobile ? "1px solid rgba(0, 245, 255, 0.44)" : "2px solid rgba(0, 245, 255, 0.44)",
+        border: isMobile
+          ? "1px solid rgba(0, 245, 255, 0.44)"
+          : "2px solid rgba(0, 245, 255, 0.44)",
         background: "rgba(1, 8, 22, 0.74)",
         boxShadow: "inset 0 0 22px rgba(0, 245, 255, 0.12)",
         padding: isMobile ? "4px 6px" : "clamp(10px, 1.6vw, 18px)",
@@ -161,7 +163,9 @@ export function RankingsPanel({ isMobile }: { isMobile?: boolean }) {
             alignItems: "start",
             gap: isMobile ? "4px" : "clamp(8px, 1.4vw, 16px)",
             minHeight: isMobile ? "30px" : "clamp(38px, 6.5vh, 54px)",
-            border: isMobile ? "1px solid rgba(0, 245, 255, 0.24)" : "2px solid rgba(0, 245, 255, 0.24)",
+            border: isMobile
+              ? "1px solid rgba(0, 245, 255, 0.24)"
+              : "2px solid rgba(0, 245, 255, 0.24)",
             background:
               index === 0
                 ? "linear-gradient(90deg, rgba(255, 217, 102, 0.22), rgba(1, 8, 22, 0.68))"

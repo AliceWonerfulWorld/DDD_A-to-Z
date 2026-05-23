@@ -96,7 +96,15 @@ function SectionTitle({ text, color }: { text: string; color?: string }) {
   );
 }
 
-function Panel({ children, borderColor, className = "" }: { children: ReactNode; borderColor?: string; className?: string }) {
+function Panel({
+  children,
+  borderColor,
+  className = "",
+}: {
+  children: ReactNode;
+  borderColor?: string;
+  className?: string;
+}) {
   return (
     <motion.div
       className={`${styles.panel} ${className}`}

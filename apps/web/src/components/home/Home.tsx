@@ -255,10 +255,7 @@ export function Home({ onNavigate }: HomeProps) {
           onReturnTitle={openReturnTitleDialog}
         />
 
-        <section
-          aria-label="Character placement area"
-          className={styles.characterArea}
-        >
+        <section aria-label="Character placement area" className={styles.characterArea}>
           <WalkingGopher onTalk={playGopherTalk} />
         </section>
 

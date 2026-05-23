@@ -9,14 +9,8 @@ import {
 } from "../../features/guild/api";
 import { connectChat, type GuildChatMessage } from "../../features/chat/api";
 import type { ChatConnection } from "../../features/chat/api";
-import {
-  toDisplayGuild,
-  type DisplayGuild,
-} from "../../features/guild/presentation";
-import {
-  BACK_NAVIGATION_SE_SRC,
-  useBackNavigationSe,
-} from "../../hooks/useBackNavigationSe";
+import { toDisplayGuild, type DisplayGuild } from "../../features/guild/presentation";
+import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBackNavigationSe";
 import { steppedEase } from "../../lib/animationUtils";
 import { PATHS } from "../../constants/paths";
 import { GuildChatExpandedModal } from "../../features/chat/components/GuildChatExpandedModal";
@@ -27,8 +21,7 @@ import { GuildBadge } from "./GuildBadge";
 import { GuildNavigation } from "./GuildNavigation";
 import type { ActivityLog, GuildTab } from "./types";
 
-const CHAT_SERVICE_URL =
-  import.meta.env.VITE_CHAT_SERVICE_URL ?? "ws://localhost:4000";
+const CHAT_SERVICE_URL = import.meta.env.VITE_CHAT_SERVICE_URL ?? "ws://localhost:4000";
 
 interface GuildDashboardProps {
   onNavigate: (path: string) => void;
@@ -61,9 +54,7 @@ const DASHBOARD_LAYOUTS = {
 };
 
 function useDeviceLayout() {
-  const [layout, setLayout] = useState<"mobile" | "tablet" | "desktop">(
-    "desktop",
-  );
+  const [layout, setLayout] = useState<"mobile" | "tablet" | "desktop">("desktop");
 
   useEffect(() => {
     const updateLayout = () => {
@@ -103,15 +94,12 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
   const { isSeEnabled } = useAudioSettings();
   const [activeTab, setActiveTab] = useState<GuildTab>("activity");
   const [chatView, setChatView] = useState<ChatView>("closed");
-  const [logs, setLogs] = useState<ActivityLog[]>(
-    import.meta.env.DEV ? INITIAL_LOGS : [],
-  );
+  const [logs, setLogs] = useState<ActivityLog[]>(import.meta.env.DEV ? INITIAL_LOGS : []);
   const [currentGuild, setCurrentGuild] = useState<DisplayGuild | null>(null);
   const [isCurrentGuildLoaded, setIsCurrentGuildLoaded] = useState(false);
   const [chatMessages, setChatMessages] = useState<GuildChatMessage[]>([]);
   const chatConnectionRef = useRef<ChatConnection | null>(null);
-  const { backNavigationSeRef, navigateBackWithSe } =
-    useBackNavigationSe(onNavigate);
+  const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
   const tabSwitchSeRef = useRef<HTMLAudioElement | null>(null);
 
   const playTabSwitchSe = useCallback(() => {
@@ -120,10 +108,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
       return;
     }
 
-    if (
-      audio.preload === "none" &&
-      audio.readyState === HTMLMediaElement.HAVE_NOTHING
-    ) {
+    if (audio.preload === "none" && audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
       audio.load();
     }
 
@@ -339,16 +324,10 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
         transition={{ delay: 0.14, duration: 0.28, ease: steppedEase(5) }}
         whileHover={{ y: -2, scale: 1.02 }}
         whileTap={{ y: 1, scale: 0.98 }}
-        onClick={() =>
-          setChatView((current) =>
-            current === "closed" ? "compact" : "closed",
-          )
-        }
+        onClick={() => setChatView((current) => (current === "closed" ? "compact" : "closed"))}
         aria-expanded={chatView !== "closed"}
         aria-controls={
-          chatView === "expanded"
-            ? "guild-chat-expanded-title"
-            : "guild-chat-overlay-title"
+          chatView === "expanded" ? "guild-chat-expanded-title" : "guild-chat-overlay-title"
         }
         style={{
           position: "fixed",

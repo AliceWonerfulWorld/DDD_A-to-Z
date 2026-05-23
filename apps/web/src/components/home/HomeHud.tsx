@@ -55,13 +55,7 @@ function HudPanel({
   );
 }
 
-function LabelValue({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
+function LabelValue({ label, value }: { label: string; value: string | number }) {
   return (
     <div className={styles.labelRow}>
       <span
@@ -89,10 +83,7 @@ function LabelValue({
 
 function ExpBar({ player }: { player: PlayerSummary }) {
   const levelRange = Math.max(1, player.nextLevelTotalCp - player.levelTotalCp);
-  const earnedInLevel = Math.max(
-    0,
-    player.lifetimeTotalEarnedCp - player.levelTotalCp,
-  );
+  const earnedInLevel = Math.max(0, player.lifetimeTotalEarnedCp - player.levelTotalCp);
   const pct = Math.min(100, Math.max(0, (earnedInLevel / levelRange) * 100));
 
   return (
@@ -290,10 +281,7 @@ export function HomeHud({
     <header className={styles.hudHeader}>
       <div className={styles.hudLeft}>
         <HudPanel className={styles.playerInfoPanel}>
-          <div
-            className={styles.sectionHeader}
-            style={{ color: "#ffd700" }}
-          >
+          <div className={styles.sectionHeader} style={{ color: "#ffd700" }}>
             PLAYER INFO
           </div>
           <div className={styles.infoGrid}>
@@ -324,21 +312,12 @@ export function HomeHud({
       </div>
 
       <HudPanel align="right" className={styles.contribPanel}>
-        <div
-          className={styles.sectionHeader}
-          style={{ color: "#00f5ff" }}
-        >
+        <div className={styles.sectionHeader} style={{ color: "#00f5ff" }}>
           CONTRIBUTION POINT
         </div>
         <div className={styles.infoGrid}>
-          <LabelValue
-            label="TOTAL CP"
-            value={player.totalCp.toLocaleString()}
-          />
-          <LabelValue
-            label="TODAY CP"
-            value={`+${player.todayCp.toLocaleString()}`}
-          />
+          <LabelValue label="TOTAL CP" value={player.totalCp.toLocaleString()} />
+          <LabelValue label="TODAY CP" value={`+${player.todayCp.toLocaleString()}`} />
           <LabelValue
             label="EXP"
             value={`${player.lifetimeTotalEarnedCp.toLocaleString()} / ${player.nextLevelTotalCp.toLocaleString()}`}

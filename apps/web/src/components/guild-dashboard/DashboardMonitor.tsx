@@ -103,7 +103,14 @@ export function DashboardMonitor({
             lineHeight: isMobile ? 1.1 : 1.4,
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "4px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
             <span style={{ color: "#ffd966", whiteSpace: "nowrap" }}>EXP</span>
             <span style={{ color: "#f4ecd0", whiteSpace: "nowrap" }}>
               {isMaxGuildLevel
@@ -124,7 +131,9 @@ export function DashboardMonitor({
             }
             style={{
               height: isMobile ? "4px" : "10px",
-              border: isMobile ? "1px solid rgba(116, 247, 161, 0.6)" : "2px solid rgba(116, 247, 161, 0.6)",
+              border: isMobile
+                ? "1px solid rgba(116, 247, 161, 0.6)"
+                : "2px solid rgba(116, 247, 161, 0.6)",
               background: "rgba(1, 8, 22, 0.72)",
               boxShadow: "inset 0 0 8px rgba(0,0,0,0.64)",
               overflow: "hidden",
@@ -168,7 +177,9 @@ export function DashboardMonitor({
                 onClick={() => onSwitchTab(tab.id)}
                 style={{
                   minHeight: isMobile ? "18px" : "34px",
-                  border: isMobile ? `1px solid ${isActive ? "#00f5ff" : "rgba(0, 245, 255, 0.28)"}` : `2px solid ${isActive ? "#00f5ff" : "rgba(0, 245, 255, 0.28)"}`,
+                  border: isMobile
+                    ? `1px solid ${isActive ? "#00f5ff" : "rgba(0, 245, 255, 0.28)"}`
+                    : `2px solid ${isActive ? "#00f5ff" : "rgba(0, 245, 255, 0.28)"}`,
                   background: isActive ? "rgba(0, 245, 255, 0.14)" : "rgba(1, 8, 22, 0.46)",
                   color: isActive ? "#fff8d7" : "rgba(244, 236, 208, 0.64)",
                   boxShadow: isActive ? "inset 0 0 16px rgba(0, 245, 255, 0.18)" : "none",
@@ -191,7 +202,11 @@ export function DashboardMonitor({
 
       <div style={{ minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <AnimatePresence mode="wait">
-          {activeTab === "activity" ? <ActivityLogPanel logs={logs} isMobile={isMobile} /> : <RankingsPanel isMobile={isMobile} />}
+          {activeTab === "activity" ? (
+            <ActivityLogPanel logs={logs} isMobile={isMobile} />
+          ) : (
+            <RankingsPanel isMobile={isMobile} />
+          )}
         </AnimatePresence>
       </div>
     </motion.section>
