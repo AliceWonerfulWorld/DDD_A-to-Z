@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router";
 import { PATHS } from "../../constants/paths";
 import { fetchTechNews, type TechNewsItem } from "../../features/tech-news/api";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
@@ -32,8 +33,14 @@ export function TechNews({ onNavigate }: TechNewsProps) {
   const { isSeEnabled } = useAudioSettings();
   const { backNavigationSeRef, navigateBackWithSe } = useBackNavigationSe(onNavigate);
   const selectSeRef = useRef<HTMLAudioElement | null>(null);
+  const locationState = useLocation().state as { guildSlug?: string } | null;
 
-  const [selectedSlug, setSelectedSlug] = useState<string>(GUILD_MASTERS[0].slug);
+  const initialSlug =
+    locationState?.guildSlug && GUILD_MASTERS.some((g) => g.slug === locationState.guildSlug)
+      ? locationState.guildSlug
+      : GUILD_MASTERS[0].slug;
+
+  const [selectedSlug, setSelectedSlug] = useState<string>(initialSlug);
   const [items, setItems] = useState<TechNewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
