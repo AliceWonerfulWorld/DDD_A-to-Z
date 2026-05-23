@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import type { GuildMemberContribution } from "../../features/guild/api";
 import type { DisplayGuild } from "../../features/guild/presentation";
 import { steppedEase } from "../../lib/animationUtils";
 import { ActivityLogPanel, RankingsPanel } from "./DashboardPanels";
@@ -13,6 +14,7 @@ interface DashboardMonitorProps {
   tabs: { id: GuildTab; label: string }[];
   layoutStyle?: React.CSSProperties;
   isMobile?: boolean;
+  members?: GuildMemberContribution[];
 }
 
 export function DashboardMonitor({
@@ -24,6 +26,7 @@ export function DashboardMonitor({
   tabs,
   layoutStyle,
   isMobile,
+  members = [],
 }: DashboardMonitorProps) {
   const guildName = isGuildLoading ? "SYNCING GUILD" : guild ? `${guild.name} GUILD` : "NO GUILD";
   const guildRank = guild ? `Rank: #${guild.sortOrder + 1}` : "Rank: --";
@@ -205,7 +208,7 @@ export function DashboardMonitor({
           {activeTab === "activity" ? (
             <ActivityLogPanel logs={logs} isMobile={isMobile} />
           ) : (
-            <RankingsPanel isMobile={isMobile} />
+            <RankingsPanel isMobile={isMobile} members={members} />
           )}
         </AnimatePresence>
       </div>

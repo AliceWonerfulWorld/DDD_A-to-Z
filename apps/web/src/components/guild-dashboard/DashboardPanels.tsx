@@ -1,6 +1,6 @@
 import { AnimatePresence, motion, type Variants } from "framer-motion";
+import type { GuildMemberContribution } from "../../features/guild/api";
 import { steppedEase } from "../../lib/animationUtils";
-import { RANKINGS } from "./data";
 import type { ActivityLog } from "./types";
 import styles from "./DashboardPanels.module.css";
 
@@ -130,7 +130,13 @@ export function ActivityLogPanel({ logs, isMobile }: { logs: ActivityLog[]; isMo
   );
 }
 
-export function RankingsPanel({ isMobile }: { isMobile?: boolean }) {
+export function RankingsPanel({
+  isMobile,
+  members,
+}: {
+  isMobile?: boolean;
+  members: GuildMemberContribution[];
+}) {
   return (
     <motion.section
       key="rankings"
@@ -151,9 +157,9 @@ export function RankingsPanel({ isMobile }: { isMobile?: boolean }) {
         overflowY: "auto",
       }}
     >
-      {RANKINGS.map((member, index) => (
+      {members.map((member, index) => (
         <motion.div
-          key={member.name}
+          key={member.user_id}
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.07, duration: 0.28, ease: steppedEase(5) }}
@@ -174,13 +180,14 @@ export function RankingsPanel({ isMobile }: { isMobile?: boolean }) {
             padding: isMobile ? "4px 6px" : "8px clamp(8px, 1.5vw, 16px)",
           }}
         >
-          <span
-            style={{
-              color: member.color,
-              fontSize: isMobile ? "0.55rem" : "clamp(0.72rem, 1.45vw, 1rem)",
-              lineHeight: 1,
-            }}
-          >
+            <span
+              style={{
+                color:
+                  index === 0 ? "#ffd966" : index === 1 ? "#e2e8f0" : index === 2 ? "#b45309" : "#a1a1aa",
+                fontSize: isMobile ? "0.55rem" : "clamp(0.72rem, 1.45vw, 1rem)",
+                lineHeight: 1,
+              }}
+            >
             #{index + 1}
           </span>
           <span style={{ minWidth: 0, overflow: "hidden" }}>
@@ -195,18 +202,6 @@ export function RankingsPanel({ isMobile }: { isMobile?: boolean }) {
             >
               {member.name}
             </span>
-            <span
-              style={{
-                display: "block",
-                color: "rgba(244, 236, 208, 0.62)",
-                fontFamily: '"DotGothic16", monospace',
-                fontSize: isMobile ? "0.5rem" : "clamp(0.58rem, 1.05vw, 0.76rem)",
-                lineHeight: isMobile ? 1.2 : 1.35,
-                overflowWrap: "anywhere",
-              }}
-            >
-              {member.title}
-            </span>
           </span>
           <span
             style={{
@@ -216,7 +211,7 @@ export function RankingsPanel({ isMobile }: { isMobile?: boolean }) {
               whiteSpace: "nowrap",
             }}
           >
-            {member.cp.toLocaleString()} CP
+            {(member.total_contributed_cp || 0).toLocaleString()} CP
           </span>
         </motion.div>
       ))}
