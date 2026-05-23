@@ -9,6 +9,8 @@ import (
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
+	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
+	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
 var (
@@ -20,6 +22,7 @@ var (
 	ErrInvalidCPContribution       = errors.New("guild cp contribution amount must be positive")
 	ErrInvalidCPContributionLedger = errors.New("guild cp contribution ledger is invalid")
 	ErrCPServiceUnavailable        = errors.New("contribution point service is unavailable")
+	ErrPetAlreadyOwned             = errors.New("guild pet already owned")
 )
 
 const (
@@ -34,10 +37,17 @@ type MyGuildDetails struct {
 	Members    []guilddomain.MemberContribution
 }
 
+type JoinGuildResult struct {
+	Membership      guilddomain.MembershipWithGuild
+	GrantedPet      *petdomain.Pet
+	PetAlreadyOwned bool
+}
+
 type UseCase struct {
 	repository      Repository
 	current         CurrentUserRepository
 	ids             IDGenerator
+	petIDs          IDGenerator
 	contributionIDs IDGenerator
 	cp              CPSpender
 	cpTransactioner CPContributionTransactioner
@@ -66,6 +76,18 @@ func NewUseCaseWithCPTransaction(
 	cp CPSpender,
 	cpTransactioner CPContributionTransactioner,
 ) *UseCase {
+	return NewUseCaseWithPetAndCPTransaction(repository, current, ids, ids, contributionIDs, cp, cpTransactioner)
+}
+
+func NewUseCaseWithPetAndCPTransaction(
+	repository Repository,
+	current CurrentUserRepository,
+	ids IDGenerator,
+	petIDs IDGenerator,
+	contributionIDs IDGenerator,
+	cp CPSpender,
+	cpTransactioner CPContributionTransactioner,
+) *UseCase {
 	if repository == nil {
 		panic("guild repository is required")
 	}
@@ -75,6 +97,9 @@ func NewUseCaseWithCPTransaction(
 	if ids == nil {
 		panic("guild membership id generator is required")
 	}
+	if petIDs == nil {
+		panic("guild pet id generator is required")
+	}
 	if contributionIDs == nil {
 		panic("guild cp contribution id generator is required")
 	}
@@ -83,6 +108,7 @@ func NewUseCaseWithCPTransaction(
 		repository:      repository,
 		current:         current,
 		ids:             ids,
+		petIDs:          petIDs,
 		contributionIDs: contributionIDs,
 		cp:              cp,
 		cpTransactioner: cpTransactioner,
@@ -98,40 +124,44 @@ func (u *UseCase) ListGuilds(ctx context.Context) ([]guilddomain.Guild, error) {
 	return u.repository.ListGuilds(ctx)
 }
 
-func (u *UseCase) JoinGuild(ctx context.Context, sessionToken string, guildID guilddomain.ID) (guilddomain.MembershipWithGuild, error) {
+func (u *UseCase) JoinGuild(ctx context.Context, sessionToken string, guildID guilddomain.ID) (JoinGuildResult, error) {
 	if strings.TrimSpace(sessionToken) == "" {
-		return guilddomain.MembershipWithGuild{}, ErrUnauthenticated
+		return JoinGuildResult{}, ErrUnauthenticated
 	}
 	if strings.TrimSpace(string(guildID)) == "" {
-		return guilddomain.MembershipWithGuild{}, ErrGuildNotFound
+		return JoinGuildResult{}, ErrGuildNotFound
 	}
 
 	now := u.now()
 	appUser, ok, err := u.current.FindUserBySessionToken(ctx, sessionToken, now)
 	if err != nil {
-		return guilddomain.MembershipWithGuild{}, err
+		return JoinGuildResult{}, err
 	}
 	if !ok {
-		return guilddomain.MembershipWithGuild{}, ErrUnauthenticated
+		return JoinGuildResult{}, ErrUnauthenticated
 	}
 
 	if membership, ok, err := u.repository.FindActiveMembershipByUserID(ctx, appUser.ID); err != nil {
-		return guilddomain.MembershipWithGuild{}, err
+		return JoinGuildResult{}, err
 	} else if ok {
-		return membership, ErrAlreadyJoined
+		result, grantErr := u.joinGuildResultWithPet(ctx, membership, now)
+		if grantErr != nil {
+			return JoinGuildResult{}, grantErr
+		}
+		return result, ErrAlreadyJoined
 	}
 
 	foundGuild, ok, err := u.repository.FindGuildByID(ctx, guildID)
 	if err != nil {
-		return guilddomain.MembershipWithGuild{}, err
+		return JoinGuildResult{}, err
 	}
 	if !ok {
-		return guilddomain.MembershipWithGuild{}, ErrGuildNotFound
+		return JoinGuildResult{}, ErrGuildNotFound
 	}
 
 	membershipID, err := u.ids.NewID()
 	if err != nil {
-		return guilddomain.MembershipWithGuild{}, err
+		return JoinGuildResult{}, err
 	}
 	membership, err := guilddomain.NewMembership(guilddomain.Membership{
 		ID:        guilddomain.MembershipID(membershipID),
@@ -142,24 +172,77 @@ func (u *UseCase) JoinGuild(ctx context.Context, sessionToken string, guildID gu
 		UpdatedAt: now,
 	})
 	if err != nil {
-		return guilddomain.MembershipWithGuild{}, err
+		return JoinGuildResult{}, err
 	}
 
 	if err := u.repository.CreateMembership(ctx, membership); err != nil {
 		if errors.Is(err, ErrAlreadyJoined) {
 			if existing, ok, findErr := u.repository.FindActiveMembershipByUserID(ctx, appUser.ID); findErr != nil {
-				return guilddomain.MembershipWithGuild{}, findErr
+				return JoinGuildResult{}, findErr
 			} else if ok {
-				return existing, ErrAlreadyJoined
+				result, grantErr := u.joinGuildResultWithPet(ctx, existing, now)
+				if grantErr != nil {
+					return JoinGuildResult{}, grantErr
+				}
+				return result, ErrAlreadyJoined
 			}
 		}
-		return guilddomain.MembershipWithGuild{}, err
+		return JoinGuildResult{}, err
 	}
 
-	return guilddomain.MembershipWithGuild{
-		Membership: membership,
-		Guild:      foundGuild,
+	result := JoinGuildResult{
+		Membership: guilddomain.MembershipWithGuild{
+			Membership: membership,
+			Guild:      foundGuild,
+		},
+	}
+	grantedPet, alreadyOwned, err := u.grantGuildPet(ctx, appUser.ID, foundGuild.ID, now)
+	if err != nil {
+		return JoinGuildResult{}, err
+	}
+	result.GrantedPet = grantedPet
+	result.PetAlreadyOwned = alreadyOwned
+
+	return result, nil
+}
+
+func (u *UseCase) joinGuildResultWithPet(ctx context.Context, membership guilddomain.MembershipWithGuild, now time.Time) (JoinGuildResult, error) {
+	grantedPet, alreadyOwned, err := u.grantGuildPet(ctx, membership.Membership.UserID, membership.Membership.GuildID, now)
+	if err != nil {
+		return JoinGuildResult{}, err
+	}
+
+	return JoinGuildResult{
+		Membership:      membership,
+		GrantedPet:      grantedPet,
+		PetAlreadyOwned: alreadyOwned,
 	}, nil
+}
+
+func (u *UseCase) grantGuildPet(ctx context.Context, userID user.ID, guildID guilddomain.ID, now time.Time) (*petdomain.Pet, bool, error) {
+	if _, ok, err := u.repository.FindPetByUserAndGuild(ctx, userID, guildID); err != nil {
+		return nil, false, err
+	} else if ok {
+		return nil, true, nil
+	}
+
+	petID, err := u.petIDs.NewID()
+	if err != nil {
+		return nil, false, err
+	}
+	grantedPet, err := petdomain.NewPetFromGuild(petdomain.ID(petID), userID, guildID, now)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if err := u.repository.CreatePet(ctx, grantedPet); err != nil {
+		if errors.Is(err, ErrPetAlreadyOwned) {
+			return nil, true, nil
+		}
+		return nil, false, err
+	}
+
+	return &grantedPet, false, nil
 }
 
 func (u *UseCase) GetMyGuild(ctx context.Context, sessionToken string) (guilddomain.MembershipWithGuild, bool, error) {

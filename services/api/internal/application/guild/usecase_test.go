@@ -10,6 +10,7 @@ import (
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
+	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
@@ -18,6 +19,9 @@ type testRepository struct {
 	activeMembership *guilddomain.MembershipWithGuild
 	created          *guilddomain.Membership
 	updated          *guilddomain.Membership
+	pet              *petdomain.Pet
+	createdPet       *petdomain.Pet
+	createPetErr     error
 	contribution     *guilddomain.CPContribution
 	contributions    []guilddomain.CPContribution
 	activityLogs     []guilddomain.ActivityLog
@@ -68,6 +72,25 @@ func (r *testRepository) CreateMembership(ctx context.Context, membership guildd
 
 func (r *testRepository) UpdateMembership(ctx context.Context, membership guilddomain.Membership) error {
 	r.updated = &membership
+	return nil
+}
+
+func (r testRepository) FindPetByUserAndGuild(ctx context.Context, userID user.ID, guildID guilddomain.ID) (petdomain.Pet, bool, error) {
+	if r.pet == nil {
+		return petdomain.Pet{}, false, nil
+	}
+	if r.pet.UserID != userID || r.pet.GuildID != guildID {
+		return petdomain.Pet{}, false, nil
+	}
+
+	return *r.pet, true, nil
+}
+
+func (r *testRepository) CreatePet(ctx context.Context, pet petdomain.Pet) error {
+	if r.createPetErr != nil {
+		return r.createPetErr
+	}
+	r.createdPet = &pet
 	return nil
 }
 
@@ -192,12 +215,12 @@ func TestUseCaseJoinGuild(t *testing.T) {
 	}, testIDGenerator{id: "membership_1"})
 	usecase.now = func() time.Time { return now }
 
-	membership, err := usecase.JoinGuild(context.Background(), "session-token", "guild_go")
+	result, err := usecase.JoinGuild(context.Background(), "session-token", "guild_go")
 	if err != nil {
 		t.Fatalf("JoinGuild() がエラーを返しました: %v", err)
 	}
-	if membership.Guild.ID != "guild_go" {
-		t.Fatalf("guild id = %q, 期待値 guild_go", membership.Guild.ID)
+	if result.Membership.Guild.ID != "guild_go" {
+		t.Fatalf("guild id = %q, 期待値 guild_go", result.Membership.Guild.ID)
 	}
 	if repository.created == nil {
 		t.Fatal("CreateMembership() が呼ばれる必要があります")
@@ -207,6 +230,100 @@ func TestUseCaseJoinGuild(t *testing.T) {
 	}
 	if !repository.created.JoinedAt.Equal(now) {
 		t.Fatalf("joined_at = %v, 期待値 %v", repository.created.JoinedAt, now)
+	}
+	if repository.createdPet == nil {
+		t.Fatal("CreatePet() が呼ばれる必要があります")
+	}
+	if repository.createdPet.UserID != "user_1" || repository.createdPet.GuildID != "guild_go" {
+		t.Fatalf("created pet owner = %q/%q, 期待値 user_1/guild_go", repository.createdPet.UserID, repository.createdPet.GuildID)
+	}
+	if result.GrantedPet == nil {
+		t.Fatal("GrantedPet が設定されている必要があります")
+	}
+	if result.PetAlreadyOwned {
+		t.Fatal("PetAlreadyOwned = true, 期待値 false")
+	}
+}
+
+func TestUseCaseJoinGuildDoesNotGrantDuplicatePet(t *testing.T) {
+	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
+	targetGuild := guilddomain.Guild{
+		ID:          "guild_go",
+		Slug:        "go",
+		Name:        "Go",
+		Description: "シンプルさと並列処理で前に進むギルド。",
+		Icon:        "GO",
+		Color:       "#00acd7",
+		SortOrder:   1,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	existingPet := petdomain.Pet{
+		ID:        "pet_existing",
+		UserID:    "user_1",
+		GuildID:   "guild_go",
+		Attribute: petdomain.AttributeGo,
+		Stats:     petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7},
+		CreatedAt: now.Add(-time.Hour),
+		UpdatedAt: now.Add(-time.Hour),
+	}
+	repository := &testRepository{
+		guilds: []guilddomain.Guild{targetGuild},
+		pet:    &existingPet,
+	}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "membership_1"})
+	usecase.now = func() time.Time { return now }
+
+	result, err := usecase.JoinGuild(context.Background(), "session-token", "guild_go")
+	if err != nil {
+		t.Fatalf("JoinGuild() がエラーを返しました: %v", err)
+	}
+	if repository.createdPet != nil {
+		t.Fatal("CreatePet() は呼ばれない必要があります")
+	}
+	if result.GrantedPet != nil {
+		t.Fatalf("GrantedPet = %#v, 期待値 nil", result.GrantedPet)
+	}
+	if !result.PetAlreadyOwned {
+		t.Fatal("PetAlreadyOwned = false, 期待値 true")
+	}
+}
+
+func TestUseCaseJoinGuildTreatsDuplicatePetInsertAsAlreadyOwned(t *testing.T) {
+	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
+	targetGuild := guilddomain.Guild{
+		ID:          "guild_go",
+		Slug:        "go",
+		Name:        "Go",
+		Description: "シンプルさと並列処理で前に進むギルド。",
+		Icon:        "GO",
+		Color:       "#00acd7",
+		SortOrder:   1,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	repository := &testRepository{
+		guilds:       []guilddomain.Guild{targetGuild},
+		createPetErr: ErrPetAlreadyOwned,
+	}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "membership_1"})
+	usecase.now = func() time.Time { return now }
+
+	result, err := usecase.JoinGuild(context.Background(), "session-token", "guild_go")
+	if err != nil {
+		t.Fatalf("JoinGuild() がエラーを返しました: %v", err)
+	}
+	if result.GrantedPet != nil {
+		t.Fatalf("GrantedPet = %#v, 期待値 nil", result.GrantedPet)
+	}
+	if !result.PetAlreadyOwned {
+		t.Fatal("PetAlreadyOwned = false, 期待値 true")
 	}
 }
 
@@ -241,6 +358,54 @@ func TestUseCaseJoinGuildRejectsAlreadyJoinedUser(t *testing.T) {
 	_, err := usecase.JoinGuild(context.Background(), "session-token", "guild_python")
 	if !errors.Is(err, ErrAlreadyJoined) {
 		t.Fatalf("JoinGuild() error = %v, 期待値 ErrAlreadyJoined", err)
+	}
+}
+
+func TestUseCaseJoinGuildGrantsMissingPetForAlreadyJoinedUser(t *testing.T) {
+	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
+	existing := guilddomain.MembershipWithGuild{
+		Membership: guilddomain.Membership{
+			ID:        "membership_1",
+			UserID:    "user_1",
+			GuildID:   "guild_go",
+			JoinedAt:  now,
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Guild: guilddomain.Guild{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+	repository := &testRepository{activeMembership: &existing}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testIDGenerator{id: "pet_repair_1"})
+	usecase.now = func() time.Time { return now }
+
+	result, err := usecase.JoinGuild(context.Background(), "session-token", "guild_go")
+	if !errors.Is(err, ErrAlreadyJoined) {
+		t.Fatalf("JoinGuild() error = %v, 期待値 ErrAlreadyJoined", err)
+	}
+	if repository.createdPet == nil {
+		t.Fatal("CreatePet() が呼ばれる必要があります")
+	}
+	if repository.createdPet.UserID != "user_1" || repository.createdPet.GuildID != "guild_go" {
+		t.Fatalf("created pet owner = %q/%q, 期待値 user_1/guild_go", repository.createdPet.UserID, repository.createdPet.GuildID)
+	}
+	if result.GrantedPet == nil {
+		t.Fatal("GrantedPet が設定されている必要があります")
+	}
+	if result.PetAlreadyOwned {
+		t.Fatal("PetAlreadyOwned = true, 期待値 false")
 	}
 }
 

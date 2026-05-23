@@ -30,6 +30,7 @@
     "proto:breaking": "nix develop -c ./scripts/buf.sh breaking --against '../.git#branch=origin/main,subdir=proto'",
     "proto:format": "nix develop -c ./scripts/buf.sh format -w",
     "proto:build": "nix develop -c ./scripts/buf.sh build",
+    "admin:dev": "pnpm --filter admin dev",
     "prepare": "lefthook install"
   },
   "devDependencies": {

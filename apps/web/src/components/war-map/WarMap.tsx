@@ -15,6 +15,8 @@ import { RankingPanel } from "./RankingPanel";
 import { ScoutPanel } from "./ScoutPanel";
 import { createWarGuilds, findWarGuildByID, type WarGuild } from "./WarMapData";
 import { WarMapHex } from "./WarMapHex";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import type { ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 
 interface WarMapProps {
   onNavigate: (path: string) => void;
@@ -123,6 +125,10 @@ export function WarMap({ onNavigate }: WarMapProps) {
         playSe(guildScoutSeRef.current);
         return guild;
       });
+
+      if (typeof window !== "undefined" && window.innerWidth <= 768) {
+        setIsRankingOpen(false);
+      }
     },
     [playSe],
   );
@@ -138,7 +144,12 @@ export function WarMap({ onNavigate }: WarMapProps) {
 
   const toggleRankingWithSe = useCallback(() => {
     playSe(rankingToggleSeRef.current);
-    setIsRankingOpen((isOpen) => !isOpen);
+    setIsRankingOpen((isOpen) => {
+      if (!isOpen && typeof window !== "undefined" && window.innerWidth <= 768) {
+        setSelectedGuild(null);
+      }
+      return !isOpen;
+    });
   }, [playSe]);
 
   const handleWorldPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
@@ -148,6 +159,105 @@ export function WarMap({ onNavigate }: WarMapProps) {
     closeScout();
     setIsRankingOpen(false);
   };
+
+  const transformComponentRef = useRef<ReactZoomPanPinchRef>(null);
+
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false,
+  );
+
+  useEffect(() => {
+    let lastWidth = window.innerWidth;
+    let timeoutId: number;
+
+    const handleResize = () => {
+      const currentWidth = window.innerWidth;
+      setIsMobile(currentWidth <= 768);
+
+      if (currentWidth !== lastWidth) {
+        lastWidth = currentWidth;
+        clearTimeout(timeoutId);
+        timeoutId = window.setTimeout(() => {
+          if (transformComponentRef.current) {
+            transformComponentRef.current.resetTransform(0);
+          }
+        }, 200);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  const MapContent = () => (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        touchAction: "none",
+        transformOrigin: "top left",
+        userSelect: "none",
+      }}
+    >
+      <img
+        className="pixelated"
+        src="/world_map.png"
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          objectPosition: "center",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(180deg, rgba(0,245,255,0.08), rgba(0,0,0,0.03) 46%, rgba(0,0,0,0.32)), radial-gradient(ellipse at center, transparent 34%, rgba(0,0,0,0.58) 100%)",
+          pointerEvents: "none",
+          zIndex: 2,
+        }}
+      />
+
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage:
+            "linear-gradient(rgba(0,245,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0,245,255,0.08) 1px, transparent 1px)",
+          backgroundSize: "64px 64px",
+          mixBlendMode: "screen",
+          opacity: 0.3,
+          pointerEvents: "none",
+          zIndex: 3,
+        }}
+      />
+
+      {warGuilds.map((guild) => (
+        <WarMapHex
+          key={guild.id}
+          guild={guild}
+          isCurrentGuild={guild.id === currentGuildID}
+          isSelected={selectedGuild?.id === guild.id}
+          onSelect={selectGuild}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <main
@@ -182,67 +292,22 @@ export function WarMap({ onNavigate }: WarMapProps) {
         aria-hidden="true"
       />
 
-      <div
-        className="absolute left-0 top-0 h-screen w-screen"
-        style={{
-          touchAction: "none",
-          transformOrigin: "top left",
-          userSelect: "none",
-        }}
-      >
-        <img
-          className="pixelated"
-          src="/world_map.png"
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center",
-            pointerEvents: "none",
-          }}
-        />
-
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(0,245,255,0.08), rgba(0,0,0,0.03) 46%, rgba(0,0,0,0.32)), radial-gradient(ellipse at center, transparent 34%, rgba(0,0,0,0.58) 100%)",
-            pointerEvents: "none",
-            zIndex: 2,
-          }}
-        />
-
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "linear-gradient(rgba(0,245,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0,245,255,0.08) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-            mixBlendMode: "screen",
-            opacity: 0.3,
-            pointerEvents: "none",
-            zIndex: 3,
-          }}
-        />
-
-        {warGuilds.map((guild) => (
-          <WarMapHex
-            key={guild.id}
-            guild={guild}
-            isCurrentGuild={guild.id === currentGuildID}
-            isSelected={selectedGuild?.id === guild.id}
-            onSelect={selectGuild}
-          />
-        ))}
+      <div style={{ width: "100vw", height: "100svh", overflow: "hidden" }}>
+        <TransformWrapper
+          ref={transformComponentRef}
+          initialScale={1}
+          minScale={1}
+          maxScale={3}
+          centerOnInit={true}
+          limitToBounds={true}
+        >
+          <TransformComponent
+            wrapperStyle={{ width: "100%", height: "100%" }}
+            contentStyle={{ width: "max(100vw, 177.78svh)", height: "max(100svh, 56.25vw)" }}
+          >
+            <MapContent />
+          </TransformComponent>
+        </TransformWrapper>
       </div>
 
       <RankingPanel
@@ -273,8 +338,8 @@ export function WarMap({ onNavigate }: WarMapProps) {
           boxShadow:
             "0 0 0 2px rgba(0,0,0,0.76), 6px 6px 0 rgba(0,0,0,0.36), inset 0 0 18px rgba(255,255,255,0.06)",
           color: "#fff8d7",
-          minWidth: "min(360px, calc(100vw - 96px))",
-          maxWidth: "calc(100vw - 96px)",
+          minWidth: "min(360px, calc(100vw - 210px))",
+          maxWidth: "calc(100vw - 210px)",
           padding: "10px 14px",
           textAlign: "center",
           textShadow: "2px 2px 0 rgba(0,0,0,0.8)",
@@ -295,9 +360,11 @@ export function WarMap({ onNavigate }: WarMapProps) {
           style={{
             margin: 0,
             color: "#fff8d7",
-            fontSize: "clamp(0.48rem, 1vw, 0.66rem)",
+            fontSize: isMobile ? "0.44rem" : "clamp(0.48rem, 1vw, 0.66rem)",
             lineHeight: 1.5,
-            overflowWrap: "anywhere",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
           {!isCurrentGuildLoaded && "Synchronizing guild data..."}

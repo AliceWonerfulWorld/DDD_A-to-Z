@@ -101,10 +101,11 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 	cpLedgerIDGenerator := security.NewIDGenerator("cp")
 	cpUseCase := contributionpointapp.NewUseCase(contributionPointStore, cpLedgerIDGenerator)
 	cpManager := newCPManager(cpUseCase)
-	guildUseCase := guildapp.NewUseCaseWithCPTransaction(
+	guildUseCase := guildapp.NewUseCaseWithPetAndCPTransaction(
 		guildStore,
 		authStore,
 		security.NewIDGenerator("guild_membership"),
+		security.NewIDGenerator("pet"),
 		security.NewIDGenerator("guild_cp_contribution"),
 		cpUseCase,
 		postgres.NewGuildCPContributionTransactioner(db, cpLedgerIDGenerator),

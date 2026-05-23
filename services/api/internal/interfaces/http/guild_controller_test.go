@@ -15,6 +15,7 @@ import (
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
 	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
+	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
@@ -22,6 +23,8 @@ type guildTestRepository struct {
 	guilds           []guilddomain.Guild
 	activeMembership *guilddomain.MembershipWithGuild
 	updated          *guilddomain.Membership
+	pet              *petdomain.Pet
+	createdPet       *petdomain.Pet
 	contributions    []guilddomain.CPContribution
 	activityLogs     []guilddomain.ActivityLog
 	members          []guilddomain.MemberContribution
@@ -83,6 +86,22 @@ func (r *guildTestRepository) UpdateMembership(ctx context.Context, membership g
 	}
 
 	r.updated = &membership
+	return nil
+}
+
+func (r guildTestRepository) FindPetByUserAndGuild(ctx context.Context, userID user.ID, guildID guilddomain.ID) (petdomain.Pet, bool, error) {
+	if r.pet == nil {
+		return petdomain.Pet{}, false, nil
+	}
+	if r.pet.UserID != userID || r.pet.GuildID != guildID {
+		return petdomain.Pet{}, false, nil
+	}
+
+	return *r.pet, true, nil
+}
+
+func (r *guildTestRepository) CreatePet(ctx context.Context, pet petdomain.Pet) error {
+	r.createdPet = &pet
 	return nil
 }
 
@@ -268,6 +287,12 @@ func TestGuildControllerJoinGuild(t *testing.T) {
 			ID       string `json:"id"`
 			JoinedAt string `json:"joined_at"`
 		} `json:"membership"`
+		GrantedPet struct {
+			ID        string `json:"id"`
+			GuildID   string `json:"guild_id"`
+			Attribute string `json:"attribute"`
+		} `json:"granted_pet"`
+		PetAlreadyOwned bool `json:"pet_already_owned"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
 		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
@@ -277,6 +302,77 @@ func TestGuildControllerJoinGuild(t *testing.T) {
 	}
 	if body.Membership.JoinedAt == "" {
 		t.Fatal("joined_at が設定されている必要があります")
+	}
+	if body.GrantedPet.GuildID != "guild_go" {
+		t.Fatalf("granted_pet.guild_id = %q, 期待値 guild_go", body.GrantedPet.GuildID)
+	}
+	if body.GrantedPet.Attribute != "go" {
+		t.Fatalf("granted_pet.attribute = %q, 期待値 go", body.GrantedPet.Attribute)
+	}
+	if body.PetAlreadyOwned {
+		t.Fatal("pet_already_owned = true, 期待値 false")
+	}
+}
+
+func TestGuildControllerJoinGuildPetAlreadyOwned(t *testing.T) {
+	now := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
+	existingPet := petdomain.Pet{
+		ID:        "pet_existing",
+		UserID:    "user_1",
+		GuildID:   "guild_go",
+		Attribute: petdomain.AttributeGo,
+		Stats:     petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7},
+		CreatedAt: now.Add(-time.Hour),
+		UpdatedAt: now.Add(-time.Hour),
+	}
+	controller := NewGuildController(guildapp.NewUseCase(&guildTestRepository{
+		guilds: []guilddomain.Guild{{
+			ID:          "guild_go",
+			Slug:        "go",
+			Name:        "Go",
+			Description: "シンプルさと並列処理で前に進むギルド。",
+			Icon:        "GO",
+			Color:       "#00acd7",
+			SortOrder:   1,
+			MemberCount: 1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}},
+		pet: &existingPet,
+	}, guildTestCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, guildTestIDGenerator{}), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	router := stdhttp.NewServeMux()
+	controller.RegisterRoutes(router)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodPost, "/guilds/guild_go/join", nil)
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusCreated {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusCreated)
+	}
+
+	var body struct {
+		Membership struct {
+			JoinedAt string `json:"joined_at"`
+		} `json:"membership"`
+		GrantedPet      *struct{} `json:"granted_pet"`
+		PetAlreadyOwned bool      `json:"pet_already_owned"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("レスポンスボディのデコードに失敗しました: %v", err)
+	}
+	if body.Membership.JoinedAt == "" {
+		t.Fatal("joined_at が設定されている必要があります")
+	}
+	if body.GrantedPet != nil {
+		t.Fatalf("granted_pet = %#v, 期待値 nil", body.GrantedPet)
+	}
+	if !body.PetAlreadyOwned {
+		t.Fatal("pet_already_owned = false, 期待値 true")
 	}
 }
 
