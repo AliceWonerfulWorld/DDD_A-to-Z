@@ -14,6 +14,7 @@ env "local" {
 
 env "ci" {
   src = "file://db/schema.sql"
+  url = "docker://postgres/17/dev?search_path=public"
   dev = "docker://postgres/17/dev?search_path=public"
 
   migration {
