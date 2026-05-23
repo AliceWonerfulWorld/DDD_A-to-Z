@@ -140,7 +140,7 @@ jobs:
             --region=${{ env.GCP_REGION }} \
             --platform=managed \
             --allow-unauthenticated \
-            --set-secrets="DATABASE_URL=lang-war-news-database-url:latest" \
+            --set-secrets="DATABASE_URL=lang-war-database-url:latest" \
             --port=8080 \
             --min-instances=0 \
             --max-instances=3 \
@@ -156,8 +156,7 @@ jobs:
             lang-war-github-client-secret \
             lang-war-github-redirect-url \
             lang-war-auth-cookie-secret \
-            lang-war-github-token-encryption-secret \
-            lang-war-news-database-url; do
+            lang-war-github-token-encryption-secret; do
             latest="$(gcloud secrets versions list "${secret}" \
               --project="${GCP_PROJECT_ID}" \
               --filter="state=ENABLED" \

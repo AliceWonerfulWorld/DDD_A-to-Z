@@ -58,7 +58,7 @@ locals {
   }
 
   news_api_secret_envs = {
-    DATABASE_URL = "lang-war-news-database-url"
+    DATABASE_URL = "lang-war-database-url"
   }
 
   news_api_plain_envs = {}
@@ -268,6 +268,7 @@ resource "google_cloud_run_v2_service" "news_api" {
           cpu    = "1"
           memory = "256Mi"
         }
+        cpu_idle = true
       }
 
       dynamic "env" {

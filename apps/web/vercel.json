@@ -6,7 +6,7 @@
     },
     {
       "source": "/news-api/:path*",
-      "destination": "https://news-api-196970530977.asia-northeast1.run.app/:path*"
+      "destination": "https://news-api-885177952038.asia-northeast1.run.app/:path*"
     },
     {
       "source": "/langwar.home.v1.HomeService/:path*",

@@ -30,7 +30,6 @@ locals {
     "lang-war-github-redirect-url",            # GitHub OAuth callback URL
     "lang-war-auth-cookie-secret",             # OAuth state cookie 署名用 secret
     "lang-war-github-token-encryption-secret", # GitHub token 暗号化用 secret
-    "lang-war-news-database-url",             # news-api 用 Neon DB 接続文字列
   ]
 }
 

@@ -28,7 +28,6 @@
 #   - lang-war-github-redirect-url
 #   - lang-war-auth-cookie-secret
 #   - lang-war-github-token-encryption-secret
-#   - lang-war-news-database-url
 set -euo pipefail
 
 # ── プロジェクトルートの .env.prod を読み込む ──────────────────
@@ -181,14 +180,9 @@ ensure_secret "lang-war-auth-cookie-secret"
 add_secret_version "lang-war-auth-cookie-secret" "${AUTH_COOKIE_SECRET}"
 echo ""
 
-echo "[6/7] lang-war-github-token-encryption-secret"
+echo "[6/6] lang-war-github-token-encryption-secret"
 ensure_secret "lang-war-github-token-encryption-secret"
 add_secret_version "lang-war-github-token-encryption-secret" "${GITHUB_TOKEN_ENCRYPTION_SECRET}"
-echo ""
-
-echo "[7/7] lang-war-news-database-url"
-ensure_secret "lang-war-news-database-url"
-add_secret_version "lang-war-news-database-url" "${NEWS_DATABASE_URL}"
 echo ""
 
 # ── 登録済みシークレット一覧を表示 ───────────────────────────
