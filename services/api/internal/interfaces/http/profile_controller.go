@@ -9,13 +9,11 @@ import (
 	profileapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/profile"
 )
 
-// プロフィールコントローラー本体
 type ProfileController struct {
 	usecase *profileapp.UseCase
 	logger  *slog.Logger
 }
 
-// NewProfileController
 func NewProfileController(usecase *profileapp.UseCase, logger *slog.Logger) *ProfileController {
 	return &ProfileController{
 		usecase: usecase,
@@ -28,6 +26,7 @@ func (c *ProfileController) RegisterRoutes(mux *stdhttp.ServeMux) {
 	mux.HandleFunc("POST /profile/complete", c.completeInitialProfile)
 	mux.HandleFunc("PUT /profile", c.updateProfile)
 	mux.HandleFunc("GET /profile", c.getProfile)
+	mux.HandleFunc("PATCH /profile/badge", c.updateBadge)
 }
 
 // bodyの構造体
@@ -143,12 +142,52 @@ func (c *ProfileController) getProfile(w stdhttp.ResponseWriter, r *stdhttp.Requ
 	}
 
 	resp := map[string]any{
-		"display_name": profile.DisplayName,
-		"avatar_url":   profile.AvatarURL,
+		"display_name":        profile.DisplayName,
+		"avatar_url":          profile.AvatarURL,
+		"selected_badge_slug": profile.SelectedBadgeSlug,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		c.logger.Error("failed to write profile response", "error", err)
 	}
+}
+
+type updateBadgeRequest struct {
+	BadgeSlug *string `json:"badge_slug"`
+}
+
+func (c *ProfileController) updateBadge(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		writeAPIError(w, stdhttp.StatusUnauthorized, "unauthenticated", "unauthenticated", 0, nil)
+		return
+	}
+
+	var req updateBadgeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_request", "invalid json body", 0, nil)
+		return
+	}
+
+	if req.BadgeSlug != nil && *req.BadgeSlug == "" {
+		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_request", "badge_slug must not be empty", 0, nil)
+		return
+	}
+
+	if err := c.usecase.UpdateSelectedBadgeSlug(r.Context(), profileapp.UpdateSelectedBadgeSlugInput{
+		SessionToken: cookie.Value,
+		BadgeSlug:    req.BadgeSlug,
+	}); err != nil {
+		switch {
+		case errors.Is(err, profileapp.ErrUnauthenticated):
+			writeAPIError(w, stdhttp.StatusUnauthorized, "unauthenticated", "unauthenticated", 0, nil)
+		default:
+			c.logger.Error("failed to update badge", "error", err)
+			writeAPIError(w, stdhttp.StatusInternalServerError, "internal_error", "Internal Server Error", 0, nil)
+		}
+		return
+	}
+
+	w.WriteHeader(stdhttp.StatusNoContent)
 }

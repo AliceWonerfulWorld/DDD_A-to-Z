@@ -9,12 +9,14 @@ import (
 // It gathers user profile, contribution-point summary, repository summary,
 // and guild information into a single structure.
 type MyPageData struct {
-	User         user.User
-	CP           CPSummary
-	Repositories RepositorySummary
-	GitHubStats  *GitHubStats
-	Guild        *GuildInfo
-	Profile      *ProfileInfo
+	User              user.User
+	CP                CPSummary
+	Repositories      RepositorySummary
+	GitHubStats       *GitHubStats
+	Guild             *GuildInfo
+	Badges            []BadgeSummary
+	SelectedBadgeSlug *string
+	Profile           *ProfileInfo
 }
 
 // ProfileInfo holds the user's custom profile settings.
@@ -70,4 +72,13 @@ type GitHubStats struct {
 	GitHubCreatedAt     string
 	YearlyCommits       int
 	YearlyContributions int
+}
+
+// BadgeSummary holds a badge earned by the user.
+type BadgeSummary struct {
+	Slug        string
+	Name        string
+	Description string
+	Icon        string
+	EarnedAt    string
 }

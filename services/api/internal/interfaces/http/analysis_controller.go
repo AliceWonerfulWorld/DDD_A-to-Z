@@ -9,21 +9,39 @@ import (
 
 	githubapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/github"
 	analysisapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/repositoryanalysis"
+	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
 type Analyzer interface {
 	Analyze(ctx context.Context, sessionToken string) (analysisapp.AnalysisResult, error)
 }
 
-type AnalysisController struct {
-	usecase Analyzer
-	logger  *slog.Logger
+type BadgeGranter interface {
+	Execute(ctx context.Context, userID user.ID) (int, error)
 }
 
-func NewAnalysisController(usecase Analyzer, logger *slog.Logger) *AnalysisController {
+type AnalysisController struct {
+	usecase     Analyzer
+	grantBadges BadgeGranter
+	session     interface {
+		FindUserBySessionToken(ctx context.Context, token string, now time.Time) (user.User, bool, error)
+	}
+	logger *slog.Logger
+}
+
+func NewAnalysisController(
+	usecase Analyzer,
+	grantBadges BadgeGranter,
+	session interface {
+		FindUserBySessionToken(ctx context.Context, token string, now time.Time) (user.User, bool, error)
+	},
+	logger *slog.Logger,
+) *AnalysisController {
 	return &AnalysisController{
-		usecase: usecase,
-		logger:  logger,
+		usecase:     usecase,
+		grantBadges: grantBadges,
+		session:     session,
+		logger:      logger,
 	}
 }
 
@@ -44,6 +62,18 @@ func (c *AnalysisController) analyzeContribution(w stdhttp.ResponseWriter, r *st
 	if err != nil {
 		c.writeError(w, err)
 		return
+	}
+
+	if result.TotalCP > 0 {
+		appUser, ok, userErr := c.session.FindUserBySessionToken(r.Context(), cookie.Value, time.Now())
+		if userErr == nil && ok {
+			_, badgeErr := c.grantBadges.Execute(r.Context(), appUser.ID)
+			if badgeErr != nil {
+				c.logger.WarnContext(r.Context(), "failed to check/grant badges", "error", badgeErr, "user_id", appUser.ID)
+			}
+		} else if userErr != nil {
+			c.logger.WarnContext(r.Context(), "failed to resolve user for badge check", "error", userErr)
+		}
 	}
 
 	contributions := make([]map[string]any, 0, len(result.Contributions))

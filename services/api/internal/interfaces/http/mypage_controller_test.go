@@ -86,6 +86,22 @@ func (s *stubMypageGuildMembershipReader) GetTotalGuilds(_ context.Context) (int
 	return s.total, nil
 }
 
+type stubMypageBadgeReader struct {
+	badges []mypage.BadgeSummary
+}
+
+func (s *stubMypageBadgeReader) ListUserBadges(_ context.Context, _ user.ID) ([]mypage.BadgeSummary, error) {
+	return s.badges, nil
+}
+
+type stubMypageSelectedBadgeReader struct {
+	slug *string
+}
+
+func (s *stubMypageSelectedBadgeReader) GetSelectedBadgeSlug(_ context.Context, _ user.ID) (*string, error) {
+	return s.slug, nil
+}
+
 type stubMypageProfileReader struct {
 	profile *mypage.ProfileInfo
 	err     error
@@ -105,6 +121,9 @@ func TestMypageController_NoCookie(t *testing.T) {
 		&stubMypageGitHubStatsReader{},
 		&stubMypageGitHubTokenRepo{},
 		&stubMypageGuildMembershipReader{},
+		&stubMypageBadgeReader{},
+		nil,
+		&stubMypageSelectedBadgeReader{},
 		&stubMypageProfileReader{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -146,6 +165,9 @@ func TestMypageController_Success(t *testing.T) {
 		&stubMypageGitHubStatsReader{},
 		&stubMypageGitHubTokenRepo{},
 		&stubMypageGuildMembershipReader{},
+		&stubMypageBadgeReader{},
+		nil,
+		&stubMypageSelectedBadgeReader{},
 		&stubMypageProfileReader{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -186,5 +208,17 @@ func TestMypageController_Success(t *testing.T) {
 
 	if body["guild"] != nil {
 		t.Errorf("expected null guild, got %v", body["guild"])
+	}
+
+	badgesSection, ok := body["badges"].([]any)
+	if !ok {
+		t.Fatal("expected badges array in response")
+	}
+	if len(badgesSection) != 0 {
+		t.Errorf("expected empty badges, got %d", len(badgesSection))
+	}
+
+	if body["selected_badge_slug"] != nil {
+		t.Errorf("expected null selected_badge_slug, got %v", body["selected_badge_slug"])
 	}
 }

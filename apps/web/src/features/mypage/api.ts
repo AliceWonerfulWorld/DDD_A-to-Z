@@ -53,12 +53,22 @@ export interface GitHubStats {
   yearly_contributions: number;
 }
 
+export interface MyPageBadge {
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  earned_at: string;
+}
+
 export interface MyPageResponse {
   user: MyPageUser;
   contribution_points: MyPageContributionPoints;
   repositories: MyPageRepositories;
   guild: MyPageGuild | null;
   github_stats: GitHubStats | null;
+  badges: MyPageBadge[];
+  selected_badge_slug: string | null;
 }
 
 export async function fetchMyPage(): Promise<MyPageResponse> {
