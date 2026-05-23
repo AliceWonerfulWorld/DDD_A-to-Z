@@ -31,6 +31,21 @@ export function normalizeGrantedPet(pet: GrantedPetAPIResponse): GrantedPet {
   return pet;
 }
 
+function isGrantedPet(value: unknown): value is GrantedPet {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    "guildId" in value &&
+    "attribute" in value &&
+    "createdAt" in value &&
+    typeof value.id === "string" &&
+    typeof value.guildId === "string" &&
+    typeof value.attribute === "string" &&
+    typeof value.createdAt === "string"
+  );
+}
+
 export function storeGrantedPet(pet: GrantedPet): void {
   try {
     window.sessionStorage.setItem(grantedPetStorageKey, JSON.stringify(pet));
@@ -44,7 +59,8 @@ export function consumeGrantedPet(): GrantedPet | null {
     const raw = window.sessionStorage.getItem(grantedPetStorageKey);
     if (!raw) return null;
     window.sessionStorage.removeItem(grantedPetStorageKey);
-    return JSON.parse(raw) as GrantedPet;
+    const parsed: unknown = JSON.parse(raw);
+    return isGrantedPet(parsed) ? parsed : null;
   } catch {
     return null;
   }

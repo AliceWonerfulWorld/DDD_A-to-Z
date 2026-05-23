@@ -30,6 +30,17 @@ describe("guildGrant", () => {
     });
   });
 
+  it("camelCase のギルド参加レスポンスはそのまま返す", () => {
+    const pet = {
+      id: "pet_1",
+      guildId: "guild_go",
+      attribute: "go",
+      createdAt: "2026-05-23T00:00:00Z",
+    };
+
+    expect(normalizeGrantedPet(pet)).toEqual(pet);
+  });
+
   it("獲得ペットは一度だけ取り出せる", () => {
     storeGrantedPet({
       id: "pet_1",

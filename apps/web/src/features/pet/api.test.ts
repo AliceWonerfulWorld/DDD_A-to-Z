@@ -33,6 +33,17 @@ describe("pet api", () => {
     );
   });
 
+  it("non-2xx response は rejection として伝播する", async () => {
+    mockFetch(400, { message: "bad request" });
+
+    await expect(fetchMyPets()).rejects.toThrow();
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/pets/me",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
   it("trainPet は育成対象とステータスを送る", async () => {
     mockFetch(200, { cpBefore: 120, cpAfter: 110, increasedStat: "power", increasedBy: 1 });
 

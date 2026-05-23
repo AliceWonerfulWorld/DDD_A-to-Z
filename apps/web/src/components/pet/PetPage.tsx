@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { useMachine } from "@xstate/react";
 import { motion, type Variants } from "framer-motion";
 import { PATHS } from "../../constants/paths";
@@ -39,7 +39,7 @@ async function fetchPetPageBootstrap() {
 
 function petDisplayName(pet: PetSummary | null | undefined) {
   if (!pet) return "相棒未選択";
-  return pet.attribute === "Go" ? "Gopher" : pet.name;
+  return pet.attribute.toLowerCase() === "go" ? "Gopher君" : pet.name;
 }
 
 const petPortraits: Record<string, { label: string; tone: string }> = {
@@ -87,6 +87,7 @@ function apiWaitingMessage(error: unknown, fallback: string) {
 }
 
 export function PetPage({ onNavigate }: PetPageProps) {
+  const isMountedRef = useRef(false);
   const [snapshot, send] = useMachine(petPageMachine);
   const {
     data,
@@ -102,10 +103,18 @@ export function PetPage({ onNavigate }: PetPageProps) {
   const isBattling = snapshot.matches("battling");
 
   useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const grantedPet = consumeGrantedPet();
     if (grantedPet) {
       const guildName = grantedPet.guildId === "guild_go" ? "Goギルド" : "所属ギルド";
-      const petName = grantedPet.attribute === "go" ? "Gopher" : grantedPet.attribute;
+      const petName =
+        grantedPet.attribute.toLowerCase() === "go" ? "Gopher君" : grantedPet.attribute;
       send({ type: "NOTICE", message: `${guildName}の相棒「${petName}」が仲間になった！` });
     }
   }, [send]);
@@ -226,10 +235,12 @@ export function PetPage({ onNavigate }: PetPageProps) {
               );
             })
           : await startPetBattle(selectedOpponent.userId);
+      if (!isMountedRef.current) return;
       saveBattleSession({ playerPet: selectedPet, opponent: selectedOpponent, result });
       send({ type: "BATTLE_SUCCESS", result });
       onNavigate(PATHS.BATTLE);
     } catch (error) {
+      if (!isMountedRef.current) return;
       console.error("failed to start pet battle", error);
       send({
         type: "BATTLE_FAILURE",
@@ -420,7 +431,7 @@ function PetStats({ pet }: { pet: PetSummary }) {
 }
 
 function PetPortrait({ pet }: { pet: PetSummary }) {
-  if (pet.attribute === "Go") {
+  if (pet.attribute.toLowerCase() === "go") {
     return <GopherSprite />;
   }
 
