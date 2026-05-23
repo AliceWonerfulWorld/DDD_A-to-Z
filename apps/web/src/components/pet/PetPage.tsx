@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useMachine } from "@xstate/react";
 import { motion, type Variants } from "framer-motion";
+import { SPRITE_ASSETS } from "../../constants/assets";
 import { PATHS } from "../../constants/paths";
 import { ApiError } from "../../lib/api/client";
 import { GopherSprite } from "../shared/GopherSprite";
@@ -70,6 +71,14 @@ const petPortraits: Record<string, { label: string; tone: string }> = {
   Haskell: { label: "λ", tone: "#b89cff" },
   Zig: { label: "Zg", tone: "#f7a541" },
 };
+
+const SPRITE_FRAME_WIDTH = 192;
+const SPRITE_FRAME_HEIGHT = 208;
+const SPRITE_COLUMNS = 8;
+const SPRITE_ROWS = 9;
+const PYTHON_IDLE_FRAMES = 6;
+const PET_SPRITE_DISPLAY_WIDTH = 132;
+const PET_SPRITE_DISPLAY_HEIGHT = 143;
 
 const pageVariants: Variants = {
   hidden: { opacity: 0 },
@@ -572,6 +581,9 @@ function PetPortrait({ pet }: { pet: PetSummary }) {
   if (pet.attribute.toLowerCase() === "go") {
     return <GopherSprite />;
   }
+  if (pet.attribute.toLowerCase() === "python") {
+    return <PythonPetSprite />;
+  }
 
   const portrait = petPortraits[pet.attribute] ?? {
     label: pet.attribute.slice(0, 2).toUpperCase(),
@@ -587,5 +599,32 @@ function PetPortrait({ pet }: { pet: PetSummary }) {
       <span className={styles.placeholderFace}>{portrait.label}</span>
       <span className={styles.placeholderName}>{petDisplayName(pet)}</span>
     </div>
+  );
+}
+
+function PythonPetSprite() {
+  const scale = PET_SPRITE_DISPLAY_WIDTH / SPRITE_FRAME_WIDTH;
+  const displaySheetWidth = Math.round(SPRITE_FRAME_WIDTH * SPRITE_COLUMNS * scale);
+  const displaySheetHeight = Math.round(SPRITE_FRAME_HEIGHT * SPRITE_ROWS * scale);
+  const frameStep = Math.round(SPRITE_FRAME_WIDTH * scale);
+  const totalMoveX = frameStep * PYTHON_IDLE_FRAMES;
+
+  return (
+    <motion.div
+      animate={{ backgroundPositionX: ["0px", `-${totalMoveX}px`] }}
+      className={styles.petSprite}
+      transition={{
+        duration: 0.9,
+        repeat: Infinity,
+        ease: steppedEase(PYTHON_IDLE_FRAMES),
+      }}
+      style={{
+        width: `${PET_SPRITE_DISPLAY_WIDTH}px`,
+        height: `${PET_SPRITE_DISPLAY_HEIGHT}px`,
+        backgroundImage: `url(${SPRITE_ASSETS.PYTHON})`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: `${displaySheetWidth}px ${displaySheetHeight}px`,
+      }}
+    />
   );
 }

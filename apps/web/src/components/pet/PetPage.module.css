@@ -283,6 +283,10 @@
   white-space: nowrap;
 }
 
+.petSprite {
+  image-rendering: pixelated;
+}
+
 .petName {
   margin: 0 0 8px;
   font-size: clamp(0.9rem, 1.8vw, 1.18rem);
