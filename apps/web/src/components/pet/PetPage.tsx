@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useMachine } from "@xstate/react";
 import { PATHS } from "../../constants/paths";
 import { ApiError } from "../../lib/api/client";
 import { GopherSprite } from "../shared/GopherSprite";
@@ -8,102 +9,21 @@ import {
   PET_TRAINING_COSTS,
   startPetBattle,
   trainPet,
-  type BattleOpponent,
-  type BattleResult,
-  type MyPetsResponse,
   type PetSummary,
   type PetTrainingStat,
 } from "../../features/pet/api";
 import { consumeGrantedPet } from "../../features/pet/guildGrant";
+import { petPageMachine } from "../../features/pet/petPageMachine";
+import {
+  sampleBattleResult,
+  sampleCurrentPet,
+  sampleOpponents,
+} from "../../features/pet/sampleData";
 import styles from "./PetPage.module.css";
 
 interface PetPageProps {
   onNavigate: (path: string) => void;
 }
-
-const sampleCurrentPet: PetSummary = {
-  id: "sample_pet_go",
-  guildId: "guild_go",
-  guildName: "Go",
-  name: "Gopher",
-  species: "gopher",
-  attribute: "Go",
-  level: 4,
-  exp: 40,
-  maxHp: 35,
-  power: 6,
-  guard: 5,
-  speed: 7,
-  acquiredAt: "2026-05-23T00:00:00Z",
-};
-
-const sampleOpponents: BattleOpponent[] = [
-  {
-    userId: "sample_user_rust",
-    playerName: "FerrisBlade",
-    pet: {
-      id: "sample_pet_rust",
-      guildId: "guild_rust",
-      guildName: "Rust",
-      name: "Ferris",
-      species: "crab",
-      attribute: "Rust",
-      level: 3,
-      exp: 20,
-      maxHp: 32,
-      power: 7,
-      guard: 6,
-      speed: 4,
-      acquiredAt: "2026-05-23T00:00:00Z",
-    },
-  },
-  {
-    userId: "sample_user_python",
-    playerName: "PyRunner",
-    pet: {
-      id: "sample_pet_python",
-      guildId: "guild_python",
-      guildName: "Python",
-      name: "Py",
-      species: "python",
-      attribute: "Python",
-      level: 5,
-      exp: 80,
-      maxHp: 40,
-      power: 5,
-      guard: 4,
-      speed: 8,
-      acquiredAt: "2026-05-23T00:00:00Z",
-    },
-  },
-];
-
-const sampleBattleResult: BattleResult = {
-  result: "win",
-  turns: [
-    {
-      turn: 1,
-      actorPetId: "sample_pet_go",
-      targetPetId: "sample_pet_rust",
-      damage: 7,
-      message: "Gopher君の先制攻撃！ Ferris に 7 ダメージ。",
-    },
-    {
-      turn: 2,
-      actorPetId: "sample_pet_rust",
-      targetPetId: "sample_pet_go",
-      damage: 4,
-      message: "Ferris の反撃。Gopher君は 4 ダメージを受けた。",
-    },
-    {
-      turn: 3,
-      actorPetId: "sample_pet_go",
-      targetPetId: "sample_pet_rust",
-      damage: 9,
-      message: "Gopher君の会心アタック！ 勝負あり。",
-    },
-  ],
-};
 
 function petDisplayName(pet: PetSummary | null | undefined) {
   if (!pet) return "相棒未選択";
@@ -123,24 +43,28 @@ function apiWaitingMessage(error: unknown, fallback: string) {
 }
 
 export function PetPage({ onNavigate }: PetPageProps) {
-  const [data, setData] = useState<MyPetsResponse | null>(null);
-  const [opponents, setOpponents] = useState<BattleOpponent[]>([]);
-  const [selectedOpponentId, setSelectedOpponentId] = useState<string | null>(null);
-  const [battleResult, setBattleResult] = useState<BattleResult | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isTraining, setIsTraining] = useState<PetTrainingStat | null>(null);
-  const [isBattling, setIsBattling] = useState(false);
+  const [snapshot, send] = useMachine(petPageMachine);
+  const {
+    data,
+    opponents,
+    selectedOpponentId,
+    battleResult,
+    statusMessage,
+    noticeMessage,
+    trainingStat,
+  } = snapshot.context;
+  const isLoading = snapshot.matches("loading");
+  const isTraining = snapshot.matches("training");
+  const isBattling = snapshot.matches("battling");
 
   useEffect(() => {
     const grantedPet = consumeGrantedPet();
     if (grantedPet) {
       const guildName = grantedPet.guildId === "guild_go" ? "Goギルド" : "所属ギルド";
       const petName = grantedPet.attribute === "go" ? "Gopher君" : grantedPet.attribute;
-      setNoticeMessage(`${guildName}の相棒「${petName}」が仲間になった！`);
+      send({ type: "NOTICE", message: `${guildName}の相棒「${petName}」が仲間になった！` });
     }
-  }, []);
+  }, [send]);
 
   useEffect(() => {
     let isMounted = true;
@@ -148,45 +72,45 @@ export function PetPage({ onNavigate }: PetPageProps) {
     fetchMyPets()
       .then((result) => {
         if (!isMounted) return;
-        setData(result);
+        send({ type: "LOAD_SUCCESS", data: result });
       })
       .catch((error) => {
         if (!isMounted) return;
         console.error("failed to fetch pets", error);
         if (import.meta.env.DEV) {
-          setData({
-            cpBalance: 120,
-            currentGuildPet: sampleCurrentPet,
-            pets: [sampleCurrentPet],
+          send({
+            type: "LOAD_SUCCESS",
+            data: {
+              cpBalance: 120,
+              currentGuildPet: sampleCurrentPet,
+              pets: [sampleCurrentPet],
+            },
+            statusMessage: "API未接続のため、画面確認用サンプルを表示しています。",
           });
-          setStatusMessage("API未接続のため、画面確認用サンプルを表示しています。");
           return;
         }
-        setStatusMessage("ペット情報を取得できませんでした。");
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
+        send({ type: "LOAD_FAILURE", message: "ペット情報を取得できませんでした。" });
       });
 
     fetchBattleOpponents()
       .then((result) => {
         if (!isMounted) return;
-        setOpponents(result);
-        setSelectedOpponentId(result[0]?.userId ?? null);
+        send({ type: "OPPONENTS_SUCCESS", opponents: result });
       })
       .catch((error) => {
         if (!isMounted) return;
         console.info("battle opponents are not available yet", error);
         if (import.meta.env.DEV) {
-          setOpponents(sampleOpponents);
-          setSelectedOpponentId(sampleOpponents[0]?.userId ?? null);
+          send({ type: "OPPONENTS_SUCCESS", opponents: sampleOpponents });
+          return;
         }
+        send({ type: "OPPONENTS_FAILURE" });
       });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [send]);
 
   const currentPet = data?.currentGuildPet ?? null;
   const selectedOpponent = useMemo(
@@ -198,60 +122,51 @@ export function PetPage({ onNavigate }: PetPageProps) {
     if (!currentPet || isTraining) return;
     const training = PET_TRAINING_COSTS[stat];
     if ((data?.cpBalance ?? 0) < training.cost) {
-      setStatusMessage("CPが足りません");
+      send({ type: "INSUFFICIENT_CP" });
       return;
     }
 
-    setIsTraining(stat);
-    setStatusMessage(null);
+    send({ type: "TRAIN", stat });
     try {
       const result = await trainPet(currentPet.id, stat);
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          cpBalance: result.cpAfter,
-          currentGuildPet: result.pet,
-          pets: prev.pets.map((pet) => (pet.id === result.pet.id ? result.pet : pet)),
-        };
+      send({
+        type: "TRAIN_SUCCESS",
+        result,
+        message: `${PET_TRAINING_COSTS[result.increasedStat].label} が ${result.increasedBy} 上がった！ CP: ${result.cpBefore} → ${result.cpAfter}`,
       });
-      setStatusMessage(
-        `${PET_TRAINING_COSTS[result.increasedStat].label} が ${result.increasedBy} 上がった！ CP: ${result.cpBefore} → ${result.cpAfter}`,
-      );
     } catch (error) {
       console.error("failed to train pet", error);
-      setStatusMessage(
-        apiWaitingMessage(error, "育成に失敗しました。少し時間を置いて再度お試しください。"),
-      );
-    } finally {
-      setIsTraining(null);
+      send({
+        type: "TRAIN_FAILURE",
+        message: apiWaitingMessage(
+          error,
+          "育成に失敗しました。少し時間を置いて再度お試しください。",
+        ),
+      });
     }
   };
 
   const battle = async () => {
     if (!selectedOpponent || isBattling) return;
 
-    setIsBattling(true);
-    setStatusMessage(null);
-    setBattleResult(null);
+    send({ type: "BATTLE" });
     try {
       if (import.meta.env.DEV && selectedOpponent.userId.startsWith("sample_")) {
         await new Promise((resolve) => window.setTimeout(resolve, 650));
-        setBattleResult(sampleBattleResult);
+        send({ type: "BATTLE_SUCCESS", result: sampleBattleResult });
         return;
       }
       const result = await startPetBattle(selectedOpponent.userId);
-      setBattleResult(result);
+      send({ type: "BATTLE_SUCCESS", result });
     } catch (error) {
       console.error("failed to start pet battle", error);
-      setStatusMessage(
-        apiWaitingMessage(
+      send({
+        type: "BATTLE_FAILURE",
+        message: apiWaitingMessage(
           error,
           "バトルを開始できませんでした。少し時間を置いて再度お試しください。",
         ),
-      );
-    } finally {
-      setIsBattling(false);
+      });
     }
   };
 
@@ -312,12 +227,14 @@ export function PetPage({ onNavigate }: PetPageProps) {
                     return (
                       <button
                         className={styles.actionButton}
-                        disabled={isTraining !== null || lacksCP}
+                        disabled={isTraining || lacksCP}
                         key={stat}
                         type="button"
                         onClick={() => void train(stat)}
                       >
-                        {training.label} +{training.amount} / {training.cost} CP
+                        {trainingStat === stat
+                          ? "TRAINING..."
+                          : `${training.label} +${training.amount} / ${training.cost} CP`}
                       </button>
                     );
                   })}
@@ -360,7 +277,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
                   className={styles.opponentItem}
                   key={opponent.userId}
                   type="button"
-                  onClick={() => setSelectedOpponentId(opponent.userId)}
+                  onClick={() => send({ type: "SELECT_OPPONENT", userId: opponent.userId })}
                 >
                   <span className={styles.itemTitle}>{opponent.playerName}</span>
                   <span className={styles.itemText}>
