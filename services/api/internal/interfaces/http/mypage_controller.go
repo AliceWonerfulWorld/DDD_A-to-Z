@@ -78,13 +78,25 @@ func (c *MypageController) toResponse(data mypageapp.MyPageData) map[string]any 
 		langSummary = map[string]int{}
 	}
 
+	username := data.User.GitHubAccount.Username
+	avatarURL := data.User.GitHubAccount.AvatarURL
+	if data.Profile != nil {
+		if data.Profile.DisplayName != "" {
+			username = data.Profile.DisplayName
+		}
+		if data.Profile.AvatarURL != "" {
+			avatarURL = data.Profile.AvatarURL
+		}
+	}
+
 	resp := map[string]any{
 		"user": map[string]any{
-			"id":         data.User.ID,
-			"github_id":  data.User.GitHubAccount.GitHubID,
-			"username":   data.User.GitHubAccount.Username,
-			"avatar_url": data.User.GitHubAccount.AvatarURL,
-			"created_at": data.User.CreatedAt.Format(time.RFC3339),
+			"id":                data.User.ID,
+			"github_id":         data.User.GitHubAccount.GitHubID,
+			"username":          username,
+			"avatar_url":        avatarURL,
+			"github_avatar_url": data.User.GitHubAccount.AvatarURL,
+			"created_at":        data.User.CreatedAt.Format(time.RFC3339),
 		},
 		"contribution_points": map[string]any{
 			"balance":      data.CP.Balance,

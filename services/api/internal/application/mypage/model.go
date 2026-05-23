@@ -14,6 +14,13 @@ type MyPageData struct {
 	Repositories RepositorySummary
 	GitHubStats  *GitHubStats
 	Guild        *GuildInfo
+	Profile      *ProfileInfo
+}
+
+// ProfileInfo holds the user's custom profile settings.
+type ProfileInfo struct {
+	DisplayName string
+	AvatarURL   string
 }
 
 // CPSummary holds the current balance and lifetime earn/spend totals.
