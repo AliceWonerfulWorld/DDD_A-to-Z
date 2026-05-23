@@ -124,7 +124,7 @@ export function WarMap({ onNavigate }: WarMapProps) {
         playSe(guildScoutSeRef.current);
         return guild;
       });
-      
+
       if (typeof window !== "undefined" && window.innerWidth <= 768) {
         setIsRankingOpen(false);
       }
