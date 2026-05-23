@@ -4,9 +4,9 @@ import type { GuildSummary } from "./HomeHud";
 import { HomeFirstVisitGuide } from "./HomeFirstVisitGuide";
 import { HomeNav } from "./HomeNav";
 import { ReturnTitleDialog } from "./ReturnTitleDialog";
-import { AudioTogglePanel } from "../shared/AudioTogglePanel";
 import { WalkingGopher } from "./WalkingGopher";
 import { PATHS } from "../../constants/paths";
+import styles from "./Home.module.css";
 import { useHomeAudio } from "../../hooks/useHomeAudio";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { fetchMyGuild } from "../../features/guild/api";
@@ -227,8 +227,6 @@ export function Home({ onNavigate }: HomeProps) {
         }}
       />
 
-      <AudioTogglePanel position="bottom-left" />
-
       <div
         style={{
           position: "relative",
@@ -259,11 +257,7 @@ export function Home({ onNavigate }: HomeProps) {
 
         <section
           aria-label="Character placement area"
-          style={{
-            position: "relative",
-            minHeight: "clamp(96px, 20svh, 360px)",
-            overflow: "visible",
-          }}
+          className={styles.characterArea}
         >
           <WalkingGopher onTalk={playGopherTalk} />
         </section>

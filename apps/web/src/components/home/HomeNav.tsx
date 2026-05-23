@@ -1,5 +1,6 @@
 import { motion, type Variants } from "framer-motion";
 import { steppedEase } from "../../lib/animationUtils";
+import styles from "./Home.module.css";
 
 interface HomeNavItem {
   label: string;
@@ -27,13 +28,7 @@ export function HomeNav({
   return (
     <nav
       aria-label="Main navigation"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
-        gap: "14px",
-        width: "min(100%, 1240px)",
-        justifySelf: "center",
-      }}
+      className={styles.nav}
     >
       {items.map((item, index) => (
         <motion.button
@@ -46,7 +41,6 @@ export function HomeNav({
           whileTap={{ y: 2, scale: 0.98 }}
           onClick={() => onNavigate(item.path)}
           style={{
-            minHeight: "86px",
             border: `3px solid ${item.accent}`,
             borderBottomColor: "rgba(0,0,0,0.75)",
             borderRightColor: "rgba(0,0,0,0.75)",
@@ -55,9 +49,9 @@ export function HomeNav({
             color: "#fff8d7",
             cursor: "pointer",
             fontFamily: "inherit",
-            padding: "16px 18px",
             textAlign: "left",
           }}
+          className={styles.navButton}
         >
           <span
             style={{

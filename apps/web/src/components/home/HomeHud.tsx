@@ -1,6 +1,8 @@
 import { motion, type Variants } from "framer-motion";
 import type { ReactNode } from "react";
 import { steppedEase } from "../../lib/animationUtils";
+import { AudioTogglePanel } from "../shared/AudioTogglePanel";
+import styles from "./Home.module.css";
 
 interface PlayerSummary {
   name: string;
@@ -31,41 +33,37 @@ const panelVariants: Variants = {
   },
 };
 
-function HudPanel({ align = "left", children }: { align?: "left" | "right"; children: ReactNode }) {
+function HudPanel({
+  align = "left",
+  children,
+  className = "",
+}: {
+  align?: "left" | "right";
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <motion.section
+      className={`${styles.hudPanel} ${className}`}
       variants={panelVariants}
       initial="hidden"
       animate="visible"
-      style={{
-        width: "min(100%, 360px)",
-        border: "3px solid rgba(255, 215, 0, 0.72)",
-        borderBottomColor: "rgba(111, 79, 28, 0.95)",
-        borderRightColor: "rgba(111, 79, 28, 0.95)",
-        background: "rgba(3, 10, 24, 0.72)",
-        boxShadow: "0 0 0 2px rgba(0,0,0,0.78), 8px 8px 0 rgba(0,0,0,0.45)",
-        color: "#f4ecd0",
-        padding: "14px 16px",
-        textAlign: align,
-        backdropFilter: "blur(2px)",
-      }}
+      style={{ textAlign: align }}
     >
       {children}
     </motion.section>
   );
 }
 
-function LabelValue({ label, value }: { label: string; value: string | number }) {
+function LabelValue({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(78px, max-content) 1fr",
-        gap: "12px",
-        alignItems: "baseline",
-        minHeight: "28px",
-      }}
-    >
+    <div className={styles.labelRow}>
       <span
         style={{
           color: "rgba(244, 236, 208, 0.62)",
@@ -91,11 +89,14 @@ function LabelValue({ label, value }: { label: string; value: string | number })
 
 function ExpBar({ player }: { player: PlayerSummary }) {
   const levelRange = Math.max(1, player.nextLevelTotalCp - player.levelTotalCp);
-  const earnedInLevel = Math.max(0, player.lifetimeTotalEarnedCp - player.levelTotalCp);
+  const earnedInLevel = Math.max(
+    0,
+    player.lifetimeTotalEarnedCp - player.levelTotalCp,
+  );
   const pct = Math.min(100, Math.max(0, (earnedInLevel / levelRange) * 100));
 
   return (
-    <div style={{ display: "grid", gap: "6px", marginTop: "2px" }}>
+    <div className={styles.expBar}>
       <div
         aria-label={`EXP ${earnedInLevel.toLocaleString()} / ${levelRange.toLocaleString()} CP`}
         role="progressbar"
@@ -140,9 +141,10 @@ function ExpBar({ player }: { player: PlayerSummary }) {
   );
 }
 
-function TitleButton({ onClick }: { onClick: () => void }) {
+function TitleButton({ onClick, className = "" }: { onClick: () => void; className?: string }) {
   return (
     <motion.button
+      className={className}
       type="button"
       variants={panelVariants}
       initial="hidden"
@@ -212,7 +214,13 @@ function GuildEmblem({ accent, icon }: { accent: string; icon: string }) {
   );
 }
 
-function GuildMembership({ guild }: { guild: GuildSummary | null | undefined }) {
+function GuildMembership({
+  guild,
+  className = "",
+}: {
+  guild: GuildSummary | null | undefined;
+  className?: string;
+}) {
   const accent = guild?.accent ?? "#f4ecd0";
   const icon = guild?.icon ?? "--";
   const name = guild === undefined ? "確認中" : (guild?.name ?? "未所属");
@@ -222,7 +230,7 @@ function GuildMembership({ guild }: { guild: GuildSummary | null | undefined }) 
       : (guild?.rank ?? "Guild Base から所属先を選択");
 
   return (
-    <HudPanel>
+    <HudPanel className={className}>
       <div
         style={{
           display: "flex",
@@ -279,34 +287,16 @@ export function HomeHud({
   player: PlayerSummary;
 }) {
   return (
-    <header
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: "18px",
-        flexWrap: "wrap",
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gap: "12px",
-          width: "min(100%, 360px)",
-        }}
-      >
-        <HudPanel>
+    <header className={styles.hudHeader}>
+      <div className={styles.hudLeft}>
+        <HudPanel className={styles.playerInfoPanel}>
           <div
-            style={{
-              color: "#ffd700",
-              fontSize: "0.64rem",
-              lineHeight: 1.6,
-              marginBottom: "10px",
-            }}
+            className={styles.sectionHeader}
+            style={{ color: "#ffd700" }}
           >
             PLAYER INFO
           </div>
-          <div style={{ display: "grid", gap: "6px" }}>
+          <div className={styles.infoGrid}>
             <LabelValue label="NAME" value={player.name} />
             <LabelValue label="TITLE" value={player.title} />
             <LabelValue label="LEVEL" value={`LV.${player.level}`} />
@@ -318,25 +308,37 @@ export function HomeHud({
           </div>
         </HudPanel>
 
-        <GuildMembership guild={guild} />
+        <GuildMembership guild={guild} className={styles.guildPanel} />
 
-        <TitleButton onClick={onReturnTitle} />
+        <div
+          className={styles.titleBtn}
+          style={{
+            display: "flex",
+            gap: "12px",
+            alignItems: "flex-start",
+          }}
+        >
+          <AudioTogglePanel position="bottom-left" inlineOnMobile={true} />
+          <TitleButton onClick={onReturnTitle} />
+        </div>
       </div>
 
-      <HudPanel align="right">
+      <HudPanel align="right" className={styles.contribPanel}>
         <div
-          style={{
-            color: "#00f5ff",
-            fontSize: "0.64rem",
-            lineHeight: 1.6,
-            marginBottom: "10px",
-          }}
+          className={styles.sectionHeader}
+          style={{ color: "#00f5ff" }}
         >
           CONTRIBUTION POINT
         </div>
-        <div style={{ display: "grid", gap: "6px" }}>
-          <LabelValue label="TOTAL CP" value={player.totalCp.toLocaleString()} />
-          <LabelValue label="TODAY CP" value={`+${player.todayCp.toLocaleString()}`} />
+        <div className={styles.infoGrid}>
+          <LabelValue
+            label="TOTAL CP"
+            value={player.totalCp.toLocaleString()}
+          />
+          <LabelValue
+            label="TODAY CP"
+            value={`+${player.todayCp.toLocaleString()}`}
+          />
           <LabelValue
             label="EXP"
             value={`${player.lifetimeTotalEarnedCp.toLocaleString()} / ${player.nextLevelTotalCp.toLocaleString()}`}
