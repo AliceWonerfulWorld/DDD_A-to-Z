@@ -10,3 +10,4 @@
 /storage/framework/views
 /storage/logs
 .phpunit.cache
+.phpunit.result.cache

@@ -7,11 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class Guild extends Model
 {
     protected $table = 'guilds';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
-    // id・slug は作成後 immutable なので fillable に含めない
     protected $fillable = [
+        'id',
+        'slug',
         'name',
         'description',
         'icon',
@@ -20,10 +23,10 @@ class Guild extends Model
     ];
 
     protected $casts = [
-        'sort_order'  => 'integer',
+        'sort_order' => 'integer',
         'current_exp' => 'integer',
         'guild_level' => 'integer',
-        'created_at'  => 'datetime',
-        'updated_at'  => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 }
