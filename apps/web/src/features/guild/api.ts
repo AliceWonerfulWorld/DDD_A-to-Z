@@ -30,6 +30,7 @@ export interface GuildMemberContribution {
   user_id: string;
   name: string;
   total_earned_cp: number;
+  total_contributed_cp: number;
   joined_at: string;
 }
 

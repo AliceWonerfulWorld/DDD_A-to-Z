@@ -18,7 +18,7 @@ interface GuildMember {
   id: string;
   name: string;
   avatar: string;
-  totalEarnedCp: number;
+  totalContributedCp: number;
   isCurrentUser?: boolean;
 }
 
@@ -43,7 +43,7 @@ function toGuildMember(member: GuildMemberContribution, currentUserID?: string):
     id: member.user_id,
     name: member.name,
     avatar: member.user_id === currentUserID ? "YOU" : memberInitials(member.name),
-    totalEarnedCp: member.total_earned_cp,
+    totalContributedCp: member.total_contributed_cp,
     isCurrentUser: member.user_id === currentUserID,
   };
 }
@@ -316,7 +316,7 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
                     <strong className={styles.memberName}>{member.name}</strong>
                   </div>
                   <strong className={styles.memberCp}>
-                    {member.totalEarnedCp.toLocaleString()} CP
+                    {(member.totalContributedCp || 0).toLocaleString()} CP
                   </strong>
                 </motion.article>
               ))}

@@ -47,10 +47,11 @@ type MembershipWithGuild struct {
 }
 
 type MemberContribution struct {
-	UserID        user.ID
-	Name          string
-	TotalEarnedCP int64
-	JoinedAt      time.Time
+	UserID             user.ID
+	Name               string
+	TotalEarnedCP      int64
+	TotalContributedCP int64
+	JoinedAt           time.Time
 }
 
 type ActivityLog struct {
@@ -173,6 +174,9 @@ func NewMemberContribution(member MemberContribution) (MemberContribution, error
 	}
 	if member.TotalEarnedCP < 0 {
 		return MemberContribution{}, errors.New("guild member total earned cp cannot be negative")
+	}
+	if member.TotalContributedCP < 0 {
+		return MemberContribution{}, errors.New("guild member total contributed cp cannot be negative")
 	}
 	if member.JoinedAt.IsZero() {
 		return MemberContribution{}, errors.New("guild member joined at is required")
