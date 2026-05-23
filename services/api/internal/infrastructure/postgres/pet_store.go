@@ -10,7 +10,6 @@ import (
 	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // PetStore provides read-only queries for player pets.
@@ -136,7 +135,6 @@ func (s *PetStore) FindPetByIDForUser(ctx context.Context, petID petdomain.ID, u
 func (s *PetStore) UpdatePet(ctx context.Context, pet petdomain.Pet) error {
 	result := s.db.WithContext(ctx).
 		Table("player_pets").
-		Clauses(clause.Returning{}).
 		Where("id = ? AND user_id = ?", pet.ID, pet.UserID).
 		Updates(map[string]any{
 			"vitality":   pet.Stats.Vitality,
