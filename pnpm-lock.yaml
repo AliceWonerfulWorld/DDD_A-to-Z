@@ -156,6 +156,8 @@ importers:
 
   services/chat: {}
 
+  services/loadtest-d: {}
+
 packages:
 
   '@babel/code-frame@7.29.0':

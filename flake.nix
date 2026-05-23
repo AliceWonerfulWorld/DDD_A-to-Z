@@ -18,12 +18,15 @@
           packages = [
             pkgs.atlas
             pkgs.buf
+            pkgs.dfmt
             pkgs.docker
             pkgs.docker-compose
+            pkgs.dub
             pkgs.elixir
             pkgs.erlang
             pkgs.git
             pkgs.golangci-lint
+            pkgs.ldc
             pkgs.nodejs_24
             pkgs.google-cloud-sdk
             pkgs.opentofu

@@ -133,6 +133,8 @@ apps/
   web/          React + Vite の最小フロントエンド
 services/
   api/          Go の最小 HTTP API
+  chat/         Elixir / Phoenix のチャットサービス
+  loadtest-d/   Dlang の defensive load testing CLI
 docs/           企画・技術・アーキテクチャ資料
 ```
 

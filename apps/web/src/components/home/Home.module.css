@@ -1,0 +1,194 @@
+/* ─── Mobile overrides for Home screen ─── */
+
+/* HomeHud header wrapper */
+.hudHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+/* Left column: PLAYER INFO + GUILD + TITLE button */
+.hudLeft {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 360px);
+}
+
+/* Individual HUD panel */
+.hudPanel {
+  width: min(100%, 360px);
+  border: 3px solid rgba(255, 215, 0, 0.72);
+  border-bottom-color: rgba(111, 79, 28, 0.95);
+  border-right-color: rgba(111, 79, 28, 0.95);
+  background: rgba(3, 10, 24, 0.72);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.78),
+    8px 8px 0 rgba(0, 0, 0, 0.45);
+  color: #f4ecd0;
+  padding: 14px 16px;
+  backdrop-filter: blur(2px);
+}
+
+/* Section header (e.g. "PLAYER INFO", "CONTRIBUTION POINT") */
+.sectionHeader {
+  font-size: 0.64rem;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+/* Grid container for LabelValue rows */
+.infoGrid {
+  display: grid;
+  gap: 6px;
+}
+
+/* LabelValue row */
+.labelRow {
+  display: grid;
+  grid-template-columns: minmax(78px, max-content) 1fr;
+  gap: 12px;
+  align-items: baseline;
+  min-height: 28px;
+}
+
+/* ExpBar wrapper */
+.expBar {
+  display: grid;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* Character area */
+.characterArea {
+  position: relative;
+  min-height: clamp(96px, 20svh, 360px);
+  overflow: visible;
+}
+
+/* Bottom nav */
+.nav {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 14px;
+  width: min(100%, 1240px);
+  justify-self: center;
+}
+
+.navButton {
+  min-height: 86px;
+  padding: 16px 18px;
+}
+
+/* ─── Mobile: ≤ 768px ─── */
+
+@media (max-width: 768px) {
+  .hudHeader {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "player player"
+      "guild contrib"
+      "title title";
+    gap: 10px;
+  }
+
+  /* Grid areas for reordering on mobile */
+  .playerInfoPanel {
+    grid-area: player;
+  }
+  .guildPanel {
+    grid-area: guild;
+  }
+  .contribPanel {
+    grid-area: contrib;
+  }
+  .titleBtn {
+    grid-area: title;
+  }
+
+  .hudLeft {
+    display: contents; /* removes the wrapper from layout so children join the grid */
+  }
+
+  .hudPanel {
+    width: 100%;
+    padding: 8px 10px;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.78),
+      4px 4px 0 rgba(0, 0, 0, 0.45);
+  }
+
+  .sectionHeader {
+    font-size: 0.56rem;
+    margin-bottom: 4px;
+  }
+
+  .infoGrid {
+    gap: 2px;
+  }
+
+  .labelRow {
+    grid-template-columns: minmax(56px, max-content) 1fr;
+    gap: 6px;
+    min-height: 20px;
+  }
+
+  .expBar {
+    gap: 3px;
+    margin-top: 1px;
+  }
+
+  .characterArea {
+    min-height: clamp(48px, 10svh, 120px);
+  }
+
+  .nav {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .navButton {
+    min-height: 56px;
+    padding: 10px 10px;
+  }
+}
+
+/* ─── Small mobile: ≤ 480px ─── */
+
+@media (max-width: 480px) {
+  .hudPanel {
+    padding: 6px 8px;
+  }
+
+  .sectionHeader {
+    font-size: 0.5rem;
+    margin-bottom: 3px;
+  }
+
+  .infoGrid {
+    gap: 1px;
+  }
+
+  .labelRow {
+    grid-template-columns: minmax(48px, max-content) 1fr;
+    gap: 4px;
+    min-height: 18px;
+  }
+
+  .expBar {
+    gap: 2px;
+    margin-top: 0;
+  }
+
+  .nav {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .navButton {
+    min-height: 48px;
+    padding: 8px 8px;
+  }
+}
