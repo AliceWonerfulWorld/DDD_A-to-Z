@@ -79,6 +79,16 @@ function statValue(pet: PetSummary, stat: PetTrainingStat) {
   return pet[stat];
 }
 
+function levelProgress(pet: PetSummary) {
+  const expToNextLevel = Math.max(100, pet.level * 100);
+  const currentExp = Math.max(0, Math.min(pet.exp, expToNextLevel));
+  return {
+    currentExp,
+    expToNextLevel,
+    percentage: Math.round((currentExp / expToNextLevel) * 100),
+  };
+}
+
 function apiWaitingMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError && error.status === 404) {
     return "この操作は API 実装待ちです。画面と client の接続口だけ先に用意しています。";
@@ -304,12 +314,11 @@ export function PetPage({ onNavigate }: PetPageProps) {
                     <div className={styles.meta}>
                       <span className={styles.chip}>{selectedPet.guildName} Guild</span>
                       <span className={styles.chip}>{selectedPet.attribute}</span>
-                      <span className={styles.chip}>Lv {selectedPet.level}</span>
                       {selectedPet.id === data.currentGuildPet?.id && (
                         <span className={styles.chip}>CURRENT GUILD</span>
                       )}
-                      <span className={styles.chip}>CP {data.cpBalance}</span>
                     </div>
+                    <PetStatusPanel pet={selectedPet} cpBalance={data.cpBalance} />
                     <PetStats pet={selectedPet} />
                   </div>
                 </div>
@@ -414,6 +423,33 @@ export function PetPage({ onNavigate }: PetPageProps) {
         </motion.div>
       </motion.div>
     </motion.main>
+  );
+}
+
+function PetStatusPanel({ pet, cpBalance }: { pet: PetSummary; cpBalance: number }) {
+  const progress = levelProgress(pet);
+
+  return (
+    <div className={styles.statusGrid} aria-label="ペット育成ステータス">
+      <div className={`${styles.statusCard} ${styles.levelCard}`}>
+        <div className={styles.statusHeader}>
+          <span className={styles.statusLabel}>CURRENT LV</span>
+          <span className={styles.levelBadge}>Lv {pet.level}</span>
+        </div>
+        <div className={styles.expTrack} aria-label={`次のレベルまで ${progress.percentage}%`}>
+          <span className={styles.expFill} style={{ width: `${progress.percentage}%` }} />
+        </div>
+        <p className={styles.statusHelp}>
+          NEXT {progress.expToNextLevel - progress.currentExp} EXP
+        </p>
+      </div>
+
+      <div className={`${styles.statusCard} ${styles.cpCard}`}>
+        <span className={styles.statusLabel}>OWNED CP</span>
+        <strong className={styles.cpValue}>{cpBalance}</strong>
+        <span className={styles.statusHelp}>TRAINING RESOURCE</span>
+      </div>
+    </div>
   );
 }
 

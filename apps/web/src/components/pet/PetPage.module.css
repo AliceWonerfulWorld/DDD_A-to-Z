@@ -225,7 +225,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: clamp(8px, 1.2svh, 12px);
+  margin-bottom: clamp(10px, 1.4svh, 14px);
 }
 
 .chip {
@@ -235,6 +235,106 @@
   font-size: 0.56rem;
   line-height: 1.45;
   padding: 5px 8px;
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(132px, 0.75fr);
+  gap: 10px;
+  margin-bottom: clamp(10px, 1.5svh, 14px);
+}
+
+.statusCard {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(116, 247, 161, 0.48);
+  background:
+    linear-gradient(135deg, rgba(116, 247, 161, 0.18), transparent 48%),
+    linear-gradient(180deg, rgba(13, 47, 54, 0.94), rgba(10, 24, 42, 0.96));
+  box-shadow:
+    inset 0 0 18px rgba(116, 247, 161, 0.1),
+    0 0 16px rgba(116, 247, 161, 0.12);
+  min-height: 86px;
+  padding: 12px;
+}
+
+.statusCard::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(255, 248, 215, 0.08);
+  pointer-events: none;
+}
+
+.cpCard {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  border-color: rgba(255, 217, 102, 0.58);
+  background:
+    linear-gradient(135deg, rgba(255, 217, 102, 0.2), transparent 50%),
+    linear-gradient(180deg, rgba(58, 42, 18, 0.92), rgba(18, 28, 44, 0.96));
+  box-shadow:
+    inset 0 0 18px rgba(255, 217, 102, 0.12),
+    0 0 16px rgba(255, 217, 102, 0.13);
+}
+
+.statusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.statusLabel {
+  color: rgba(255, 248, 215, 0.68);
+  font-size: 0.46rem;
+  line-height: 1.5;
+}
+
+.levelBadge {
+  color: #74f7a1;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  text-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(116, 247, 161, 0.3);
+}
+
+.expTrack {
+  height: 14px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 248, 215, 0.2);
+  background: rgba(3, 10, 18, 0.72);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.54);
+}
+
+.expFill {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  background: linear-gradient(90deg, #74f7a1, #6bb7ff);
+  box-shadow: 0 0 14px rgba(116, 247, 161, 0.38);
+}
+
+.statusHelp {
+  position: relative;
+  z-index: 1;
+  margin: 9px 0 0;
+  color: rgba(255, 248, 215, 0.78);
+  font-family: "DotGothic16", monospace;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.cpValue {
+  color: #ffd966;
+  font-size: clamp(1rem, 2.4vw, 1.46rem);
+  line-height: 1.2;
+  text-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.62),
+    0 0 14px rgba(255, 217, 102, 0.32);
 }
 
 .statsGrid {
@@ -449,7 +549,8 @@
   }
 
   .statsGrid,
-  .trainingGrid {
+  .trainingGrid,
+  .statusGrid {
     grid-template-columns: 1fr;
   }
 }
