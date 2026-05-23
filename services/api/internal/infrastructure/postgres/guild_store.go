@@ -233,15 +233,21 @@ func (s *GuildStore) ListActiveMembersByGuild(ctx context.Context, guildID guild
 			COALESCE(SUM(pl.amount) FILTER (
 				WHERE pl.point_type_code = ? AND pl.language = ? AND pl.type = ?
 			), 0) AS total_earned_cp,
+			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
 			gm.joined_at
 		FROM guild_memberships gm
 		JOIN github_accounts ga ON ga.user_id = gm.user_id
 		LEFT JOIN user_profiles up ON up.user_id = gm.user_id
 		LEFT JOIN point_ledger pl ON pl.user_id = gm.user_id
+		LEFT JOIN (
+			SELECT guild_id, user_id, SUM(amount) AS total_contributed_cp
+			FROM guild_cp_contributions
+			GROUP BY guild_id, user_id
+		) gcc ON gcc.user_id = gm.user_id AND gcc.guild_id = gm.guild_id
 		WHERE gm.guild_id = ?
 			AND gm.left_at IS NULL
-		GROUP BY gm.user_id, up.display_name, ga.username, gm.joined_at
-		ORDER BY total_earned_cp DESC, LOWER(COALESCE(up.display_name, ga.username)) ASC, gm.joined_at ASC
+		GROUP BY gm.user_id, up.display_name, ga.username, gm.joined_at, gcc.total_contributed_cp
+		ORDER BY total_contributed_cp DESC, LOWER(COALESCE(up.display_name, ga.username)) ASC, gm.joined_at ASC
 	`, contributionpointdomain.PointTypeCP.Code, contributionpointdomain.PointTypeCP.Language, contributionpointdomain.EntryTypeEarn, guildID).Scan(&records).Error; err != nil {
 		return nil, err
 	}
@@ -565,18 +571,20 @@ type playerPetRecord struct {
 }
 
 type guildMemberContributionRecord struct {
-	UserID        user.ID   `gorm:"column:user_id"`
-	Name          string    `gorm:"column:name"`
-	TotalEarnedCP int64     `gorm:"column:total_earned_cp"`
-	JoinedAt      time.Time `gorm:"column:joined_at"`
+	UserID             user.ID   `gorm:"column:user_id"`
+	Name               string    `gorm:"column:name"`
+	TotalEarnedCP      int64     `gorm:"column:total_earned_cp"`
+	TotalContributedCP int64     `gorm:"column:total_contributed_cp"`
+	JoinedAt           time.Time `gorm:"column:joined_at"`
 }
 
 func (r guildMemberContributionRecord) toDomain() (guilddomain.MemberContribution, error) {
 	return guilddomain.NewMemberContribution(guilddomain.MemberContribution{
-		UserID:        r.UserID,
-		Name:          r.Name,
-		TotalEarnedCP: r.TotalEarnedCP,
-		JoinedAt:      r.JoinedAt,
+		UserID:             r.UserID,
+		Name:               r.Name,
+		TotalEarnedCP:      r.TotalEarnedCP,
+		TotalContributedCP: r.TotalContributedCP,
+		JoinedAt:           r.JoinedAt,
 	})
 }
 

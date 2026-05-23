@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -36,6 +37,9 @@ func (c *PetController) getMyPets(w stdhttp.ResponseWriter, r *stdhttp.Request) 
 
 	data, err := c.usecase.GetMyPets(r.Context(), cookie.Value)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
 		c.writeError(w, err)
 		return
 	}
@@ -89,6 +93,8 @@ func (c *PetController) writeError(w stdhttp.ResponseWriter, err error) {
 		writeAPIError(w, stdhttp.StatusConflict, "insufficient_cp", "CP balance is not enough to train this pet.", 0, nil)
 	case errors.Is(err, petapp.ErrPetNotFound):
 		writeAPIError(w, stdhttp.StatusNotFound, "pet_not_found", "pet_not_found", 0, nil)
+	case errors.Is(err, context.Canceled):
+		return
 	default:
 		c.logger.Error("pets request failed", "error", err)
 		writeAPIError(w, stdhttp.StatusInternalServerError, "internal_error", "Internal Server Error", 0, nil)

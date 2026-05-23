@@ -6,6 +6,7 @@ import {
   fetchGuildActivityLogs,
   fetchMyGuild,
   type GuildActivityLog,
+  type GuildMemberContribution,
 } from "../../features/guild/api";
 import { connectChat, type GuildChatMessage } from "../../features/chat/api";
 import type { ChatConnection } from "../../features/chat/api";
@@ -96,6 +97,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
   const [chatView, setChatView] = useState<ChatView>("closed");
   const [logs, setLogs] = useState<ActivityLog[]>(import.meta.env.DEV ? INITIAL_LOGS : []);
   const [currentGuild, setCurrentGuild] = useState<DisplayGuild | null>(null);
+  const [members, setMembers] = useState<GuildMemberContribution[]>([]);
   const [isCurrentGuildLoaded, setIsCurrentGuildLoaded] = useState(false);
   const [chatMessages, setChatMessages] = useState<GuildChatMessage[]>([]);
   const chatConnectionRef = useRef<ChatConnection | null>(null);
@@ -143,6 +145,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
         }
 
         setCurrentGuild(toDisplayGuild(data.guild));
+        setMembers(data.members ?? []);
       })
       .catch((error) => {
         if (!isMounted) {
@@ -312,6 +315,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
           tabs={GUILD_TABS}
           layoutStyle={currentLayoutProps.monitor}
           isMobile={deviceLayout === "mobile"}
+          members={members}
         />
       </div>
 

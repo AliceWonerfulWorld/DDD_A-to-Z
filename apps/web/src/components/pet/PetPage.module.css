@@ -1,0 +1,455 @@
+.screen {
+  height: 100svh;
+  min-height: 100svh;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(9, 20, 34, 0.34), rgba(6, 13, 24, 0.62)),
+    url("/pixel-town-day.png");
+  background-position: center;
+  background-size: cover;
+  color: #fff8d7;
+  font-family: "Press Start 2P", "DotGothic16", monospace;
+  image-rendering: pixelated;
+}
+
+.shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(10px, 1.8svh, 18px);
+  height: 100svh;
+  width: min(1220px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: clamp(10px, 1.8svh, 18px) 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  border: 3px solid rgba(255, 217, 102, 0.74);
+  border-bottom-color: rgba(92, 76, 34, 0.96);
+  border-right-color: rgba(92, 76, 34, 0.96);
+  background: linear-gradient(180deg, rgba(21, 37, 58, 0.9), rgba(10, 22, 39, 0.94));
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.5),
+    6px 6px 0 rgba(0, 0, 0, 0.22);
+  padding: clamp(10px, 1.5svh, 14px) clamp(14px, 2.4vw, 22px);
+  backdrop-filter: blur(2px);
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: #74f7a1;
+  font-size: 0.52rem;
+  line-height: 1.5;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(0.95rem, 1.6vw, 1.24rem);
+  line-height: 1.5;
+  text-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.72),
+    0 0 14px rgba(255, 248, 215, 0.32);
+}
+
+.backButton,
+.actionButton,
+.battleButton,
+.smallButton {
+  border: 2px solid rgba(255, 248, 215, 0.72);
+  border-bottom-color: rgba(30, 40, 58, 0.94);
+  border-right-color: rgba(30, 40, 58, 0.94);
+  background: rgba(18, 31, 52, 0.94);
+  color: #fff8d7;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.backButton {
+  min-width: 112px;
+  padding: 10px 12px;
+  font-size: 0.58rem;
+  box-shadow: 0 0 16px rgba(255, 248, 215, 0.14);
+}
+
+.notice {
+  border: 3px solid rgba(116, 247, 161, 0.8);
+  border-bottom-color: rgba(8, 40, 22, 0.96);
+  border-right-color: rgba(8, 40, 22, 0.96);
+  background: rgba(4, 22, 16, 0.9);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.76),
+    7px 7px 0 rgba(0, 0, 0, 0.34);
+  color: #f7ffe4;
+  font-size: 0.68rem;
+  line-height: 1.75;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+}
+
+.layout {
+  display: grid;
+  grid-template-areas:
+    "training owned"
+    "training battle";
+  grid-template-columns: minmax(0, 1.24fr) minmax(360px, 0.86fr);
+  grid-template-rows: minmax(0, 0.58fr) minmax(218px, 0.42fr);
+  gap: clamp(10px, 1.7svh, 16px);
+  min-height: 0;
+  align-items: stretch;
+}
+
+.panel {
+  min-height: 0;
+  overflow: hidden;
+  border: 3px solid rgba(255, 217, 102, 0.82);
+  border-bottom-color: rgba(92, 76, 34, 0.96);
+  border-right-color: rgba(92, 76, 34, 0.96);
+  background:
+    linear-gradient(180deg, rgba(21, 37, 58, 0.9), rgba(10, 22, 39, 0.94)), rgba(13, 29, 48, 0.92);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.54),
+    7px 7px 0 rgba(0, 0, 0, 0.24),
+    inset 0 0 28px rgba(255, 255, 255, 0.035);
+  padding: clamp(12px, 1.8vw, 18px);
+  backdrop-filter: blur(2px);
+}
+
+.trainingPanel {
+  grid-area: training;
+}
+
+.ownedPanel {
+  grid-area: owned;
+}
+
+.battlePanel {
+  grid-area: battle;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(8px, 1.2svh, 12px);
+}
+
+.panelTitle {
+  margin: 0 0 clamp(8px, 1.2svh, 12px);
+  color: #ffd966;
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.currentPet {
+  display: grid;
+  grid-template-columns: minmax(112px, 164px) minmax(0, 1fr);
+  gap: clamp(12px, 1.6vw, 18px);
+  align-items: center;
+}
+
+.spriteStage {
+  display: grid;
+  min-height: clamp(132px, 23svh, 172px);
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 78%, rgba(116, 247, 161, 0.14), transparent 46%),
+    rgba(15, 30, 48, 0.78);
+  border: 2px solid rgba(255, 248, 215, 0.24);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.28);
+}
+
+.placeholderPortrait {
+  --pet-tone: #74f7a1;
+  position: relative;
+  display: grid;
+  width: min(148px, 88%);
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 4px solid color-mix(in srgb, var(--pet-tone) 64%, #fff8d7);
+  background:
+    radial-gradient(
+      circle at 50% 34%,
+      color-mix(in srgb, var(--pet-tone) 34%, transparent),
+      transparent 42%
+    ),
+    linear-gradient(180deg, rgba(255, 248, 215, 0.1), rgba(0, 0, 0, 0.18)), rgba(18, 31, 52, 0.92);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.54),
+    inset 0 0 24px color-mix(in srgb, var(--pet-tone) 24%, transparent),
+    0 0 18px color-mix(in srgb, var(--pet-tone) 22%, transparent);
+}
+
+.placeholderAura {
+  position: absolute;
+  inset: 18%;
+  border: 2px solid color-mix(in srgb, var(--pet-tone) 62%, #fff8d7);
+  background: color-mix(in srgb, var(--pet-tone) 15%, transparent);
+  transform: rotate(45deg);
+}
+
+.placeholderFace {
+  position: relative;
+  z-index: 1;
+  color: #fff8d7;
+  font-size: clamp(1.55rem, 3.4vw, 2.45rem);
+  line-height: 1;
+  text-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.72),
+    0 0 16px color-mix(in srgb, var(--pet-tone) 55%, transparent);
+}
+
+.placeholderName {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  z-index: 1;
+  overflow: hidden;
+  color: rgba(255, 248, 215, 0.86);
+  font-family: "DotGothic16", monospace;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.petName {
+  margin: 0 0 8px;
+  font-size: clamp(0.9rem, 1.8vw, 1.18rem);
+  line-height: 1.6;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: clamp(8px, 1.2svh, 12px);
+}
+
+.chip {
+  border: 1px solid rgba(255, 248, 215, 0.28);
+  background: rgba(255, 248, 215, 0.12);
+  color: rgba(255, 248, 215, 0.94);
+  font-size: 0.56rem;
+  line-height: 1.45;
+  padding: 5px 8px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.statCell {
+  background: rgba(255, 248, 215, 0.08);
+  border: 1px solid rgba(255, 248, 215, 0.18);
+  padding: clamp(8px, 1.2svh, 11px);
+}
+
+.statLabel {
+  display: block;
+  color: rgba(255, 248, 215, 0.74);
+  font-size: 0.5rem;
+  line-height: 1.4;
+  margin-bottom: 7px;
+}
+
+.statValue {
+  color: #fff8d7;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.trainingGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(8px, 1.2svh, 10px);
+  margin-top: clamp(10px, 1.4svh, 14px);
+}
+
+.actionButton,
+.battleButton,
+.smallButton {
+  min-height: clamp(42px, 6.4svh, 54px);
+  padding: 8px 12px;
+  font-size: 0.52rem;
+}
+
+.actionButton {
+  background: linear-gradient(180deg, rgba(21, 53, 84, 0.96), rgba(9, 26, 48, 0.96));
+  border-color: rgba(159, 214, 255, 0.78);
+  box-shadow:
+    inset 0 0 16px rgba(86, 166, 255, 0.08),
+    0 0 14px rgba(86, 166, 255, 0.16);
+}
+
+.battleButton {
+  min-height: clamp(44px, 6.8svh, 56px);
+  background: linear-gradient(180deg, rgba(90, 38, 44, 0.96), rgba(37, 20, 35, 0.98));
+  border-color: rgba(255, 127, 116, 0.82);
+  box-shadow:
+    inset 0 0 20px rgba(255, 95, 86, 0.12),
+    0 0 18px rgba(255, 95, 86, 0.18);
+  font-size: 0.62rem;
+}
+
+.actionButton:disabled,
+.battleButton:disabled,
+.smallButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.list {
+  display: grid;
+  gap: clamp(8px, 1.2svh, 10px);
+  min-height: 0;
+}
+
+.ownedPanel .list {
+  max-height: calc(100% - 42px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.opponentList {
+  display: grid;
+  align-content: start;
+  gap: clamp(8px, 1.2svh, 10px);
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.petListItem,
+.opponentItem,
+.logItem {
+  border: 2px solid rgba(255, 248, 215, 0.16);
+  background: rgba(255, 248, 215, 0.07);
+  padding: clamp(10px, 1.4svh, 14px);
+}
+
+.petListItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  color: #fff8d7;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.petListItem[aria-selected="true"] {
+  border-color: #74f7a1;
+  background: linear-gradient(90deg, rgba(116, 247, 161, 0.18), rgba(255, 248, 215, 0.08));
+  box-shadow:
+    inset 0 0 18px rgba(116, 247, 161, 0.14),
+    0 0 16px rgba(116, 247, 161, 0.16);
+}
+
+.petListBadges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.itemTitle {
+  margin: 0 0 6px;
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+
+.itemText,
+.message {
+  margin: 0;
+  color: rgba(255, 248, 215, 0.82);
+  font-family: "DotGothic16", monospace;
+  font-size: clamp(0.78rem, 1.15vw, 0.9rem);
+  line-height: 1.55;
+}
+
+.opponentItem {
+  display: grid;
+  gap: 10px;
+  min-height: 74px;
+  color: #fff8d7;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+
+.opponentItem[aria-selected="true"] {
+  border-color: #6bb7ff;
+  background: linear-gradient(90deg, rgba(107, 183, 255, 0.2), rgba(255, 248, 215, 0.08));
+  box-shadow:
+    inset 0 0 18px rgba(107, 183, 255, 0.14),
+    0 0 16px rgba(107, 183, 255, 0.18);
+}
+
+.battleResult {
+  margin-top: 12px;
+}
+
+.battleActions {
+  display: grid;
+}
+
+@media (max-width: 860px) {
+  .screen {
+    height: auto;
+    overflow: auto;
+  }
+
+  .shell {
+    height: auto;
+    min-height: 100svh;
+    grid-template-rows: auto auto;
+    padding: 12px 0;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "training"
+      "owned"
+      "battle";
+    grid-template-rows: none;
+  }
+
+  .panel {
+    overflow: visible;
+  }
+
+  .ownedPanel .list,
+  .opponentList {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .currentPet {
+    grid-template-columns: 1fr;
+  }
+
+  .spriteStage {
+    min-height: 150px;
+  }
+}
+
+@media (max-width: 520px) {
+  .header {
+    display: grid;
+    gap: 12px;
+  }
+
+  .statsGrid,
+  .trainingGrid {
+    grid-template-columns: 1fr;
+  }
+}

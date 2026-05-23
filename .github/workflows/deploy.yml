@@ -6,18 +6,12 @@ permissions:
 
 on:
   workflow_dispatch:
-  push:
+  workflow_run:
+    workflows: ["CI DB"]
+    types:
+      - completed
     branches:
       - main
-    paths:
-      - ".github/workflows/deploy.yml"
-      - "services/api/**"
-      - "services/chat/**"
-      - "proto/**"
-      - "gen/go/**"
-      - "db/**"
-      - "go.work"
-      - "go.work.sum"
 
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
@@ -32,6 +26,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -53,6 +48,7 @@ jobs:
       - name: Run DB migrations
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: nix develop -c ./scripts/atlas.sh migrate apply --env prod
 
       # Artifact Registry に push するため Docker を認証

@@ -170,10 +170,10 @@ function getLockedFogGradient(
 
 function getLockedAreaLabelPosition(level: number) {
   const positionByLevel: Record<number, { x: number; y: number }> = {
-    2: { x: 62, y: 30 },
-    3: { x: 76, y: 44 },
-    4: { x: 30, y: 18 },
-    5: { x: 83, y: 82 },
+    2: { x: 74, y: 36 }, // Light blue ring (radius 32-46)
+    3: { x: 17, y: 69 }, // Purple ring (radius 46-60)
+    4: { x: 16, y: 16 }, // Orange ring (radius 60-74)
+    5: { x: 90, y: 90 }, // Pink ring (radius 74-88)
   };
 
   return positionByLevel[level] ?? { x: 76, y: 50 };

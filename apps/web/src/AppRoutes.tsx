@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router";
 import App from "./App.tsx";
+import { BattlePage } from "./components/battle/BattlePage.tsx";
 import { ContributionAnalysis } from "./components/analysis/ContributionAnalysis.tsx";
 import { GuildDashboard } from "./components/guild-dashboard/GuildDashboard.tsx";
 import { MyGuildDetails } from "./components/guild-details/MyGuildDetails.tsx";
@@ -7,7 +8,9 @@ import { GuildSelection } from "./components/guild-selection/GuildSelection.tsx"
 import { GuildTown } from "./components/guild-town/GuildTown.tsx";
 import { Home } from "./components/home/Home.tsx";
 import { MyPage } from "./components/my-page/MyPage.tsx";
+import { PetPage } from "./components/pet/PetPage.tsx";
 import { InitialProfile } from "./components/profile/InitialProfile.tsx";
+import { TechNews } from "./components/tech-news/TechNews.tsx";
 import { GuildBgm } from "./components/shared/GuildBgm.tsx";
 import { HomeBgm } from "./components/shared/HomeBgm.tsx";
 import { WarMap } from "./components/war-map/WarMap.tsx";
@@ -24,7 +27,11 @@ export function AppRoutes() {
     location.pathname === PATHS.GUILD_SELECT ||
     location.pathname === PATHS.GUILD_DETAILS ||
     location.pathname === PATHS.GUILD_MY_GUILD;
-  const usesSharedHomeBgm = location.pathname === PATHS.HOME || location.pathname === PATHS.MY_PAGE;
+  const usesSharedHomeBgm =
+    location.pathname === PATHS.HOME ||
+    location.pathname === PATHS.MY_PAGE ||
+    location.pathname === PATHS.PETS ||
+    location.pathname === PATHS.BATTLE;
   const completeInitialProfile = async (username: string) => {
     if (username.trim() === "") return;
 
@@ -59,6 +66,8 @@ export function AppRoutes() {
         />
         <Route path={PATHS.HOME} element={<Home onNavigate={navigate} />} />
         <Route path={PATHS.MY_PAGE} element={<MyPage onNavigate={navigate} />} />
+        <Route path={PATHS.PETS} element={<PetPage onNavigate={navigate} />} />
+        <Route path={PATHS.BATTLE} element={<BattlePage onNavigate={navigate} />} />
         <Route path={PATHS.GUILD} element={<GuildDashboard onNavigate={navigate} />} />
         <Route
           path={PATHS.GUILD_SELECT}
@@ -67,6 +76,7 @@ export function AppRoutes() {
         <Route path={PATHS.GUILD_DETAILS} element={<MyGuildDetails onNavigate={navigate} />} />
         <Route path={PATHS.GUILD_MY_GUILD} element={<MyGuildDetails onNavigate={navigate} />} />
         <Route path={PATHS.GUILD_TOWN} element={<GuildTown onNavigate={navigate} />} />
+        <Route path={PATHS.GUILD_TECH_NEWS} element={<TechNews onNavigate={navigate} />} />
         <Route path={PATHS.WAR} element={<WarMap onNavigate={navigate} />} />
         <Route path="*" element={<Navigate to={PATHS.ROOT} replace />} />
       </Routes>
