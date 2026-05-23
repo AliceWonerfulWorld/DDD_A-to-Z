@@ -6,6 +6,7 @@ import (
 
 	petapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/pet"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
+	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"gorm.io/gorm"
 )
@@ -77,22 +78,42 @@ func (s *PetStore) ListPetsByUser(ctx context.Context, userID user.ID) ([]petapp
 }
 
 type playerPetWithGuildRecord struct {
-	playerPetRecord
-	Slug               string    `gorm:"column:slug"`
-	Name               string    `gorm:"column:name"`
-	Description        string    `gorm:"column:description"`
-	Icon               string    `gorm:"column:icon"`
-	Color              string    `gorm:"column:color"`
-	SortOrder          int       `gorm:"column:sort_order"`
-	MemberCount        int64     `gorm:"column:member_count"`
-	TotalContributedCP int64     `gorm:"column:total_contributed_cp"`
-	GuildExperience    int64     `gorm:"column:guild_experience"`
-	GuildCreatedAt     time.Time `gorm:"column:guild_created_at"`
-	GuildUpdatedAt     time.Time `gorm:"column:guild_updated_at"`
+	ID                 petdomain.ID        `gorm:"column:id"`
+	UserID             user.ID             `gorm:"column:user_id"`
+	GuildID            guilddomain.ID      `gorm:"column:guild_id"`
+	Attribute          petdomain.Attribute `gorm:"column:attribute"`
+	Vitality           int                 `gorm:"column:vitality"`
+	Strength           int                 `gorm:"column:strength"`
+	Agility            int                 `gorm:"column:agility"`
+	CreatedAt          time.Time           `gorm:"column:created_at"`
+	UpdatedAt          time.Time           `gorm:"column:updated_at"`
+	Slug               string              `gorm:"column:slug"`
+	Name               string              `gorm:"column:name"`
+	Description        string              `gorm:"column:description"`
+	Icon               string              `gorm:"column:icon"`
+	Color              string              `gorm:"column:color"`
+	SortOrder          int                 `gorm:"column:sort_order"`
+	MemberCount        int64               `gorm:"column:member_count"`
+	TotalContributedCP int64               `gorm:"column:total_contributed_cp"`
+	GuildExperience    int64               `gorm:"column:guild_experience"`
+	GuildCreatedAt     time.Time           `gorm:"column:guild_created_at"`
+	GuildUpdatedAt     time.Time           `gorm:"column:guild_updated_at"`
 }
 
 func (r playerPetWithGuildRecord) toApplicationModel() (petapp.PetWithGuild, error) {
-	foundPet, err := r.toDomain()
+	foundPet, err := petdomain.NewPet(petdomain.Pet{
+		ID:        r.ID,
+		UserID:    r.UserID,
+		GuildID:   r.GuildID,
+		Attribute: r.Attribute,
+		Stats: petdomain.Stats{
+			Vitality: r.Vitality,
+			Strength: r.Strength,
+			Agility:  r.Agility,
+		},
+		CreatedAt: r.CreatedAt,
+		UpdatedAt: r.UpdatedAt,
+	})
 	if err != nil {
 		return petapp.PetWithGuild{}, err
 	}
