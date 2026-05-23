@@ -54,3 +54,8 @@ type BadgeReader interface {
 type BadgeGrantingChecker interface {
 	CheckAndGrantBadges(ctx context.Context, userID user.ID, conditionType badgedomain.ConditionType, value int64) (int, error)
 }
+
+// SelectedBadgeReader reads the user's selected badge slug from their profile.
+type SelectedBadgeReader interface {
+	GetSelectedBadgeSlug(ctx context.Context, userID user.ID) (*string, error)
+}

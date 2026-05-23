@@ -92,6 +92,15 @@ func (s *stubBadgeReader) ListUserBadges(_ context.Context, _ user.ID) ([]mypage
 	return s.badges, s.err
 }
 
+type stubSelectedBadgeReader struct {
+	slug *string
+	err  error
+}
+
+func (s *stubSelectedBadgeReader) GetSelectedBadgeSlug(_ context.Context, _ user.ID) (*string, error) {
+	return s.slug, s.err
+}
+
 // --- tests ---
 
 func TestGetMyPage_EmptyToken(t *testing.T) {
@@ -104,6 +113,7 @@ func TestGetMyPage_EmptyToken(t *testing.T) {
 		&stubGuildMembershipReader{},
 		&stubBadgeReader{},
 		nil,
+		&stubSelectedBadgeReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "")
@@ -122,6 +132,7 @@ func TestGetMyPage_SessionNotFound(t *testing.T) {
 		&stubGuildMembershipReader{},
 		&stubBadgeReader{},
 		nil,
+		&stubSelectedBadgeReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "invalid-token")
@@ -155,6 +166,7 @@ func TestGetMyPage_Success(t *testing.T) {
 		&stubGuildMembershipReader{},
 		&stubBadgeReader{},
 		nil,
+		&stubSelectedBadgeReader{},
 	)
 
 	result, err := uc.GetMyPage(context.Background(), "valid-token")
@@ -195,6 +207,7 @@ func TestGetMyPage_CPError(t *testing.T) {
 		&stubGuildMembershipReader{},
 		&stubBadgeReader{},
 		nil,
+		&stubSelectedBadgeReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "valid-token")
@@ -216,6 +229,7 @@ func TestGetMyPage_RepoError(t *testing.T) {
 		&stubGuildMembershipReader{},
 		&stubBadgeReader{},
 		nil,
+		&stubSelectedBadgeReader{},
 	)
 
 	_, err := uc.GetMyPage(context.Background(), "valid-token")

@@ -9,12 +9,13 @@ import (
 // It gathers user profile, contribution-point summary, repository summary,
 // and guild information into a single structure.
 type MyPageData struct {
-	User         user.User
-	CP           CPSummary
-	Repositories RepositorySummary
-	GitHubStats  *GitHubStats
-	Guild        *GuildInfo
-	Badges       []BadgeSummary
+	User              user.User
+	CP                CPSummary
+	Repositories      RepositorySummary
+	GitHubStats       *GitHubStats
+	Guild             *GuildInfo
+	Badges            []BadgeSummary
+	SelectedBadgeSlug *string
 }
 
 // CPSummary holds the current balance and lifetime earn/spend totals.

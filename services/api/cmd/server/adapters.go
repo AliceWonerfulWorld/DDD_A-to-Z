@@ -161,3 +161,19 @@ func (c *mypageBadgeGrantingChecker) CheckAndGrantBadges(ctx context.Context, us
 	}
 	return len(results), nil
 }
+
+type mypageSelectedBadgeReader struct {
+	inner interface {
+		GetSelectedBadgeSlug(ctx context.Context, userID user.ID) (*string, error)
+	}
+}
+
+func newMypageSelectedBadgeReader(inner interface {
+	GetSelectedBadgeSlug(ctx context.Context, userID user.ID) (*string, error)
+}) *mypageSelectedBadgeReader {
+	return &mypageSelectedBadgeReader{inner: inner}
+}
+
+func (r *mypageSelectedBadgeReader) GetSelectedBadgeSlug(ctx context.Context, userID user.ID) (*string, error) {
+	return r.inner.GetSelectedBadgeSlug(ctx, userID)
+}

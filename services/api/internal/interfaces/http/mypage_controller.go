@@ -107,7 +107,8 @@ func (c *MypageController) toResponse(data mypageapp.MyPageData) map[string]any 
 			"language_summary": langSummary,
 			"recent":           recent,
 		},
-		"badges": badges,
+		"badges":              badges,
+		"selected_badge_slug": data.SelectedBadgeSlug,
 	}
 
 	if data.GitHubStats != nil {

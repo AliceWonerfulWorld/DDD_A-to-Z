@@ -94,6 +94,14 @@ func (s *stubMypageBadgeReader) ListUserBadges(_ context.Context, _ user.ID) ([]
 	return s.badges, nil
 }
 
+type stubMypageSelectedBadgeReader struct {
+	slug *string
+}
+
+func (s *stubMypageSelectedBadgeReader) GetSelectedBadgeSlug(_ context.Context, _ user.ID) (*string, error) {
+	return s.slug, nil
+}
+
 // --- tests ---
 
 func TestMypageController_NoCookie(t *testing.T) {
@@ -106,6 +114,7 @@ func TestMypageController_NoCookie(t *testing.T) {
 		&stubMypageGuildMembershipReader{},
 		&stubMypageBadgeReader{},
 		nil,
+		&stubMypageSelectedBadgeReader{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)
@@ -148,6 +157,7 @@ func TestMypageController_Success(t *testing.T) {
 		&stubMypageGuildMembershipReader{},
 		&stubMypageBadgeReader{},
 		nil,
+		&stubMypageSelectedBadgeReader{},
 	)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	controller := httpapi.NewMypageController(uc, logger)

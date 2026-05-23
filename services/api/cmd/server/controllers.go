@@ -136,6 +136,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		mypageapp.NewGuildMembershipReader(guildStore),
 		newMypageBadgeReader(badgeStore),
 		newMypageBadgeGrantingChecker(badgeUseCase),
+		newMypageSelectedBadgeReader(profileStore),
 	)
 	petUseCase := petapp.NewUseCase(
 		authStore,
@@ -184,7 +185,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 			guildTown:  httpapi.NewGuildTownController(guildTownUseCase, logger),
 			mypage:     httpapi.NewMypageController(mypageUseCase, logger),
 			pet:        httpapi.NewPetController(petUseCase, logger),
-			profile:    httpapi.NewProfileController(profileUseCase, logger),
+			profile:    httpapi.NewProfileController(profileUseCase, profileStore, logger),
 			analysis:   httpapi.NewAnalysisController(newAnalysisGuard(analysisUseCase, authStore), badgeUseCase, mypageStore, authStore, logger),
 			home:       httpapi.NewHomeController(homeUseCase, logger),
 			sp:         httpapi.NewSPController(spUseCase, logger),

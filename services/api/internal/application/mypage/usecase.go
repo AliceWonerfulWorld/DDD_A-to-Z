@@ -22,6 +22,7 @@ type UseCase struct {
 	guild                GuildMembershipReader
 	badges               BadgeReader
 	badgeGrantingChecker BadgeGrantingChecker
+	selectedBadge        SelectedBadgeReader
 	now                  func() time.Time
 }
 
@@ -34,6 +35,7 @@ func NewUseCase(
 	guild GuildMembershipReader,
 	badges BadgeReader,
 	badgeGrantingChecker BadgeGrantingChecker,
+	selectedBadge SelectedBadgeReader,
 ) *UseCase {
 	return &UseCase{
 		current:              current,
@@ -44,6 +46,7 @@ func NewUseCase(
 		guild:                guild,
 		badges:               badges,
 		badgeGrantingChecker: badgeGrantingChecker,
+		selectedBadge:        selectedBadge,
 		now:                  time.Now,
 	}
 }
@@ -126,6 +129,16 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 		}
 	}
 
+	var selectedBadgeSlug *string
+	if u.selectedBadge != nil {
+		slug, slugErr := u.selectedBadge.GetSelectedBadgeSlug(ctx, appUser.ID)
+		if slugErr != nil {
+			slog.WarnContext(ctx, "failed to get selected badge slug", "error", slugErr, "user_id", appUser.ID)
+		} else {
+			selectedBadgeSlug = slug
+		}
+	}
+
 	return MyPageData{
 		User: appUser,
 		CP: CPSummary{
@@ -133,9 +146,10 @@ func (u *UseCase) GetMyPage(ctx context.Context, sessionToken string) (MyPageDat
 			TotalEarned: totalEarned,
 			TotalSpent:  totalSpent,
 		},
-		Repositories: repoSummary,
-		GitHubStats:  ghStats,
-		Guild:        guildInfo,
-		Badges:       badgeSummaries,
+		Repositories:      repoSummary,
+		GitHubStats:       ghStats,
+		Guild:             guildInfo,
+		Badges:            badgeSummaries,
+		SelectedBadgeSlug: selectedBadgeSlug,
 	}, nil
 }
