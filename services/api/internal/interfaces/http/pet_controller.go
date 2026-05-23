@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	stdhttp "net/http"
@@ -24,6 +25,7 @@ func NewPetController(usecase *petapp.UseCase, logger *slog.Logger) *PetControll
 // RegisterRoutes registers the /pets/me route.
 func (c *PetController) RegisterRoutes(mux *stdhttp.ServeMux) {
 	mux.HandleFunc("GET /pets/me", c.getMyPets)
+	mux.HandleFunc("POST /pets/{petId}/train", c.trainPet)
 }
 
 func (c *PetController) getMyPets(w stdhttp.ResponseWriter, r *stdhttp.Request) {
@@ -47,10 +49,50 @@ func (c *PetController) getMyPets(w stdhttp.ResponseWriter, r *stdhttp.Request) 
 	}
 }
 
+func (c *PetController) trainPet(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		c.writeError(w, petapp.ErrUnauthenticated)
+		return
+	}
+
+	var request struct {
+		Stat string `json:"stat"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_request", "Invalid request body", 0, nil)
+		return
+	}
+
+	result, err := c.usecase.TrainPet(r.Context(), petapp.TrainPetCommand{
+		SessionToken: cookie.Value,
+		PetID:        r.PathValue("petId"),
+		Stat:         request.Stat,
+	})
+	if err != nil {
+		c.writeError(w, err)
+		return
+	}
+
+	if err := writeJSON(w, stdhttp.StatusOK, map[string]any{
+		"pet":       petToResponse(result.Pet),
+		"spentCp":   result.SpentCP,
+		"cpBalance": result.CPBalance,
+	}); err != nil {
+		c.logger.Error("failed to write pet training response", "error", err)
+	}
+}
+
 func (c *PetController) writeError(w stdhttp.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, petapp.ErrUnauthenticated):
 		writeAPIError(w, stdhttp.StatusUnauthorized, "unauthenticated", "unauthenticated", 0, nil)
+	case errors.Is(err, petapp.ErrInvalidTrainStat):
+		writeAPIError(w, stdhttp.StatusBadRequest, "invalid_training_stat", "invalid_training_stat", 0, nil)
+	case errors.Is(err, petapp.ErrInsufficientCP):
+		writeAPIError(w, stdhttp.StatusConflict, "insufficient_cp", "CP balance is not enough to train this pet.", 0, nil)
+	case errors.Is(err, petapp.ErrPetNotFound):
+		writeAPIError(w, stdhttp.StatusNotFound, "pet_not_found", "pet_not_found", 0, nil)
 	case errors.Is(err, context.Canceled):
 		return
 	default:
