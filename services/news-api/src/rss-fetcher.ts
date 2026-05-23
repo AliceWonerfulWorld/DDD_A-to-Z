@@ -1,7 +1,6 @@
 import Parser from "rss-parser";
 import {
   SLUG_FEEDS,
-  CACHE_TTL_MS,
   type GuildSlug,
   type TechNewsItem,
 } from "./constants";
@@ -31,9 +30,18 @@ export async function fetchNews(slug: GuildSlug): Promise<TechNewsItem[]> {
 
       for (const entry of feed.items ?? []) {
         if (items.length >= 20) break;
-        if (!entry.link || seen.has(entry.link)) continue;
+        if (!entry.link) continue;
         if (!entry.title) continue;
-        seen.add(entry.link);
+        let normalizedUrl: string;
+        try {
+          const parsed = new URL(entry.link);
+          if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+          normalizedUrl = parsed.href;
+        } catch {
+          continue;
+        }
+        if (seen.has(normalizedUrl)) continue;
+        seen.add(normalizedUrl);
 
         const summary = entry.contentSnippet
           ? entry.contentSnippet.length > 300
@@ -46,7 +54,7 @@ export async function fetchNews(slug: GuildSlug): Promise<TechNewsItem[]> {
 
         items.push({
           title: entry.title,
-          url: entry.link,
+          url: normalizedUrl,
           source: feed.title ?? url,
           summary,
           publishedAt,
