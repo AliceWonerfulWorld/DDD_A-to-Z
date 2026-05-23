@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	petapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/pet"
+	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
@@ -48,6 +50,57 @@ type stubCurrentGuildReader struct {
 
 func (s *stubCurrentGuildReader) FindActiveMembershipByUserID(_ context.Context, _ user.ID) (guilddomain.MembershipWithGuild, bool, error) {
 	return s.membership, s.found, s.err
+}
+
+type stubPetTrainingRepository struct {
+	petWithGuild petapp.PetWithGuild
+	found        bool
+	updated      *petdomain.Pet
+}
+
+func (s *stubPetTrainingRepository) FindPetByIDForUser(_ context.Context, petID petdomain.ID, userID user.ID) (petapp.PetWithGuild, bool, error) {
+	if !s.found || s.petWithGuild.Pet.ID != petID || s.petWithGuild.Pet.UserID != userID {
+		return petapp.PetWithGuild{}, false, nil
+	}
+	return s.petWithGuild, true, nil
+}
+
+func (s *stubPetTrainingRepository) UpdatePet(_ context.Context, pet petdomain.Pet) error {
+	s.updated = &pet
+	return nil
+}
+
+type stubCPSpender struct {
+	balance int64
+	spent   *contributionpointapp.SpendCommand
+}
+
+func (s *stubCPSpender) Spend(_ context.Context, command contributionpointapp.SpendCommand) (contributionpointdomain.LedgerEntry, error) {
+	if s.balance < command.Amount {
+		return contributionpointdomain.LedgerEntry{}, contributionpointapp.ErrInsufficientBalance
+	}
+	s.spent = &command
+	s.balance -= command.Amount
+	return contributionpointdomain.LedgerEntry{
+		ID:           "point_ledger_1",
+		UserID:       command.UserID,
+		PointType:    command.PointType,
+		Amount:       -command.Amount,
+		Type:         contributionpointdomain.EntryTypeSpend,
+		Reason:       command.Reason,
+		SourceType:   command.SourceType,
+		SourceID:     command.SourceID,
+		BalanceAfter: s.balance,
+		CreatedAt:    time.Date(2026, 5, 23, 1, 0, 0, 0, time.UTC),
+	}, nil
+}
+
+type stubIDGenerator struct {
+	id string
+}
+
+func (g stubIDGenerator) NewID() (string, error) {
+	return g.id, nil
 }
 
 func TestGetMyPetsEmptyToken(t *testing.T) {
@@ -144,6 +197,106 @@ func TestGetMyPetsPetReaderError(t *testing.T) {
 	_, err := uc.GetMyPets(context.Background(), "valid-token")
 	if !errors.Is(err, petErr) {
 		t.Fatalf("expected petErr, got %v", err)
+	}
+}
+
+func TestTrainPetSuccess(t *testing.T) {
+	now := time.Date(2026, 5, 23, 0, 0, 0, 0, time.UTC)
+	testUser := user.User{ID: "user_1"}
+	goGuild := mustGuild(t, "guild_go", "go", "Go", now)
+	goPet := mustPet(t, "pet_go", testUser.ID, "guild_go", petdomain.AttributeGo, petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7}, now)
+	pets := &stubPetTrainingRepository{petWithGuild: petapp.PetWithGuild{Pet: goPet, Guild: goGuild}, found: true}
+	cp := &stubCPSpender{balance: 120}
+	uc := petapp.NewUseCaseWithTraining(
+		&stubCurrentUser{user: testUser, found: true},
+		&stubCPBalanceReader{},
+		&stubPetReader{},
+		&stubCurrentGuildReader{},
+		pets,
+		cp,
+		stubIDGenerator{id: "pet_training_1"},
+		nil,
+	)
+
+	result, err := uc.TrainPet(context.Background(), petapp.TrainPetCommand{
+		SessionToken: "valid-token",
+		PetID:        "pet_go",
+		Stat:         "power",
+	})
+	if err != nil {
+		t.Fatalf("TrainPet() error = %v", err)
+	}
+	if result.SpentCP != 10 || result.CPBalance != 110 {
+		t.Fatalf("result = %+v, 期待値 spent 10 balance 110", result)
+	}
+	if result.Pet.Power != 7 {
+		t.Fatalf("Power = %d, 期待値 7", result.Pet.Power)
+	}
+	if pets.updated == nil || pets.updated.Stats.Strength != 8 {
+		t.Fatalf("updated pet = %+v, 期待値 strength 8", pets.updated)
+	}
+	if cp.spent == nil || cp.spent.Reason != "pet_training_power" || cp.spent.SourceID != "pet_training_1" {
+		t.Fatalf("spent command = %+v", cp.spent)
+	}
+}
+
+func TestTrainPetInvalidStat(t *testing.T) {
+	uc := petapp.NewUseCaseWithTraining(&stubCurrentUser{found: true}, &stubCPBalanceReader{}, &stubPetReader{}, &stubCurrentGuildReader{}, &stubPetTrainingRepository{}, &stubCPSpender{}, stubIDGenerator{id: "pet_training_1"}, nil)
+
+	_, err := uc.TrainPet(context.Background(), petapp.TrainPetCommand{SessionToken: "valid-token", PetID: "pet_go", Stat: "luck"})
+	if !errors.Is(err, petapp.ErrInvalidTrainStat) {
+		t.Fatalf("error = %v, 期待値 ErrInvalidTrainStat", err)
+	}
+}
+
+func TestTrainPetInsufficientCPDoesNotUpdatePet(t *testing.T) {
+	now := time.Date(2026, 5, 23, 0, 0, 0, 0, time.UTC)
+	testUser := user.User{ID: "user_1"}
+	goGuild := mustGuild(t, "guild_go", "go", "Go", now)
+	goPet := mustPet(t, "pet_go", testUser.ID, "guild_go", petdomain.AttributeGo, petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7}, now)
+	pets := &stubPetTrainingRepository{petWithGuild: petapp.PetWithGuild{Pet: goPet, Guild: goGuild}, found: true}
+	uc := petapp.NewUseCaseWithTraining(
+		&stubCurrentUser{user: testUser, found: true},
+		&stubCPBalanceReader{},
+		&stubPetReader{},
+		&stubCurrentGuildReader{},
+		pets,
+		&stubCPSpender{balance: 5},
+		stubIDGenerator{id: "pet_training_1"},
+		nil,
+	)
+
+	_, err := uc.TrainPet(context.Background(), petapp.TrainPetCommand{SessionToken: "valid-token", PetID: "pet_go", Stat: "power"})
+	if !errors.Is(err, petapp.ErrInsufficientCP) {
+		t.Fatalf("error = %v, 期待値 ErrInsufficientCP", err)
+	}
+	if pets.updated != nil {
+		t.Fatalf("updated pet = %+v, 期待値 nil", pets.updated)
+	}
+}
+
+func TestTrainPetCannotTrainOtherUsersPet(t *testing.T) {
+	now := time.Date(2026, 5, 23, 0, 0, 0, 0, time.UTC)
+	testUser := user.User{ID: "user_1"}
+	otherPet := mustPet(t, "pet_go", "user_2", "guild_go", petdomain.AttributeGo, petdomain.Stats{Vitality: 6, Strength: 7, Agility: 7}, now)
+	pets := &stubPetTrainingRepository{petWithGuild: petapp.PetWithGuild{Pet: otherPet, Guild: mustGuild(t, "guild_go", "go", "Go", now)}, found: true}
+	uc := petapp.NewUseCaseWithTraining(
+		&stubCurrentUser{user: testUser, found: true},
+		&stubCPBalanceReader{},
+		&stubPetReader{},
+		&stubCurrentGuildReader{},
+		pets,
+		&stubCPSpender{balance: 120},
+		stubIDGenerator{id: "pet_training_1"},
+		nil,
+	)
+
+	_, err := uc.TrainPet(context.Background(), petapp.TrainPetCommand{SessionToken: "valid-token", PetID: "pet_go", Stat: "power"})
+	if !errors.Is(err, petapp.ErrPetNotFound) {
+		t.Fatalf("error = %v, 期待値 ErrPetNotFound", err)
+	}
+	if pets.updated != nil {
+		t.Fatalf("updated pet = %+v, 期待値 nil", pets.updated)
 	}
 }
 

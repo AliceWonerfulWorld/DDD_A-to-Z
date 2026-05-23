@@ -10,6 +10,18 @@ type MyPetsData struct {
 	Pets            []PetSummary
 }
 
+type TrainPetCommand struct {
+	SessionToken string
+	PetID        string
+	Stat         string
+}
+
+type TrainPetResult struct {
+	Pet       PetSummary
+	SpentCP   int64
+	CPBalance int64
+}
+
 // PetSummary is a frontend-oriented view of a player pet.
 type PetSummary struct {
 	ID         string

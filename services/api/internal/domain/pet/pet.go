@@ -30,6 +30,15 @@ type Stats struct {
 	Agility  int
 }
 
+type TrainingStat string
+
+const (
+	TrainingStatHP    TrainingStat = "hp"
+	TrainingStatPower TrainingStat = "power"
+	TrainingStatGuard TrainingStat = "guard"
+	TrainingStatSpeed TrainingStat = "speed"
+)
+
 type Pet struct {
 	ID        ID
 	UserID    user.ID
@@ -101,6 +110,37 @@ func NewPetFromGuild(id ID, userID user.ID, guildID guilddomain.ID, now time.Tim
 func InitialProfileForGuild(guildID guilddomain.ID) (InitialProfile, bool) {
 	profile, ok := initialProfilesByGuild[guildID]
 	return profile, ok
+}
+
+func ParseTrainingStat(value string) (TrainingStat, error) {
+	switch TrainingStat(strings.TrimSpace(value)) {
+	case TrainingStatHP:
+		return TrainingStatHP, nil
+	case TrainingStatPower:
+		return TrainingStatPower, nil
+	case TrainingStatGuard:
+		return TrainingStatGuard, nil
+	case TrainingStatSpeed:
+		return TrainingStatSpeed, nil
+	default:
+		return "", errors.New("invalid training stat")
+	}
+}
+
+func (p Pet) Train(stat TrainingStat, now time.Time) (Pet, error) {
+	switch stat {
+	case TrainingStatHP, TrainingStatGuard:
+		p.Stats.Vitality++
+	case TrainingStatPower:
+		p.Stats.Strength++
+	case TrainingStatSpeed:
+		p.Stats.Agility++
+	default:
+		return Pet{}, errors.New("invalid training stat")
+	}
+	p.UpdatedAt = now
+
+	return NewPet(p)
 }
 
 func validateStats(stats Stats) error {
