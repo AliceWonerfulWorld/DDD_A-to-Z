@@ -1,5 +1,6 @@
 import { useEffect, useMemo, type CSSProperties } from "react";
 import { useMachine } from "@xstate/react";
+import { motion, type Variants } from "framer-motion";
 import { PATHS } from "../../constants/paths";
 import { ApiError } from "../../lib/api/client";
 import { GopherSprite } from "../shared/GopherSprite";
@@ -17,6 +18,7 @@ import { petPageMachine } from "../../features/pet/petPageMachine";
 import { buildSampleBattleResult } from "../../features/pet/battleReplay";
 import { saveBattleSession } from "../../features/pet/battleSession";
 import { sampleCurrentPet, sampleOwnedPets, sampleOpponents } from "../../features/pet/sampleData";
+import { steppedEase } from "../../lib/animationUtils";
 import styles from "./PetPage.module.css";
 
 interface PetPageProps {
@@ -37,7 +39,7 @@ async function fetchPetPageBootstrap() {
 
 function petDisplayName(pet: PetSummary | null | undefined) {
   if (!pet) return "相棒未選択";
-  return pet.attribute === "Go" ? "Gopher君" : pet.name;
+  return pet.attribute === "Go" ? "Gopher" : pet.name;
 }
 
 const petPortraits: Record<string, { label: string; tone: string }> = {
@@ -47,6 +49,29 @@ const petPortraits: Record<string, { label: string; tone: string }> = {
   Java: { label: "Jv", tone: "#ff7b7b" },
   Haskell: { label: "λ", tone: "#b89cff" },
   Zig: { label: "Zg", tone: "#f7a541" },
+};
+
+const pageVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.24,
+      ease: steppedEase(4),
+      staggerChildren: 0.08,
+      delayChildren: 0.08,
+    },
+  },
+};
+
+const panelVariants: Variants = {
+  hidden: { opacity: 0, y: 18, scale: 0.985 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.34, ease: steppedEase(6) },
+  },
 };
 
 function statValue(pet: PetSummary, stat: PetTrainingStat) {
@@ -80,7 +105,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
     const grantedPet = consumeGrantedPet();
     if (grantedPet) {
       const guildName = grantedPet.guildId === "guild_go" ? "Goギルド" : "所属ギルド";
-      const petName = grantedPet.attribute === "go" ? "Gopher君" : grantedPet.attribute;
+      const petName = grantedPet.attribute === "go" ? "Gopher" : grantedPet.attribute;
       send({ type: "NOTICE", message: `${guildName}の相棒「${petName}」が仲間になった！` });
     }
   }, [send]);
@@ -217,9 +242,14 @@ export function PetPage({ onNavigate }: PetPageProps) {
   };
 
   return (
-    <main className={styles.screen}>
-      <div className={styles.shell}>
-        <header className={styles.header}>
+    <motion.main
+      animate="visible"
+      className={styles.screen}
+      initial="hidden"
+      variants={pageVariants}
+    >
+      <motion.div className={styles.shell} variants={pageVariants}>
+        <motion.header className={styles.header} variants={panelVariants}>
           <div>
             <p className={styles.eyebrow}>PET TERMINAL</p>
             <h1 className={styles.title}>マイペット</h1>
@@ -231,13 +261,17 @@ export function PetPage({ onNavigate }: PetPageProps) {
           >
             HOME
           </button>
-        </header>
+        </motion.header>
 
         {noticeMessage && <div className={styles.notice}>{noticeMessage}</div>}
         {statusMessage && <div className={styles.notice}>{statusMessage}</div>}
 
-        <div className={styles.layout}>
-          <section className={styles.panel} aria-labelledby="current-pet-title">
+        <motion.div className={styles.layout} variants={pageVariants}>
+          <motion.section
+            className={`${styles.panel} ${styles.trainingPanel}`}
+            aria-labelledby="current-pet-title"
+            variants={panelVariants}
+          >
             <h2 className={styles.panelTitle} id="current-pet-title">
               TRAINING PET
             </h2>
@@ -290,9 +324,13 @@ export function PetPage({ onNavigate }: PetPageProps) {
                 </div>
               </>
             )}
-          </section>
+          </motion.section>
 
-          <section className={styles.panel} aria-labelledby="owned-pets-title">
+          <motion.section
+            className={`${styles.panel} ${styles.ownedPanel}`}
+            aria-labelledby="owned-pets-title"
+            variants={panelVariants}
+          >
             <h2 className={styles.panelTitle} id="owned-pets-title">
               OWNED PETS
             </h2>
@@ -322,9 +360,13 @@ export function PetPage({ onNavigate }: PetPageProps) {
                 </button>
               ))}
             </div>
-          </section>
+          </motion.section>
 
-          <section className={styles.panel} aria-labelledby="battle-title">
+          <motion.section
+            className={`${styles.panel} ${styles.battlePanel}`}
+            aria-labelledby="battle-title"
+            variants={panelVariants}
+          >
             <h2 className={styles.panelTitle} id="battle-title">
               AUTO BATTLE
             </h2>
@@ -355,10 +397,10 @@ export function PetPage({ onNavigate }: PetPageProps) {
                 {isBattling ? "MATCHING..." : "START BATTLE"}
               </button>
             </div>
-          </section>
-        </div>
-      </div>
-    </main>
+          </motion.section>
+        </motion.div>
+      </motion.div>
+    </motion.main>
   );
 }
 

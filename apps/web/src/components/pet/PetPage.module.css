@@ -1,5 +1,7 @@
 .screen {
+  height: 100svh;
   min-height: 100svh;
+  overflow: hidden;
   background:
     linear-gradient(180deg, rgba(9, 20, 34, 0.34), rgba(6, 13, 24, 0.62)),
     url("/pixel-town-day.png");
@@ -11,9 +13,13 @@
 }
 
 .shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(10px, 1.8svh, 18px);
+  height: 100svh;
   width: min(1220px, calc(100% - 28px));
   margin: 0 auto;
-  padding: clamp(18px, 4vw, 44px) 0;
+  padding: clamp(10px, 1.8svh, 18px) 0;
 }
 
 .header {
@@ -28,8 +34,7 @@
   box-shadow:
     0 0 0 2px rgba(0, 0, 0, 0.5),
     6px 6px 0 rgba(0, 0, 0, 0.22);
-  margin-bottom: 18px;
-  padding: 14px clamp(14px, 2.4vw, 22px);
+  padding: clamp(10px, 1.5svh, 14px) clamp(14px, 2.4vw, 22px);
   backdrop-filter: blur(2px);
 }
 
@@ -87,12 +92,19 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
-  gap: 18px;
-  align-items: start;
+  grid-template-areas:
+    "training owned"
+    "battle owned";
+  grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.9fr);
+  grid-template-rows: minmax(0, 1fr) minmax(154px, 0.42fr);
+  gap: clamp(10px, 1.7svh, 16px);
+  min-height: 0;
+  align-items: stretch;
 }
 
 .panel {
+  min-height: 0;
+  overflow: hidden;
   border: 3px solid rgba(255, 217, 102, 0.82);
   border-bottom-color: rgba(92, 76, 34, 0.96);
   border-right-color: rgba(92, 76, 34, 0.96);
@@ -102,12 +114,24 @@
     0 0 0 2px rgba(0, 0, 0, 0.54),
     7px 7px 0 rgba(0, 0, 0, 0.24),
     inset 0 0 28px rgba(255, 255, 255, 0.035);
-  padding: clamp(14px, 2.5vw, 22px);
+  padding: clamp(12px, 1.8vw, 18px);
   backdrop-filter: blur(2px);
 }
 
+.trainingPanel {
+  grid-area: training;
+}
+
+.ownedPanel {
+  grid-area: owned;
+}
+
+.battlePanel {
+  grid-area: battle;
+}
+
 .panelTitle {
-  margin: 0 0 14px;
+  margin: 0 0 clamp(8px, 1.2svh, 12px);
   color: #ffd966;
   font-size: 0.72rem;
   line-height: 1.6;
@@ -115,14 +139,14 @@
 
 .currentPet {
   display: grid;
-  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(112px, 164px) minmax(0, 1fr);
+  gap: clamp(12px, 1.6vw, 18px);
   align-items: center;
 }
 
 .spriteStage {
   display: grid;
-  min-height: 172px;
+  min-height: clamp(132px, 23svh, 172px);
   place-items: center;
   background:
     radial-gradient(circle at 50% 78%, rgba(116, 247, 161, 0.14), transparent 46%),
@@ -189,7 +213,7 @@
 }
 
 .petName {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: clamp(0.9rem, 1.8vw, 1.18rem);
   line-height: 1.6;
 }
@@ -198,7 +222,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: clamp(8px, 1.2svh, 12px);
 }
 
 .chip {
@@ -207,7 +231,7 @@
   color: rgba(255, 248, 215, 0.94);
   font-size: 0.56rem;
   line-height: 1.45;
-  padding: 6px 8px;
+  padding: 5px 8px;
 }
 
 .statsGrid {
@@ -219,7 +243,7 @@
 .statCell {
   background: rgba(255, 248, 215, 0.08);
   border: 1px solid rgba(255, 248, 215, 0.18);
-  padding: 12px;
+  padding: clamp(8px, 1.2svh, 11px);
 }
 
 .statLabel {
@@ -239,15 +263,15 @@
 .trainingGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 14px;
+  gap: clamp(8px, 1.2svh, 10px);
+  margin-top: clamp(10px, 1.4svh, 14px);
 }
 
 .actionButton,
 .battleButton,
 .smallButton {
-  min-height: 54px;
-  padding: 10px 12px;
+  min-height: clamp(42px, 6.4svh, 54px);
+  padding: 8px 12px;
   font-size: 0.52rem;
 }
 
@@ -260,7 +284,7 @@
 }
 
 .battleButton {
-  min-height: 60px;
+  min-height: clamp(44px, 6.8svh, 56px);
   background: linear-gradient(180deg, rgba(90, 38, 44, 0.96), rgba(37, 20, 35, 0.98));
   border-color: rgba(255, 127, 116, 0.82);
   box-shadow:
@@ -278,7 +302,15 @@
 
 .list {
   display: grid;
-  gap: 10px;
+  gap: clamp(8px, 1.2svh, 10px);
+  min-height: 0;
+}
+
+.ownedPanel .list,
+.battlePanel .list {
+  max-height: calc(100% - 42px);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .petListItem,
@@ -286,7 +318,7 @@
 .logItem {
   border: 2px solid rgba(255, 248, 215, 0.16);
   background: rgba(255, 248, 215, 0.07);
-  padding: 14px;
+  padding: clamp(10px, 1.4svh, 14px);
 }
 
 .petListItem {
@@ -317,7 +349,7 @@
 }
 
 .itemTitle {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: 0.64rem;
   line-height: 1.5;
 }
@@ -327,7 +359,7 @@
   margin: 0;
   color: rgba(255, 248, 215, 0.82);
   font-family: "DotGothic16", monospace;
-  font-size: 0.9rem;
+  font-size: clamp(0.78rem, 1.15vw, 0.9rem);
   line-height: 1.55;
 }
 
@@ -353,8 +385,36 @@
 }
 
 @media (max-width: 860px) {
+  .screen {
+    height: auto;
+    overflow: auto;
+  }
+
+  .shell {
+    height: auto;
+    min-height: 100svh;
+    grid-template-rows: auto auto;
+    padding: 12px 0;
+  }
+
   .layout {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "training"
+      "owned"
+      "battle";
+    grid-template-rows: none;
+  }
+
+  .panel {
+    overflow: visible;
+  }
+
+  .ownedPanel .list,
+  .battlePanel .list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .currentPet {

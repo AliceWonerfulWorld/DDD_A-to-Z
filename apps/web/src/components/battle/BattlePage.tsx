@@ -23,14 +23,14 @@ interface BattleCharacterAsset {
 }
 
 const characterAssets: Record<string, BattleCharacterAsset> = {
-  Go: { kind: "sprite", label: "Gopher君" },
+  Go: { kind: "sprite", label: "Gopher" },
   Rust: { kind: "placeholder", label: "Fe" },
   TypeScript: { kind: "placeholder", label: "TS" },
   Python: { kind: "placeholder", label: "Py" },
 };
 
 function displayPetName(pet: PetSummary) {
-  return pet.attribute === "Go" ? "Gopher君" : pet.name;
+  return pet.attribute === "Go" ? "Gopher" : pet.name;
 }
 
 function fallbackSession() {
