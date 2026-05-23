@@ -17,6 +17,7 @@ import { petPageMachine } from "../../features/pet/petPageMachine";
 import {
   sampleBattleResult,
   sampleCurrentPet,
+  sampleOwnedPets,
   sampleOpponents,
 } from "../../features/pet/sampleData";
 import styles from "./PetPage.module.css";
@@ -46,6 +47,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
   const [snapshot, send] = useMachine(petPageMachine);
   const {
     data,
+    selectedPetId,
     opponents,
     selectedOpponentId,
     battleResult,
@@ -83,7 +85,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
             data: {
               cpBalance: 120,
               currentGuildPet: sampleCurrentPet,
-              pets: [sampleCurrentPet],
+              pets: sampleOwnedPets,
             },
             statusMessage: "API未接続のため、画面確認用サンプルを表示しています。",
           });
@@ -112,14 +114,17 @@ export function PetPage({ onNavigate }: PetPageProps) {
     };
   }, [send]);
 
-  const currentPet = data?.currentGuildPet ?? null;
+  const selectedPet = useMemo(
+    () => data?.pets.find((pet) => pet.id === selectedPetId) ?? data?.currentGuildPet ?? null,
+    [data, selectedPetId],
+  );
   const selectedOpponent = useMemo(
     () => opponents.find((opponent) => opponent.userId === selectedOpponentId) ?? null,
     [opponents, selectedOpponentId],
   );
 
   const train = async (stat: PetTrainingStat) => {
-    if (!currentPet || isTraining) return;
+    if (!selectedPet || isTraining) return;
     const training = PET_TRAINING_COSTS[stat];
     if ((data?.cpBalance ?? 0) < training.cost) {
       send({ type: "INSUFFICIENT_CP" });
@@ -128,7 +133,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
 
     send({ type: "TRAIN", stat });
     try {
-      const result = await trainPet(currentPet.id, stat);
+      const result = await trainPet(selectedPet.id, stat);
       send({
         type: "TRAIN_SUCCESS",
         result,
@@ -193,30 +198,33 @@ export function PetPage({ onNavigate }: PetPageProps) {
         <div className={styles.layout}>
           <section className={styles.panel} aria-labelledby="current-pet-title">
             <h2 className={styles.panelTitle} id="current-pet-title">
-              CURRENT GUILD PET
+              TRAINING PET
             </h2>
             {isLoading && <p className={styles.message}>Loading...</p>}
             {!isLoading && !data && <p className={styles.message}>ペット情報を表示できません。</p>}
-            {data && !currentPet && (
+            {data && !selectedPet && (
               <p className={styles.message}>
-                現在所属ギルド由来のペットはいません。ギルドに加入すると相棒が配布されます。
+                所持ペットはいません。ギルドに加入すると相棒が配布されます。
               </p>
             )}
-            {currentPet && data && (
+            {selectedPet && data && (
               <>
                 <div className={styles.currentPet}>
                   <div className={styles.spriteStage} aria-hidden="true">
                     <GopherSprite />
                   </div>
                   <div>
-                    <h2 className={styles.petName}>{petDisplayName(currentPet)}</h2>
+                    <h2 className={styles.petName}>{petDisplayName(selectedPet)}</h2>
                     <div className={styles.meta}>
-                      <span className={styles.chip}>{currentPet.guildName} Guild</span>
-                      <span className={styles.chip}>{currentPet.attribute}</span>
-                      <span className={styles.chip}>Lv {currentPet.level}</span>
+                      <span className={styles.chip}>{selectedPet.guildName} Guild</span>
+                      <span className={styles.chip}>{selectedPet.attribute}</span>
+                      <span className={styles.chip}>Lv {selectedPet.level}</span>
+                      {selectedPet.id === data.currentGuildPet?.id && (
+                        <span className={styles.chip}>CURRENT GUILD</span>
+                      )}
                       <span className={styles.chip}>CP {data.cpBalance}</span>
                     </div>
-                    <PetStats pet={currentPet} />
+                    <PetStats pet={selectedPet} />
                   </div>
                 </div>
 
@@ -250,15 +258,27 @@ export function PetPage({ onNavigate }: PetPageProps) {
             <div className={styles.list}>
               {data?.pets.length === 0 && <p className={styles.message}>所持ペットはいません。</p>}
               {data?.pets.map((pet) => (
-                <article className={styles.petListItem} key={pet.id}>
+                <button
+                  aria-selected={pet.id === selectedPetId}
+                  className={styles.petListItem}
+                  key={pet.id}
+                  type="button"
+                  onClick={() => send({ type: "SELECT_PET", petId: pet.id })}
+                >
                   <div>
                     <h3 className={styles.itemTitle}>{petDisplayName(pet)}</h3>
                     <p className={styles.itemText}>
                       {pet.guildName} / HP {pet.maxHp} / Power {pet.power}
                     </p>
                   </div>
-                  <span className={styles.chip}>Lv {pet.level}</span>
-                </article>
+                  <div className={styles.petListBadges}>
+                    {pet.id === data.currentGuildPet?.id && (
+                      <span className={styles.chip}>GUILD</span>
+                    )}
+                    {pet.id === selectedPetId && <span className={styles.chip}>SELECTED</span>}
+                    <span className={styles.chip}>Lv {pet.level}</span>
+                  </div>
+                </button>
               ))}
             </div>
           </section>
@@ -287,7 +307,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
               ))}
               <button
                 className={styles.actionButton}
-                disabled={!selectedOpponent || !currentPet || isBattling}
+                disabled={!selectedOpponent || !selectedPet || isBattling}
                 type="button"
                 onClick={() => void battle()}
               >

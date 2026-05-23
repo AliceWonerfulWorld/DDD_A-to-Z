@@ -9,6 +9,7 @@ import type {
 
 export interface PetPageContext {
   data: MyPetsResponse | null;
+  selectedPetId: string | null;
   opponents: BattleOpponent[];
   selectedOpponentId: string | null;
   battleResult: BattleResult | null;
@@ -21,6 +22,7 @@ export type PetPageEvent =
   | { type: "NOTICE"; message: string }
   | { type: "LOAD_SUCCESS"; data: MyPetsResponse; statusMessage?: string | null }
   | { type: "LOAD_FAILURE"; message: string }
+  | { type: "SELECT_PET"; petId: string }
   | { type: "OPPONENTS_SUCCESS"; opponents: BattleOpponent[] }
   | { type: "OPPONENTS_FAILURE" }
   | { type: "SELECT_OPPONENT"; userId: string }
@@ -43,12 +45,22 @@ export const petPageMachine = setup({
     }),
     setLoadedData: assign({
       data: ({ event }) => (event.type === "LOAD_SUCCESS" ? event.data : null),
+      selectedPetId: ({ event }) => {
+        if (event.type !== "LOAD_SUCCESS") return null;
+        return event.data.currentGuildPet?.id ?? event.data.pets[0]?.id ?? null;
+      },
       statusMessage: ({ event }) =>
         event.type === "LOAD_SUCCESS" ? (event.statusMessage ?? null) : null,
     }),
     setLoadFailure: assign({
       data: null,
+      selectedPetId: null,
       statusMessage: ({ event }) => (event.type === "LOAD_FAILURE" ? event.message : null),
+    }),
+    selectPet: assign({
+      selectedPetId: ({ event }) => (event.type === "SELECT_PET" ? event.petId : null),
+      battleResult: null,
+      statusMessage: null,
     }),
     setOpponents: assign({
       opponents: ({ event }) => (event.type === "OPPONENTS_SUCCESS" ? event.opponents : []),
@@ -101,6 +113,7 @@ export const petPageMachine = setup({
   initial: "loading",
   context: {
     data: null,
+    selectedPetId: null,
     opponents: [],
     selectedOpponentId: null,
     battleResult: null,
@@ -116,6 +129,9 @@ export const petPageMachine = setup({
       actions: "setOpponents",
     },
     OPPONENTS_FAILURE: {},
+    SELECT_PET: {
+      actions: "selectPet",
+    },
     SELECT_OPPONENT: {
       actions: "selectOpponent",
     },

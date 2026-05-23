@@ -57,6 +57,40 @@ export const sampleOpponents: BattleOpponent[] = [
   },
 ];
 
+export const sampleOwnedPets: PetSummary[] = [
+  sampleCurrentPet,
+  {
+    id: "sample_pet_typescript",
+    guildId: "guild_typescript",
+    guildName: "TypeScript",
+    name: "Scriptie",
+    species: "typescript",
+    attribute: "TypeScript",
+    level: 2,
+    exp: 15,
+    maxHp: 30,
+    power: 6,
+    guard: 4,
+    speed: 6,
+    acquiredAt: "2026-05-23T00:00:00Z",
+  },
+  {
+    id: "sample_pet_rust_owned",
+    guildId: "guild_rust",
+    guildName: "Rust",
+    name: "Ferris",
+    species: "crab",
+    attribute: "Rust",
+    level: 3,
+    exp: 25,
+    maxHp: 45,
+    power: 7,
+    guard: 8,
+    speed: 3,
+    acquiredAt: "2026-05-23T00:00:00Z",
+  },
+];
+
 export const sampleBattleResult: BattleResult = {
   result: "win",
   turns: [
