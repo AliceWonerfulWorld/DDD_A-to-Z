@@ -32,6 +32,49 @@ type ChatView = "closed" | "compact" | "expanded";
 const ACTIVITY_LOG_LIMIT = 20;
 const ACTIVITY_LOG_POLLING_MS = 10_000;
 
+const DASHBOARD_LAYOUTS = {
+  mobile: {
+    src: "/guild-dashboards/dashboard-mob.png",
+    aspectW: 9,
+    aspectH: 16,
+    monitor: { left: "31.5%", top: "34.2%", width: "37%", height: "30%" },
+  },
+  tablet: {
+    src: "/guild-dashboards/dashboard-tab.png",
+    aspectW: 4,
+    aspectH: 3,
+    monitor: { left: "28.5%", top: "26.5%", width: "43%", height: "35%" },
+  },
+  desktop: {
+    src: "/guild-dashboards/dashboard.png",
+    aspectW: 1672,
+    aspectH: 941,
+    monitor: { left: "29.2%", top: "16.2%", width: "41.6%", height: "44.2%" },
+  },
+};
+
+function useDeviceLayout() {
+  const [layout, setLayout] = useState<"mobile" | "tablet" | "desktop">("desktop");
+
+  useEffect(() => {
+    const updateLayout = () => {
+      const width = window.innerWidth;
+      if (width <= 768) {
+        setLayout("mobile");
+      } else if (width <= 1024) {
+        setLayout("tablet");
+      } else {
+        setLayout("desktop");
+      }
+    };
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
+
+  return layout;
+}
+
 function toActivityLog(log: GuildActivityLog): ActivityLog {
   const prefix = log.type === "pull_request" ? "PR" : "Commit";
 
@@ -45,6 +88,9 @@ function toActivityLog(log: GuildActivityLog): ActivityLog {
 }
 
 export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
+  const deviceLayout = useDeviceLayout();
+  const currentLayoutProps = DASHBOARD_LAYOUTS[deviceLayout];
+
   const { isSeEnabled } = useAudioSettings();
   const [activeTab, setActiveTab] = useState<GuildTab>("activity");
   const [chatView, setChatView] = useState<ChatView>("closed");
@@ -238,13 +284,13 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
           position: "absolute",
           left: "50%",
           top: "50%",
-          width: "max(100vw, calc(100svh * 1672 / 941))",
-          height: "max(100svh, calc(100vw * 941 / 1672))",
+          width: `max(100vw, calc(100svh * ${currentLayoutProps.aspectW} / ${currentLayoutProps.aspectH}))`,
+          height: `max(100svh, calc(100vw * ${currentLayoutProps.aspectH} / ${currentLayoutProps.aspectW}))`,
           transform: "translate(-50%, -50%)",
         }}
       >
         <img
-          src="/dashboard.png"
+          src={currentLayoutProps.src}
           alt=""
           aria-hidden="true"
           style={{
@@ -264,6 +310,8 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
           logs={logs}
           onSwitchTab={switchTab}
           tabs={GUILD_TABS}
+          layoutStyle={currentLayoutProps.monitor}
+          isMobile={deviceLayout === "mobile"}
         />
       </div>
 

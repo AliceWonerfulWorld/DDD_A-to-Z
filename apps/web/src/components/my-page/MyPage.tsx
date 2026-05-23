@@ -4,6 +4,7 @@ import { BACK_NAVIGATION_SE_SRC, useBackNavigationSe } from "../../hooks/useBack
 import { useGuardedNavigation } from "../../hooks/useGuardedNavigation";
 import { fetchMyPage, type MyPageResponse, type GitHubStats } from "../../features/mypage/api";
 import { findGuildBySlug } from "../../features/guild/guildMaster";
+import styles from "./MyPage.module.css";
 
 interface MyPageProps {
   onNavigate: (path: string) => void;
@@ -95,20 +96,23 @@ function SectionTitle({ text, color }: { text: string; color?: string }) {
   );
 }
 
-function Panel({ children, borderColor }: { children: ReactNode; borderColor?: string }) {
+function Panel({
+  children,
+  borderColor,
+  className = "",
+}: {
+  children: ReactNode;
+  borderColor?: string;
+  className?: string;
+}) {
   return (
     <motion.div
+      className={`${styles.panel} ${className}`}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: steppedEase(6) }}
       style={{
         border: `2px solid ${borderColor ?? "rgba(255,255,255,0.08)"}`,
-        background: "rgba(0,0,0,0.35)",
-        padding: "14px",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "auto",
       }}
     >
       {children}
@@ -267,31 +271,9 @@ export function MyPage({ onNavigate }: MyPageProps) {
       </motion.header>
 
       {/* ─── Main Content ─── */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 2,
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: "14px",
-          padding: "16px 20px",
-          maxWidth: "1280px",
-          width: "100%",
-          margin: "0 auto",
-          overflow: "hidden",
-        }}
-      >
+      <div className={styles.mainContainer}>
         {/* ═══ Top Row: 3 columns ═══ */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: "14px",
-            flex: 1,
-            minHeight: 0,
-          }}
-        >
+        <div className={styles.topRow}>
           {/* Left: Adventurer Profile */}
           <Panel borderColor="rgba(240,192,64,0.3)">
             <SectionTitle text="PROFILE" color="#f0c040" />
@@ -672,15 +654,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
         </div>
 
         {/* ═══ Bottom Row: 2 columns ═══ */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "14px",
-            flex: 1,
-            minHeight: 0,
-          }}
-        >
+        <div className={styles.bottomRow}>
           {/* Left: Language Status */}
           <Panel borderColor="rgba(191,0,255,0.3)">
             <SectionTitle text="LANGUAGES" color="#bf00ff" />

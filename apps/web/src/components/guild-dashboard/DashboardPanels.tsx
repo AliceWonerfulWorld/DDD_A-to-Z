@@ -2,6 +2,7 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { steppedEase } from "../../lib/animationUtils";
 import { RANKINGS } from "./data";
 import type { ActivityLog } from "./types";
+import styles from "./DashboardPanels.module.css";
 
 const tabContentVariants: Variants = {
   hidden: { opacity: 0, y: 12 },
@@ -17,7 +18,7 @@ const tabContentVariants: Variants = {
   },
 };
 
-export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
+export function ActivityLogPanel({ logs, isMobile }: { logs: ActivityLog[]; isMobile?: boolean }) {
   return (
     <motion.section
       key="activity"
@@ -33,10 +34,12 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
-        border: "2px solid rgba(0, 245, 255, 0.44)",
+        border: isMobile
+          ? "1px solid rgba(0, 245, 255, 0.44)"
+          : "2px solid rgba(0, 245, 255, 0.44)",
         background: "rgba(1, 8, 22, 0.74)",
         boxShadow: "inset 0 0 22px rgba(0, 245, 255, 0.12)",
-        padding: "clamp(10px, 1.6vw, 18px)",
+        padding: isMobile ? "4px 6px" : "clamp(10px, 1.6vw, 18px)",
         overflow: "hidden",
       }}
     >
@@ -44,11 +47,11 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
         style={{
           display: "flex",
           justifyContent: "space-between",
-          gap: "12px",
+          gap: isMobile ? "2px" : "12px",
           color: "#74f7a1",
-          fontSize: "clamp(0.54rem, 0.95vw, 0.72rem)",
-          lineHeight: 1.5,
-          marginBottom: "10px",
+          fontSize: isMobile ? "0.38rem" : "clamp(0.54rem, 0.95vw, 0.72rem)",
+          lineHeight: isMobile ? 1.1 : 1.5,
+          marginBottom: isMobile ? "4px" : "10px",
         }}
       >
         <span>LIVE ACTIVITY STREAM</span>
@@ -56,10 +59,11 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
       </div>
 
       <div
+        className={styles.hideScrollbar}
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "8px",
+          gap: isMobile ? "4px" : "8px",
           flex: 1,
           minHeight: 0,
           overflowY: "auto",
@@ -77,8 +81,8 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
                 minHeight: "30px",
                 color: "rgba(214, 255, 228, 0.72)",
                 fontFamily: '"DotGothic16", monospace',
-                fontSize: "clamp(0.66rem, 1.22vw, 0.94rem)",
-                lineHeight: 1.35,
+                fontSize: isMobile ? "0.6rem" : "clamp(0.66rem, 1.22vw, 0.94rem)",
+                lineHeight: isMobile ? 1.2 : 1.35,
               }}
             >
               &gt; WAITING FOR GUILD SIGNAL_
@@ -95,13 +99,13 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
               style={{
                 display: "flex",
                 alignItems: "flex-start",
-                gap: "10px",
-                padding: "4px 0",
+                gap: isMobile ? "4px" : "10px",
+                padding: isMobile ? "2px 0" : "4px 0",
                 borderBottom: "1px solid rgba(116, 247, 161, 0.12)",
                 color: "#d6ffe4",
                 fontFamily: '"DotGothic16", monospace',
-                fontSize: "clamp(0.66rem, 1.22vw, 0.94rem)",
-                lineHeight: 1.35,
+                fontSize: isMobile ? "0.6rem" : "clamp(0.66rem, 1.22vw, 0.94rem)",
+                lineHeight: isMobile ? 1.2 : 1.35,
               }}
             >
               <span style={{ color: log.tone, flexShrink: 0 }}>&gt;</span>
@@ -126,7 +130,7 @@ export function ActivityLogPanel({ logs }: { logs: ActivityLog[] }) {
   );
 }
 
-export function RankingsPanel() {
+export function RankingsPanel({ isMobile }: { isMobile?: boolean }) {
   return (
     <motion.section
       key="rankings"
@@ -137,6 +141,7 @@ export function RankingsPanel() {
       initial="hidden"
       animate="visible"
       exit="exit"
+      className={styles.hideScrollbar}
       style={{
         height: "100%",
         minHeight: 0,
@@ -156,21 +161,23 @@ export function RankingsPanel() {
             display: "grid",
             gridTemplateColumns: "minmax(34px, auto) 1fr auto",
             alignItems: "start",
-            gap: "clamp(8px, 1.4vw, 16px)",
-            minHeight: "clamp(38px, 6.5vh, 54px)",
-            border: "2px solid rgba(0, 245, 255, 0.24)",
+            gap: isMobile ? "4px" : "clamp(8px, 1.4vw, 16px)",
+            minHeight: isMobile ? "30px" : "clamp(38px, 6.5vh, 54px)",
+            border: isMobile
+              ? "1px solid rgba(0, 245, 255, 0.24)"
+              : "2px solid rgba(0, 245, 255, 0.24)",
             background:
               index === 0
                 ? "linear-gradient(90deg, rgba(255, 217, 102, 0.22), rgba(1, 8, 22, 0.68))"
                 : "rgba(1, 8, 22, 0.58)",
             boxShadow: "inset 0 0 16px rgba(0, 245, 255, 0.08)",
-            padding: "8px clamp(8px, 1.5vw, 16px)",
+            padding: isMobile ? "4px 6px" : "8px clamp(8px, 1.5vw, 16px)",
           }}
         >
           <span
             style={{
               color: member.color,
-              fontSize: "clamp(0.72rem, 1.45vw, 1rem)",
+              fontSize: isMobile ? "0.55rem" : "clamp(0.72rem, 1.45vw, 1rem)",
               lineHeight: 1,
             }}
           >
@@ -181,8 +188,8 @@ export function RankingsPanel() {
               style={{
                 display: "block",
                 color: "#fff8d7",
-                fontSize: "clamp(0.68rem, 1.3vw, 0.95rem)",
-                lineHeight: 1.4,
+                fontSize: isMobile ? "0.6rem" : "clamp(0.68rem, 1.3vw, 0.95rem)",
+                lineHeight: isMobile ? 1.2 : 1.4,
                 overflowWrap: "anywhere",
               }}
             >
@@ -193,8 +200,8 @@ export function RankingsPanel() {
                 display: "block",
                 color: "rgba(244, 236, 208, 0.62)",
                 fontFamily: '"DotGothic16", monospace',
-                fontSize: "clamp(0.58rem, 1.05vw, 0.76rem)",
-                lineHeight: 1.35,
+                fontSize: isMobile ? "0.5rem" : "clamp(0.58rem, 1.05vw, 0.76rem)",
+                lineHeight: isMobile ? 1.2 : 1.35,
                 overflowWrap: "anywhere",
               }}
             >
@@ -204,8 +211,8 @@ export function RankingsPanel() {
           <span
             style={{
               color: "#74f7a1",
-              fontSize: "clamp(0.62rem, 1.15vw, 0.86rem)",
-              lineHeight: 1.4,
+              fontSize: isMobile ? "0.55rem" : "clamp(0.62rem, 1.15vw, 0.86rem)",
+              lineHeight: isMobile ? 1.2 : 1.4,
               whiteSpace: "nowrap",
             }}
           >

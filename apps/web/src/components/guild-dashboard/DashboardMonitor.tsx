@@ -11,6 +11,8 @@ interface DashboardMonitorProps {
   logs: ActivityLog[];
   onSwitchTab: (tab: GuildTab) => void;
   tabs: { id: GuildTab; label: string }[];
+  layoutStyle?: React.CSSProperties;
+  isMobile?: boolean;
 }
 
 export function DashboardMonitor({
@@ -20,6 +22,8 @@ export function DashboardMonitor({
   logs,
   onSwitchTab,
   tabs,
+  layoutStyle,
+  isMobile,
 }: DashboardMonitorProps) {
   const guildName = isGuildLoading ? "SYNCING GUILD" : guild ? `${guild.name} GUILD` : "NO GUILD";
   const guildRank = guild ? `Rank: #${guild.sortOrder + 1}` : "Rank: --";
@@ -54,10 +58,11 @@ export function DashboardMonitor({
         top: "16.2%",
         width: "41.6%",
         height: "44.2%",
+        ...layoutStyle,
         display: "grid",
         gridTemplateRows: "auto 1fr",
-        gap: "clamp(8px, 1.2vw, 14px)",
-        padding: "clamp(14px, 2.1vw, 26px)",
+        gap: isMobile ? "4px" : "clamp(8px, 1.2vw, 14px)",
+        padding: isMobile ? "6px 8px" : "clamp(14px, 2.1vw, 26px)",
         background: "linear-gradient(180deg, rgba(3, 10, 30, 0.32), rgba(2, 8, 24, 0.58))",
         boxShadow: "inset 0 0 34px rgba(0, 245, 255, 0.1)",
         overflow: "hidden",
@@ -66,19 +71,20 @@ export function DashboardMonitor({
       <header
         style={{
           display: "grid",
-          gap: "clamp(8px, 1.2vw, 12px)",
+          gap: isMobile ? "4px" : "clamp(8px, 1.2vw, 12px)",
           minWidth: 0,
         }}
       >
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr auto",
-            alignItems: "center",
-            gap: "clamp(8px, 1.5vw, 18px)",
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            justifyContent: "space-between",
+            alignItems: isMobile ? "flex-start" : "center",
+            gap: isMobile ? "2px" : "clamp(8px, 1.5vw, 18px)",
             color: "#fff8d7",
-            fontSize: "clamp(0.58rem, 1.15vw, 0.86rem)",
-            lineHeight: 1.5,
+            fontSize: isMobile ? "0.45rem" : "clamp(0.58rem, 1.15vw, 0.86rem)",
+            lineHeight: isMobile ? 1.1 : 1.5,
           }}
         >
           <strong style={{ color: guild?.accent ?? "#9be7ff", overflowWrap: "anywhere" }}>
@@ -89,16 +95,29 @@ export function DashboardMonitor({
 
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "auto 1fr auto",
-            alignItems: "center",
-            gap: "10px",
+            display: "flex",
+            flexDirection: "column",
+            gap: isMobile ? "2px" : "10px",
             color: "#d9fbff",
-            fontSize: "clamp(0.48rem, 0.82vw, 0.62rem)",
-            lineHeight: 1.4,
+            fontSize: isMobile ? "0.4rem" : "clamp(0.48rem, 0.82vw, 0.62rem)",
+            lineHeight: isMobile ? 1.1 : 1.4,
           }}
         >
-          <span style={{ color: "#ffd966", whiteSpace: "nowrap" }}>EXP</span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <span style={{ color: "#ffd966", whiteSpace: "nowrap" }}>EXP</span>
+            <span style={{ color: "#f4ecd0", whiteSpace: "nowrap" }}>
+              {isMaxGuildLevel
+                ? "MAX"
+                : `${progressInLevel.toLocaleString()} / ${levelRange.toLocaleString()}`}
+            </span>
+          </div>
           <div
             role="progressbar"
             aria-label="Guild level experience"
@@ -111,8 +130,10 @@ export function DashboardMonitor({
                 : `${progressInLevel.toLocaleString()} of ${levelRange.toLocaleString()} (${progressPercent}%)`
             }
             style={{
-              height: "10px",
-              border: "2px solid rgba(116, 247, 161, 0.6)",
+              height: isMobile ? "4px" : "10px",
+              border: isMobile
+                ? "1px solid rgba(116, 247, 161, 0.6)"
+                : "2px solid rgba(116, 247, 161, 0.6)",
               background: "rgba(1, 8, 22, 0.72)",
               boxShadow: "inset 0 0 8px rgba(0,0,0,0.64)",
               overflow: "hidden",
@@ -130,11 +151,6 @@ export function DashboardMonitor({
               }}
             />
           </div>
-          <span style={{ color: "#f4ecd0", whiteSpace: "nowrap" }}>
-            {isMaxGuildLevel
-              ? "MAX"
-              : `${progressInLevel.toLocaleString()} / ${levelRange.toLocaleString()}`}
-          </span>
         </div>
 
         <nav
@@ -143,7 +159,7 @@ export function DashboardMonitor({
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            gap: "8px",
+            gap: isMobile ? "2px" : "8px",
           }}
         >
           {tabs.map((tab) => {
@@ -160,16 +176,21 @@ export function DashboardMonitor({
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => onSwitchTab(tab.id)}
                 style={{
-                  minHeight: "34px",
-                  border: `2px solid ${isActive ? "#00f5ff" : "rgba(0, 245, 255, 0.28)"}`,
+                  minHeight: isMobile ? "18px" : "34px",
+                  border: isMobile
+                    ? `1px solid ${isActive ? "#00f5ff" : "rgba(0, 245, 255, 0.28)"}`
+                    : `2px solid ${isActive ? "#00f5ff" : "rgba(0, 245, 255, 0.28)"}`,
                   background: isActive ? "rgba(0, 245, 255, 0.14)" : "rgba(1, 8, 22, 0.46)",
                   color: isActive ? "#fff8d7" : "rgba(244, 236, 208, 0.64)",
                   boxShadow: isActive ? "inset 0 0 16px rgba(0, 245, 255, 0.18)" : "none",
                   cursor: "pointer",
                   fontFamily: "inherit",
-                  fontSize: "clamp(0.5rem, 0.95vw, 0.7rem)",
-                  lineHeight: 1.4,
-                  padding: "6px",
+                  fontSize: isMobile ? "0.35rem" : "clamp(0.5rem, 0.95vw, 0.7rem)",
+                  lineHeight: isMobile ? 1.1 : 1.4,
+                  padding: isMobile ? "2px" : "6px",
+                  whiteSpace: "nowrap",
+                  overflow: isMobile ? "hidden" : "visible",
+                  textOverflow: isMobile ? "clip" : "clip",
                 }}
               >
                 [ {tab.label} ]
@@ -179,9 +200,13 @@ export function DashboardMonitor({
         </nav>
       </header>
 
-      <div style={{ minHeight: 0, overflow: "hidden" }}>
+      <div style={{ minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <AnimatePresence mode="wait">
-          {activeTab === "activity" ? <ActivityLogPanel logs={logs} /> : <RankingsPanel />}
+          {activeTab === "activity" ? (
+            <ActivityLogPanel logs={logs} isMobile={isMobile} />
+          ) : (
+            <RankingsPanel isMobile={isMobile} />
+          )}
         </AnimatePresence>
       </div>
     </motion.section>
