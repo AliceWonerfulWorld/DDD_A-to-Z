@@ -508,6 +508,10 @@ Options:
   --output <json|text>   Output format. Defaults to json.
   --allow-external       Required for non-localhost targets.
   --help                 Show this help.
+
+Success criteria:
+  HTTP 200-399 responses are counted as successful requests.
+  Redirects are not followed, so 3xx responses are reported as-is and counted as success.
 USAGE";
 }
 

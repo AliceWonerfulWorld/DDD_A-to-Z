@@ -52,6 +52,9 @@ pnpm --filter @lang-war/loadtest-d dev -- \
 
 ## Output
 
+`successRequests` は HTTP 200-399（2xx-3xx）の response を成功として数えます。
+Redirect は追跡しないため、3xx response は 3xx のまま `statusCounts` に記録され、成功扱いになります。
+
 ```json
 {
   "target": "http://localhost:8080/healthz",
@@ -82,3 +85,5 @@ pnpm --filter @lang-war/loadtest-d dev -- \
 | `--timeout` | `2s` | request ごとの timeout |
 | `--output` | `json` | `json` または `text` |
 | `--allow-external` | `false` | localhost 以外への実行を明示的に許可 |
+
+成功判定は HTTP 200-399 です。Redirect は追跡しないため、3xx response もそのまま成功として集計されます。
