@@ -7,6 +7,7 @@ import (
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
+	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 )
 
@@ -18,6 +19,8 @@ type Repository interface {
 	ListActivityLogsByGuild(ctx context.Context, guildID guilddomain.ID, limit int) ([]guilddomain.ActivityLog, error)
 	CreateMembership(ctx context.Context, membership guilddomain.Membership) error
 	UpdateMembership(ctx context.Context, membership guilddomain.Membership) error
+	FindPetByUserAndGuild(ctx context.Context, userID user.ID, guildID guilddomain.ID) (petdomain.Pet, bool, error)
+	CreatePet(ctx context.Context, pet petdomain.Pet) error
 	CreateCPContribution(ctx context.Context, contribution guilddomain.CPContribution) error
 	ListCPContributionsByGuild(ctx context.Context, guildID guilddomain.ID, limit int) ([]guilddomain.CPContribution, error)
 	ListCPContributionsByUser(ctx context.Context, userID user.ID, limit int) ([]guilddomain.CPContribution, error)
