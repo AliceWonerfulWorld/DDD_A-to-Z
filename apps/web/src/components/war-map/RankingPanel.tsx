@@ -51,9 +51,9 @@ export function RankingPanel({
           color: "#d9fbff",
           cursor: "pointer",
           fontFamily: "inherit",
-          fontSize: "0.62rem",
+          fontSize: "clamp(0.5rem, 1.5vw, 0.62rem)",
           lineHeight: 1,
-          padding: "12px 14px",
+          padding: "clamp(8px, 2vw, 12px) clamp(10px, 2.5vw, 14px)",
           pointerEvents: "auto",
           textShadow: "2px 2px 0 rgba(0,0,0,0.8)",
         }}
