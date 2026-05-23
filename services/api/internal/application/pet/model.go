@@ -29,7 +29,21 @@ type BattlePetCommand struct {
 }
 
 type BattleOpponentsData struct {
-	Opponents []PetSummary
+	Opponents []OpponentSummary
+}
+
+type OpponentSummary struct {
+	ID        string
+	GuildID   string
+	GuildName string
+	Name      string
+	Species   string
+	Attribute string
+	Level     int
+	MaxHP     int
+	Power     int
+	Guard     int
+	Speed     int
 }
 
 type BattleResult struct {

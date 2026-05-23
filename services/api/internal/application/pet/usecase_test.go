@@ -460,8 +460,29 @@ func TestListBattleOpponentsExcludesCurrentUsersPets(t *testing.T) {
 	if len(result.Opponents) != 1 {
 		t.Fatalf("opponents length = %d, 期待値 1", len(result.Opponents))
 	}
-	if result.Opponents[0].ID != "pet_rust" || result.Opponents[0].OwnerUserID != "user_2" {
-		t.Fatalf("opponent = %+v, 期待値 user_2 pet_rust", result.Opponents[0])
+	if result.Opponents[0].ID != "pet_rust" {
+		t.Fatalf("opponent = %+v, 期待値 pet_rust", result.Opponents[0])
+	}
+}
+
+func TestListBattleOpponentsCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	uc := petapp.NewUseCaseWithTrainingAndBattle(
+		&stubCurrentUser{user: user.User{ID: "user_1"}, found: true},
+		&stubCPBalanceReader{},
+		&stubPetReader{},
+		&stubCurrentGuildReader{},
+		nil,
+		nil,
+		nil,
+		nil,
+		&stubPetBattleReader{},
+	)
+
+	_, err := uc.ListBattleOpponents(ctx, "valid-token")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, 期待値 context.Canceled", err)
 	}
 }
 

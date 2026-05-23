@@ -214,6 +214,9 @@ func (u *UseCase) TrainPet(ctx context.Context, command TrainPetCommand) (TrainP
 }
 
 func (u *UseCase) ListBattleOpponents(ctx context.Context, sessionToken string) (BattleOpponentsData, error) {
+	if err := ctx.Err(); err != nil {
+		return BattleOpponentsData{}, err
+	}
 	if strings.TrimSpace(sessionToken) == "" {
 		return BattleOpponentsData{}, ErrUnauthenticated
 	}
@@ -234,9 +237,9 @@ func (u *UseCase) ListBattleOpponents(ctx context.Context, sessionToken string) 
 		return BattleOpponentsData{}, err
 	}
 
-	summaries := make([]PetSummary, 0, len(opponents))
+	summaries := make([]OpponentSummary, 0, len(opponents))
 	for _, opponent := range opponents {
-		summaries = append(summaries, toPetSummary(opponent))
+		summaries = append(summaries, toOpponentSummary(opponent))
 	}
 	return BattleOpponentsData{Opponents: summaries}, nil
 }
@@ -332,6 +335,23 @@ func toPetSummary(petWithGuild PetWithGuild) PetSummary {
 		Guard:       foundPet.Stats.Vitality - 1,
 		Speed:       foundPet.Stats.Agility - 1,
 		AcquiredAt:  foundPet.CreatedAt,
+	}
+}
+
+func toOpponentSummary(petWithGuild PetWithGuild) OpponentSummary {
+	summary := toPetSummary(petWithGuild)
+	return OpponentSummary{
+		ID:        summary.ID,
+		GuildID:   summary.GuildID,
+		GuildName: summary.GuildName,
+		Name:      summary.Name,
+		Species:   summary.Species,
+		Attribute: summary.Attribute,
+		Level:     summary.Level,
+		MaxHP:     summary.MaxHP,
+		Power:     summary.Power,
+		Guard:     summary.Guard,
+		Speed:     summary.Speed,
 	}
 }
 

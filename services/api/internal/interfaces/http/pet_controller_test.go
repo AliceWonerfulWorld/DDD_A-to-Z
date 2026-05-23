@@ -260,8 +260,11 @@ func TestPetControllerListBattleOpponents(t *testing.T) {
 		t.Fatalf("opponents = %v, 期待値 length 1", body["opponents"])
 	}
 	opponent := opponents[0].(map[string]any)
-	if opponent["petId"] != "pet_rust" || opponent["ownerUserId"] != "user_2" {
+	if opponent["petId"] != "pet_rust" {
 		t.Fatalf("opponent = %+v", opponent)
+	}
+	if _, ok := opponent["ownerUserId"]; ok {
+		t.Fatalf("ownerUserId should not be exposed: %+v", opponent)
 	}
 	if opponent["maxHp"].(float64) != 45 || opponent["power"].(float64) != 7 {
 		t.Fatalf("opponent stats = %+v", opponent)
