@@ -17,7 +17,7 @@ interface MyGuildDetailsProps {
 interface GuildMember {
   id: string;
   name: string;
-  avatar: string;
+  avatar: string | JSX.Element;
   totalContributedCp: number;
   isCurrentUser?: boolean;
 }
@@ -39,10 +39,22 @@ function memberInitials(name: string) {
 }
 
 function toGuildMember(member: GuildMemberContribution, currentUserID?: string): GuildMember {
+  let avatar: string | JSX.Element =
+    member.user_id === currentUserID ? "YOU" : memberInitials(member.name);
+  if (member.avatar_url) {
+    avatar = (
+      <img
+        src={member.avatar_url}
+        alt={`${member.name}'s avatar`}
+        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
+      />
+    );
+  }
+
   return {
     id: member.user_id,
     name: member.name,
-    avatar: member.user_id === currentUserID ? "YOU" : memberInitials(member.name),
+    avatar,
     totalContributedCp: member.total_contributed_cp,
     isCurrentUser: member.user_id === currentUserID,
   };
