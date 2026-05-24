@@ -107,6 +107,39 @@ func (uc *UseCase) ListGuildRankings(seasonID season.ID) ([]season.GuildSeasonRa
 	return rankings, nil
 }
 
+func (uc *UseCase) GetGuildPreviousSeasonCP(guildID string) (int64, error) {
+	allSeasons, err := uc.repo.ListAll()
+	if err != nil {
+		return 0, fmt.Errorf("list seasons for previous cp: %w", err)
+	}
+
+	current, err := uc.getOrCreateCurrentSeason()
+	if err != nil {
+		return 0, fmt.Errorf("get current season for previous cp: %w", err)
+	}
+
+	var prevSeason *season.Season
+	for _, s := range allSeasons {
+		if s.EndsAt.Before(current.StartsAt) {
+			if prevSeason == nil || s.EndsAt.After(prevSeason.EndsAt) {
+				s := s
+				prevSeason = &s
+			}
+		}
+	}
+
+	if prevSeason == nil {
+		return 0, nil
+	}
+
+	total, err := uc.repo.GetGuildSeasonCP(prevSeason.ID, guildID)
+	if err != nil {
+		return 0, fmt.Errorf("get guild season cp: %w", err)
+	}
+
+	return total, nil
+}
+
 func (uc *UseCase) ListGuildMemberRankings(seasonID season.ID, guildID string) ([]season.GuildSeasonMemberRanking, error) {
 	rankings, err := uc.repo.ListGuildMemberRankings(seasonID, guildID)
 	if err != nil {
