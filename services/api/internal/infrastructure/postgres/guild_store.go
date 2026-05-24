@@ -230,6 +230,7 @@ func (s *GuildStore) ListActiveMembersByGuild(ctx context.Context, guildID guild
 		SELECT
 			gm.user_id,
 			COALESCE(up.display_name, ga.username) AS name,
+			COALESCE(up.avatar_url, ga.avatar_url) AS avatar_url,
 			COALESCE(SUM(pl.amount) FILTER (
 				WHERE pl.point_type_code = ? AND pl.language = ? AND pl.type = ?
 			), 0) AS total_earned_cp,
@@ -246,7 +247,7 @@ func (s *GuildStore) ListActiveMembersByGuild(ctx context.Context, guildID guild
 		) gcc ON gcc.user_id = gm.user_id AND gcc.guild_id = gm.guild_id
 		WHERE gm.guild_id = ?
 			AND gm.left_at IS NULL
-		GROUP BY gm.user_id, up.display_name, ga.username, gm.joined_at, gcc.total_contributed_cp
+		GROUP BY gm.user_id, up.display_name, ga.username, up.avatar_url, ga.avatar_url, gm.joined_at, gcc.total_contributed_cp
 		ORDER BY total_contributed_cp DESC, LOWER(COALESCE(up.display_name, ga.username)) ASC, gm.joined_at ASC
 	`, contributionpointdomain.PointTypeCP.Code, contributionpointdomain.PointTypeCP.Language, contributionpointdomain.EntryTypeEarn, guildID).Scan(&records).Error; err != nil {
 		return nil, err
@@ -573,6 +574,7 @@ type playerPetRecord struct {
 type guildMemberContributionRecord struct {
 	UserID             user.ID   `gorm:"column:user_id"`
 	Name               string    `gorm:"column:name"`
+	AvatarURL          string    `gorm:"column:avatar_url"`
 	TotalEarnedCP      int64     `gorm:"column:total_earned_cp"`
 	TotalContributedCP int64     `gorm:"column:total_contributed_cp"`
 	JoinedAt           time.Time `gorm:"column:joined_at"`
@@ -582,6 +584,7 @@ func (r guildMemberContributionRecord) toDomain() (guilddomain.MemberContributio
 	return guilddomain.NewMemberContribution(guilddomain.MemberContribution{
 		UserID:             r.UserID,
 		Name:               r.Name,
+		AvatarURL:          r.AvatarURL,
 		TotalEarnedCP:      r.TotalEarnedCP,
 		TotalContributedCP: r.TotalContributedCP,
 		JoinedAt:           r.JoinedAt,

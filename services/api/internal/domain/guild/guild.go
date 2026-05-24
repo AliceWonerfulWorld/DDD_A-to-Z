@@ -49,6 +49,7 @@ type MembershipWithGuild struct {
 type MemberContribution struct {
 	UserID             user.ID
 	Name               string
+	AvatarURL          string
 	TotalEarnedCP      int64
 	TotalContributedCP int64
 	JoinedAt           time.Time

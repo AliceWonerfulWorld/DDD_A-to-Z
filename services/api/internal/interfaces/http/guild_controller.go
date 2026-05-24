@@ -426,6 +426,7 @@ func memberContributionResponses(members []guilddomain.MemberContribution) []map
 		responses = append(responses, map[string]any{
 			"user_id":              member.UserID,
 			"name":                 member.Name,
+			"avatar_url":           member.AvatarURL,
 			"total_earned_cp":      member.TotalEarnedCP,
 			"total_contributed_cp": member.TotalContributedCP,
 			"joined_at":            member.JoinedAt.Format(time.RFC3339),
