@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PATHS } from "../../constants/paths";
 import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
 import { useAudioSettings } from "../../features/audio/useAudioSettings";
@@ -17,7 +17,7 @@ interface MyGuildDetailsProps {
 interface GuildMember {
   id: string;
   name: string;
-  avatar: string | JSX.Element;
+  avatar: string | ReactNode;
   totalContributedCp: number;
   isCurrentUser?: boolean;
 }
@@ -39,7 +39,7 @@ function memberInitials(name: string) {
 }
 
 function toGuildMember(member: GuildMemberContribution, currentUserID?: string): GuildMember {
-  let avatar: string | JSX.Element =
+  let avatar: string | ReactNode =
     member.user_id === currentUserID ? "YOU" : memberInitials(member.name);
   if (member.avatar_url) {
     avatar = (
