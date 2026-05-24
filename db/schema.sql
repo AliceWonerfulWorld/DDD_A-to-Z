@@ -411,3 +411,44 @@ CREATE TABLE user_badges (
 );
 
 CREATE INDEX user_badges_user_id_earned_at_idx ON user_badges(user_id, earned_at DESC);
+
+CREATE TABLE seasons (
+  id TEXT PRIMARY KEY,
+  number INTEGER NOT NULL UNIQUE,
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE guild_season_rankings (
+  id TEXT PRIMARY KEY,
+  season_id TEXT NOT NULL REFERENCES seasons(id),
+  guild_id TEXT NOT NULL REFERENCES guilds(id),
+  total_cp BIGINT NOT NULL DEFAULT 0,
+  rank INTEGER NOT NULL,
+  member_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (season_id, guild_id)
+);
+
+CREATE INDEX guild_season_rankings_season_rank_idx ON guild_season_rankings(season_id, rank);
+
+CREATE TABLE guild_season_member_rankings (
+  id TEXT PRIMARY KEY,
+  season_id TEXT NOT NULL REFERENCES seasons(id),
+  guild_id TEXT NOT NULL REFERENCES guilds(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  user_name TEXT NOT NULL,
+  contributed_cp BIGINT NOT NULL DEFAULT 0,
+  rank INTEGER NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (season_id, guild_id, user_id)
+);
+
+CREATE INDEX guild_season_member_rankings_season_guild_rank_idx ON guild_season_member_rankings(season_id, guild_id, rank);
+
+INSERT INTO seasons (id, number, starts_at, ends_at, created_at, updated_at) VALUES
+  ('season_1', 1, '2026-05-24 00:00:00+09', '2026-08-24 00:00:00+09', NOW(), NOW());

@@ -15,6 +15,7 @@ import (
 	petapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/pet"
 	profileapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/profile"
 	analysisapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/repositoryanalysis"
+	seasonapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/season"
 	spapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/sp"
 	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/config"
 	infragithub "github.com/jyogi-web/ddd-a-to-z/services/api/internal/infrastructure/github"
@@ -41,6 +42,7 @@ type controllerSet struct {
 	home       *httpapi.HomeController
 	sp         *httpapi.SPController
 	chat       *httpapi.ChatController
+	season     *httpapi.SeasonController
 }
 
 func (c controllerSet) registrars() []httpapi.RouteRegistrar {
@@ -56,6 +58,7 @@ func (c controllerSet) registrars() []httpapi.RouteRegistrar {
 		c.home,
 		c.sp,
 		c.chat,
+		c.season,
 	}
 }
 
@@ -86,6 +89,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 	guildTownStore := postgres.NewGuildTownStore(db)
 	chatStore := postgres.NewChatStore(db, guildStore)
 	badgeStore := postgres.NewBadgeStore(db)
+	seasonStore := postgres.NewSeasonStore(db)
 
 	authUseCase := authapp.NewUseCase(
 		oauthClient,
@@ -159,6 +163,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		profileStore,
 	)
 
+	seasonUseCase := seasonapp.NewUseCase(seasonStore, security.NewIDGenerator("season"))
 	analysisUseCase := analysisapp.NewUseCaseWithContributionStore(
 		authStore,
 		authStore,
@@ -197,6 +202,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 			home:       httpapi.NewHomeController(homeUseCase, logger),
 			sp:         httpapi.NewSPController(spUseCase, logger),
 			chat:       httpapi.NewChatController(chatUseCase, logger),
+			season:     httpapi.NewSeasonController(seasonUseCase, logger),
 		},
 		connectHandlerSet{
 			home: connectapi.NewHomeHandler(homeUseCase),
