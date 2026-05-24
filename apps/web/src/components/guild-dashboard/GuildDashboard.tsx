@@ -310,6 +310,7 @@ export function GuildDashboard({ onNavigate }: GuildDashboardProps) {
         <DashboardMonitor
           activeTab={activeTab}
           guild={currentGuild}
+          guildID={currentGuild?.id ?? null}
           isGuildLoading={!isCurrentGuildLoaded}
           logs={logs}
           onSwitchTab={switchTab}

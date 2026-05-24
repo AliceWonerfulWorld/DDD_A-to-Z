@@ -3,11 +3,13 @@ import type { GuildMemberContribution } from "../../features/guild/api";
 import type { DisplayGuild } from "../../features/guild/presentation";
 import { steppedEase } from "../../lib/animationUtils";
 import { ActivityLogPanel, RankingsPanel } from "./DashboardPanels";
+import { SeasonRankingsPanel } from "./SeasonRankingsPanel";
 import type { ActivityLog, GuildTab } from "./types";
 
 interface DashboardMonitorProps {
   activeTab: GuildTab;
   guild: DisplayGuild | null;
+  guildID: string | null;
   isGuildLoading: boolean;
   logs: ActivityLog[];
   onSwitchTab: (tab: GuildTab) => void;
@@ -20,6 +22,7 @@ interface DashboardMonitorProps {
 export function DashboardMonitor({
   activeTab,
   guild,
+  guildID,
   isGuildLoading,
   logs,
   onSwitchTab,
@@ -161,7 +164,7 @@ export function DashboardMonitor({
           role="tablist"
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "1fr 1fr 1fr",
             gap: isMobile ? "2px" : "8px",
           }}
         >
@@ -207,8 +210,10 @@ export function DashboardMonitor({
         <AnimatePresence mode="wait">
           {activeTab === "activity" ? (
             <ActivityLogPanel logs={logs} isMobile={isMobile} />
-          ) : (
+          ) : activeTab === "rankings" ? (
             <RankingsPanel isMobile={isMobile} members={members} />
+          ) : (
+            <SeasonRankingsPanel guildID={guildID} isMobile={isMobile} />
           )}
         </AnimatePresence>
       </div>

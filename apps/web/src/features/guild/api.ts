@@ -19,6 +19,7 @@ export interface Guild {
   is_max_level?: boolean;
   current_guild_level_experience?: number | null;
   next_guild_level_experience?: number | null;
+  previous_season_cp?: number;
 }
 
 export interface GuildMembership {

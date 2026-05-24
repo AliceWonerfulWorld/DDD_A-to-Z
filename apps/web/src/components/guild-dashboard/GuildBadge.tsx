@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import type { DisplayGuild } from "../../features/guild/presentation";
+import { fetchCurrentSeason, type Season } from "../../features/season/api";
 import { steppedEase } from "../../lib/animationUtils";
 
 interface GuildBadgeProps {
@@ -8,9 +10,20 @@ interface GuildBadgeProps {
 }
 
 export function GuildBadge({ guild, isLoading }: GuildBadgeProps) {
+  const [season, setSeason] = useState<Season | null>(null);
+
+  useEffect(() => {
+    fetchCurrentSeason()
+      .then((s) => setSeason(s))
+      .catch((error) => {
+        console.error("failed to fetch current season", error);
+      });
+  }, []);
+
   const name = isLoading ? "SYNCING..." : guild ? `${guild.name} Guild` : "NO GUILD";
   const accent = guild?.accent ?? "#9be7ff";
   const color = guild?.color ?? "#00f5ff";
+  const seasonLabel = season ? `SEASON ${season.number}` : "SEASON --";
 
   return (
     <motion.aside
@@ -118,7 +131,7 @@ export function GuildBadge({ guild, isLoading }: GuildBadgeProps) {
             textShadow: `0 0 8px ${color}`,
           }}
         >
-          SEASON 1
+          {seasonLabel}
         </span>
       </div>
     </motion.aside>

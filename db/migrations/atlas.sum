@@ -1,4 +1,4 @@
-h1:bV0MtvhKLGLmprDSri2P0YhRae41rEnVU8E51V4/Pi8=
+h1:cem3CkazZdqR+iMjg1x6kDqRsb/KmJY7MRfAYl+HvMQ=
 20260511165019_create_auth_tables.sql h1:xBhU31KhHPurVx2RqVxMmiyIjEg1sqKV3RUJyU6gr9Y=
 20260513090000_create_cp_tables.sql h1:3Ax1icNsujVhIX3ObVtWMEbIP/a3XPD2JQHeLhQG5Mg=
 20260514113146_contribution_point.sql h1:ZUdMX0wLF3+SpmuKtFVvhtIdFQSC+P0fjO8k/eYmEhA=
@@ -22,3 +22,7 @@ h1:bV0MtvhKLGLmprDSri2P0YhRae41rEnVU8E51V4/Pi8=
 20260524000002_add_avatar_url_to_user_profiles.sql h1:PzNBL+Gp8A+i42sDilIdOg24tpTZAwabIhPRZmn1EIU=
 20260524000003_create_badges.sql h1:IPdXSbrE2KKaO44s2RgiRl33mO5ByHQnodtaghhVOj4=
 20260524000004_add_selected_badge_slug_to_user_profiles.sql h1:MmBlca6cghYIAIRUoIY9tWXwAKMVm/Xku+cxNZwhmcI=
+20260524000005_create_seasons.sql h1:VTAZEpH+Nb6kJw7vLaGntIY8oIg3Ix6IlOGLL5XcF88=
+20260524000006_insert_initial_season.sql h1:/dqFDGNOAiPedG4F+XkXmGVbQ1mM8XVvKHsJ7ITsxIo=
+20260524000007_drop_seasons_is_current.sql h1:3ztXu4dWH68omt/e/1W0kX0muufVWCwMxeDQJwZAATM=
+20260524000008_drop_season_ranking_tables.sql h1:gz5KTvr5b6pkKRYS2pwNlKED4iPFo6HvzC/pdMFmonw=

@@ -122,3 +122,8 @@ export function findGuildBySlug(slug: string | null): GuildMaster | null {
   if (!slug) return null;
   return GUILD_MASTERS.find((guild) => guild.slug === slug) ?? null;
 }
+
+export function findGuildByID(id: string | null): GuildMaster | null {
+  if (!id) return null;
+  return GUILD_MASTERS.find((guild) => guild.id === id) ?? null;
+}

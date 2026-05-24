@@ -87,7 +87,7 @@ export function MyGuildDetails({ onNavigate }: MyGuildDetailsProps) {
     const displayGuild = guild;
 
     return [
-      { label: "GUILD LEVEL", value: displayGuild ? `LV.${displayGuild.sortOrder + 1}` : "--" },
+      { label: "GUILD LEVEL", value: displayGuild ? `LV.${displayGuild.guildLevel}` : "--" },
       {
         label: "LAST SEASON CP",
         value: displayGuild ? displayGuild.previousSeasonCp.toLocaleString() : "--",
