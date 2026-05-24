@@ -69,6 +69,7 @@ interface BattleOpponentApiResponse {
   petId: string;
   guildId: string;
   guildName: string;
+  DisplayName: string;
   name: string;
   species: string;
   attribute: string;
@@ -97,7 +98,10 @@ export async function fetchMyPets(): Promise<MyPetsResponse> {
   return apiFetch<MyPetsResponse>("/pets/me");
 }
 
-export async function trainPet(petId: string, stat: PetTrainingStat): Promise<TrainingResult> {
+export async function trainPet(
+  petId: string,
+  stat: PetTrainingStat,
+): Promise<TrainingResult> {
   const result = await apiFetch<PetTrainingApiResponse>(
     `/pets/${encodeURIComponent(petId)}/train`,
     {
@@ -115,11 +119,13 @@ export async function trainPet(petId: string, stat: PetTrainingStat): Promise<Tr
 }
 
 export async function fetchBattleOpponents(): Promise<BattleOpponent[]> {
-  const data = await apiFetch<{ opponents: BattleOpponentApiResponse[] }>("/pets/battle/opponents");
+  const data = await apiFetch<{ opponents: BattleOpponentApiResponse[] }>(
+    "/pets/battle/opponents",
+  );
   return data.opponents.map((opponent) => ({
     userId: opponent.petId,
     petId: opponent.petId,
-    playerName: `${opponent.guildName} Challenger`,
+    playerName: opponent.DisplayName, // ← API から取得
     pet: {
       id: opponent.petId,
       guildId: opponent.guildId,
@@ -138,7 +144,10 @@ export async function fetchBattleOpponents(): Promise<BattleOpponent[]> {
   }));
 }
 
-export async function startPetBattle(petId: string, opponentPetId: string): Promise<BattleResult> {
+export async function startPetBattle(
+  petId: string,
+  opponentPetId: string,
+): Promise<BattleResult> {
   const result = await apiFetch<BattleResultApiResponse>(
     `/pets/${encodeURIComponent(petId)}/battle`,
     {
