@@ -242,7 +242,7 @@ export function useInitialProfileFlow({ onComplete }: InitialProfileFlowArgs) {
         onComplete(trimmedUsername, avatarUrl);
       }, JOURNEY_START_DELAY_MS);
     },
-    [onComplete],
+    [onComplete, avatarUrl],
   );
 
   const handleBeginJourney = useCallback(() => {
