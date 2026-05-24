@@ -292,6 +292,10 @@ func (u *UseCase) UpgradeBuilding(ctx context.Context, sessionToken string, comm
 	if command.NextLevel != placement.Level+1 {
 		return TownState{}, ErrInvalidPlacementLevel
 	}
+	cost, ok := guildtowndomain.FindBuildingLevelCost(placement.BuildingType, command.NextLevel)
+	if !ok {
+		cost = guildtowndomain.BuildingLevelCost{Level: command.NextLevel}
+	}
 
 	exp := guilddomain.CalculateUpgradeExp(command.NextLevel)
 	if exp <= 0 {
@@ -300,9 +304,11 @@ func (u *UseCase) UpgradeBuilding(ctx context.Context, sessionToken string, comm
 
 	updatedGuild, err := u.repository.UpgradePlacement(
 		ctx,
+		membership.Membership.UserID,
 		membership.Membership.GuildID,
 		command.PlacementID,
 		command.NextLevel,
+		cost,
 		exp,
 		u.now(),
 	)

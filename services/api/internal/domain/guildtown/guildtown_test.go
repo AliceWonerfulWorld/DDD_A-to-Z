@@ -40,3 +40,25 @@ func TestNewPlacementRejectsUnknownBuildingType(t *testing.T) {
 		t.Fatal("NewPlacement() error = nil, 期待値 error")
 	}
 }
+
+func TestFindBuildingLevelCost(t *testing.T) {
+	cost, ok := FindBuildingLevelCost("plasma-condenser", 2)
+	if !ok {
+		t.Fatal("FindBuildingLevelCost() ok = false, 期待値 true")
+	}
+	if cost.CP != 250 || cost.SP != 0 || cost.TargetSP != "Common" {
+		t.Fatalf("cost = %+v, 期待値 CP=250 SP=0 TargetSP=Common", cost)
+	}
+
+	cost, ok = FindBuildingLevelCost("concurrency-tower", 5)
+	if !ok {
+		t.Fatal("FindBuildingLevelCost() ok = false, 期待値 true")
+	}
+	if cost.CP != 20000 || cost.SP != 8000 || cost.TargetSP != "Go" {
+		t.Fatalf("cost = %+v, 期待値 CP=20000 SP=8000 TargetSP=Go", cost)
+	}
+
+	if _, ok := FindBuildingLevelCost("tent", 2); ok {
+		t.Fatal("FindBuildingLevelCost(tent, 2) ok = true, 期待値 false")
+	}
+}

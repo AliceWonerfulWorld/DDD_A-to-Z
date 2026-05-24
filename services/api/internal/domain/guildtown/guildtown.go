@@ -31,6 +31,13 @@ type DefaultInventory struct {
 	Quantity     int
 }
 
+type BuildingLevelCost struct {
+	Level    int
+	CP       int64
+	SP       int64
+	TargetSP string
+}
+
 type InventoryItem struct {
 	GuildID      guilddomain.ID
 	BuildingType BuildingType
@@ -87,7 +94,7 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   3,
-		PurchaseCP:  300,
+		PurchaseCP:  120,
 		TargetSP:    "Common",
 	},
 	{
@@ -100,8 +107,8 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   4,
-		PurchaseCP:  400,
-		PurchaseSP:  50,
+		PurchaseCP:  160,
+		PurchaseSP:  20,
 		TargetSP:    "Common",
 	},
 	{
@@ -114,8 +121,8 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   5,
-		PurchaseCP:  500,
-		PurchaseSP:  50,
+		PurchaseCP:  200,
+		PurchaseSP:  20,
 		TargetSP:    "Common",
 	},
 	{
@@ -128,8 +135,8 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   6,
-		PurchaseCP:  600,
-		PurchaseSP:  150,
+		PurchaseCP:  240,
+		PurchaseSP:  60,
 		TargetSP:    "TypeScript",
 	},
 	{
@@ -142,8 +149,8 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   7,
-		PurchaseCP:  700,
-		PurchaseSP:  200,
+		PurchaseCP:  280,
+		PurchaseSP:  80,
 		TargetSP:    "TypeScript",
 	},
 	{
@@ -156,8 +163,8 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   8,
-		PurchaseCP:  800,
-		PurchaseSP:  250,
+		PurchaseCP:  320,
+		PurchaseSP:  100,
 		TargetSP:    "Go",
 	},
 	{
@@ -170,8 +177,8 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   9,
-		PurchaseCP:  1000,
-		PurchaseSP:  300,
+		PurchaseCP:  400,
+		PurchaseSP:  120,
 		TargetSP:    "Go",
 	},
 	{
@@ -184,8 +191,8 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   10,
-		PurchaseCP:  1500,
-		PurchaseSP:  500,
+		PurchaseCP:  600,
+		PurchaseSP:  200,
 		TargetSP:    "Rust",
 	},
 	{
@@ -198,8 +205,8 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   11,
-		PurchaseCP:  2000,
-		PurchaseSP:  600,
+		PurchaseCP:  800,
+		PurchaseSP:  240,
 		TargetSP:    "Go",
 	},
 	{
@@ -212,8 +219,8 @@ var DefaultBuildingMasters = []BuildingMaster{
 		MapWidthVW:  20,
 		MaxMapWidth: 300,
 		SortOrder:   12,
-		PurchaseCP:  5000,
-		PurchaseSP:  2000,
+		PurchaseCP:  1500,
+		PurchaseSP:  600,
 		TargetSP:    "Common",
 	},
 }
@@ -221,6 +228,89 @@ var DefaultBuildingMasters = []BuildingMaster{
 var DefaultInventories = []DefaultInventory{
 	{BuildingType: "tent", Quantity: 2},
 	{BuildingType: "bonfire", Quantity: 3},
+}
+
+var defaultBuildingLevelCosts = map[BuildingType][]BuildingLevelCost{
+	"plasma-condenser": {
+		{Level: 1, CP: 120, TargetSP: "Common"},
+		{Level: 2, CP: 250, TargetSP: "Common"},
+		{Level: 3, CP: 600, TargetSP: "Common"},
+		{Level: 4, CP: 1500, TargetSP: "Common"},
+		{Level: 5, CP: 3500, TargetSP: "Common"},
+	},
+	"hacker-hideout": {
+		{Level: 1, CP: 160, SP: 20, TargetSP: "Common"},
+		{Level: 2, CP: 400, SP: 60, TargetSP: "Common"},
+		{Level: 3, CP: 1000, SP: 160, TargetSP: "Common"},
+		{Level: 4, CP: 2600, SP: 400, TargetSP: "Common"},
+		{Level: 5, CP: 6000, SP: 1000, TargetSP: "Common"},
+	},
+	"llm-semantic-compiler": {
+		{Level: 1, CP: 200, SP: 20, TargetSP: "Common"},
+		{Level: 2, CP: 480, SP: 80, TargetSP: "Common"},
+		{Level: 3, CP: 1200, SP: 200, TargetSP: "Common"},
+		{Level: 4, CP: 3200, SP: 480, TargetSP: "Common"},
+		{Level: 5, CP: 8000, SP: 1400, TargetSP: "Common"},
+	},
+	"ai-pair-programming-pod": {
+		{Level: 1, CP: 240, SP: 60, TargetSP: "TypeScript"},
+		{Level: 2, CP: 600, SP: 160, TargetSP: "TypeScript"},
+		{Level: 3, CP: 1600, SP: 400, TargetSP: "TypeScript"},
+		{Level: 4, CP: 4000, SP: 1100, TargetSP: "TypeScript"},
+		{Level: 5, CP: 8000, SP: 2800, TargetSP: "TypeScript"},
+	},
+	"refactoring-lab": {
+		{Level: 1, CP: 280, SP: 80, TargetSP: "TypeScript"},
+		{Level: 2, CP: 720, SP: 200, TargetSP: "TypeScript"},
+		{Level: 3, CP: 1800, SP: 520, TargetSP: "TypeScript"},
+		{Level: 4, CP: 4800, SP: 1400, TargetSP: "TypeScript"},
+		{Level: 5, CP: 10000, SP: 3400, TargetSP: "TypeScript"},
+	},
+	"algorithm-arena": {
+		{Level: 1, CP: 320, SP: 100, TargetSP: "Go"},
+		{Level: 2, CP: 800, SP: 260, TargetSP: "Go"},
+		{Level: 3, CP: 2200, SP: 720, TargetSP: "Go"},
+		{Level: 4, CP: 6000, SP: 1800, TargetSP: "Go"},
+		{Level: 5, CP: 12000, SP: 4000, TargetSP: "Go"},
+	},
+	"distributed-data-bank": {
+		{Level: 1, CP: 400, SP: 120, TargetSP: "Go"},
+		{Level: 2, CP: 1000, SP: 320, TargetSP: "Go"},
+		{Level: 3, CP: 2800, SP: 880, TargetSP: "Go"},
+		{Level: 4, CP: 7200, SP: 2200, TargetSP: "Go"},
+		{Level: 5, CP: 14000, SP: 4800, TargetSP: "Go"},
+	},
+	"ci-cd-automation-plant": {
+		{Level: 1, CP: 600, SP: 200, TargetSP: "Rust"},
+		{Level: 2, CP: 1400, SP: 480, TargetSP: "Rust"},
+		{Level: 3, CP: 3600, SP: 1200, TargetSP: "Rust"},
+		{Level: 4, CP: 8800, SP: 3000, TargetSP: "Rust"},
+		{Level: 5, CP: 18000, SP: 7200, TargetSP: "Rust"},
+	},
+	"concurrency-tower": {
+		{Level: 1, CP: 800, SP: 240, TargetSP: "Go"},
+		{Level: 2, CP: 1800, SP: 600, TargetSP: "Go"},
+		{Level: 3, CP: 4400, SP: 1600, TargetSP: "Go"},
+		{Level: 4, CP: 10400, SP: 3600, TargetSP: "Go"},
+		{Level: 5, CP: 20000, SP: 8000, TargetSP: "Go"},
+	},
+	"cyber-data-core": {
+		{Level: 1, CP: 1500, SP: 600, TargetSP: "Common"},
+		{Level: 2, CP: 3600, SP: 1500, TargetSP: "Common"},
+		{Level: 3, CP: 7500, SP: 3000, TargetSP: "Common"},
+		{Level: 4, CP: 12000, SP: 5400, TargetSP: "Common"},
+		{Level: 5, CP: 18000, SP: 7500, TargetSP: "Common"},
+	},
+}
+
+func FindBuildingLevelCost(buildingType BuildingType, level int) (BuildingLevelCost, bool) {
+	for _, cost := range defaultBuildingLevelCosts[buildingType] {
+		if cost.Level == level {
+			return cost, true
+		}
+	}
+
+	return BuildingLevelCost{}, false
 }
 
 func NewInventoryItem(item InventoryItem) (InventoryItem, error) {

@@ -63,7 +63,7 @@ func (r guildTownTestRepository) CreatePlacement(ctx context.Context, guildID gu
 	return nil
 }
 
-func (r guildTownTestRepository) UpgradePlacement(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, exp int64, now time.Time) (guilddomain.Guild, error) {
+func (r guildTownTestRepository) UpgradePlacement(ctx context.Context, userID user.ID, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, cost guildtowndomain.BuildingLevelCost, exp int64, now time.Time) (guilddomain.Guild, error) {
 	return guilddomain.NewGuild(guilddomain.Guild{
 		ID:              guildID,
 		Slug:            "go",
