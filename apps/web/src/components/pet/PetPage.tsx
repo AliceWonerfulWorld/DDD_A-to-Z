@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useMachine } from "@xstate/react";
 import { motion, type Variants } from "framer-motion";
+import { SPRITE_ASSETS } from "../../constants/assets";
 import { PATHS } from "../../constants/paths";
+import { AUDIO_ASSETS } from "../../features/audio/audioAssets";
+import { useAudioSettings } from "../../features/audio/useAudioSettings";
 import { ApiError } from "../../lib/api/client";
 import { GopherSprite } from "../shared/GopherSprite";
 import {
@@ -10,14 +13,21 @@ import {
   PET_TRAINING_COSTS,
   startPetBattle,
   trainPet,
+  type GrantedPet,
   type PetSummary,
   type PetTrainingStat,
 } from "../../features/pet/api";
 import { consumeGrantedPet } from "../../features/pet/guildGrant";
+import { readHomePetId, saveHomePetId } from "../../features/pet/homePet";
 import { petPageMachine } from "../../features/pet/petPageMachine";
 import { buildSampleBattleResult } from "../../features/pet/battleReplay";
 import { saveBattleSession } from "../../features/pet/battleSession";
-import { sampleCurrentPet, sampleOwnedPets, sampleOpponents } from "../../features/pet/sampleData";
+import {
+  sampleBattleResult,
+  sampleCurrentPet,
+  sampleOwnedPets,
+  sampleOpponents,
+} from "../../features/pet/sampleData";
 import { steppedEase } from "../../lib/animationUtils";
 import styles from "./PetPage.module.css";
 
@@ -31,15 +41,44 @@ let petPageBootstrapPromise: Promise<{
 }> | null = null;
 
 async function fetchPetPageBootstrap() {
-  petPageBootstrapPromise ??= Promise.allSettled([fetchMyPets(), fetchBattleOpponents()]).then(
-    ([myPets, opponents]) => ({ myPets, opponents }),
-  );
+  petPageBootstrapPromise ??= Promise.allSettled([fetchMyPets(), fetchBattleOpponents()])
+    .then(([myPets, opponents]) => ({ myPets, opponents }))
+    .finally(() => {
+      petPageBootstrapPromise = null;
+    });
   return petPageBootstrapPromise;
 }
 
 function petDisplayName(pet: PetSummary | null | undefined) {
   if (!pet) return "相棒未選択";
-  return pet.attribute.toLowerCase() === "go" ? "Gopher君" : pet.name;
+  return pet.attribute.toLowerCase() === "go" ? "Gopher" : pet.name;
+}
+
+function grantedPetAttributeLabel(attribute: string) {
+  const normalized = attribute.toLowerCase();
+  const labels: Record<string, string> = {
+    go: "Go",
+    rust: "Rust",
+    python: "Python",
+    java: "Java",
+    typescript: "TypeScript",
+    haskell: "Haskell",
+    zig: "Zig",
+  };
+  return labels[normalized] ?? attribute;
+}
+
+function grantedPetGuildName(guildId: string, attribute: string) {
+  const namesByGuildId: Record<string, string> = {
+    guild_go: "Go Guild",
+    guild_rust: "Rust Guild",
+    guild_python: "Python Guild",
+    guild_java: "Java Guild",
+    guild_typescript: "TypeScript Guild",
+    guild_haskell: "Haskell Guild",
+    guild_zig: "Zig Guild",
+  };
+  return namesByGuildId[guildId] ?? `${grantedPetAttributeLabel(attribute)} Guild`;
 }
 
 const petPortraits: Record<string, { label: string; tone: string }> = {
@@ -49,6 +88,20 @@ const petPortraits: Record<string, { label: string; tone: string }> = {
   Java: { label: "Jv", tone: "#ff7b7b" },
   Haskell: { label: "λ", tone: "#b89cff" },
   Zig: { label: "Zg", tone: "#f7a541" },
+};
+
+const SPRITE_FRAME_WIDTH = 192;
+const SPRITE_FRAME_HEIGHT = 208;
+const SPRITE_COLUMNS = 8;
+const SPRITE_ROWS = 9;
+const PET_IDLE_FRAMES = 6;
+const PET_SPRITE_DISPLAY_WIDTH = 132;
+const PET_SPRITE_DISPLAY_HEIGHT = 143;
+
+const petSpriteAssets: Record<string, string> = {
+  python: SPRITE_ASSETS.PYTHON,
+  rust: SPRITE_ASSETS.RUST,
+  java: SPRITE_ASSETS.JAVA,
 };
 
 const pageVariants: Variants = {
@@ -79,6 +132,16 @@ function statValue(pet: PetSummary, stat: PetTrainingStat) {
   return pet[stat];
 }
 
+function levelProgress(pet: PetSummary) {
+  const expToNextLevel = Math.max(100, pet.level * 100);
+  const currentExp = Math.max(0, Math.min(pet.exp, expToNextLevel));
+  return {
+    currentExp,
+    expToNextLevel,
+    percentage: Math.round((currentExp / expToNextLevel) * 100),
+  };
+}
+
 function apiWaitingMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError && error.status === 404) {
     return "この操作は API 実装待ちです。画面と client の接続口だけ先に用意しています。";
@@ -88,19 +151,30 @@ function apiWaitingMessage(error: unknown, fallback: string) {
 
 export function PetPage({ onNavigate }: PetPageProps) {
   const isMountedRef = useRef(false);
+  const buttonClickSeRef = useRef<HTMLAudioElement | null>(null);
+  const { isSeEnabled } = useAudioSettings();
+  const [grantedPetNotice, setGrantedPetNotice] = useState<GrantedPet | null>(null);
+  const [homePetId, setHomePetId] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : readHomePetId(),
+  );
+  const [homePetMessage, setHomePetMessage] = useState<string | null>(null);
   const [snapshot, send] = useMachine(petPageMachine);
-  const {
-    data,
-    selectedPetId,
-    opponents,
-    selectedOpponentId,
-    statusMessage,
-    noticeMessage,
-    trainingStat,
-  } = snapshot.context;
+  const { data, selectedPetId, opponents, selectedOpponentId, statusMessage, trainingStat } =
+    snapshot.context;
   const isLoading = snapshot.matches("loading");
   const isTraining = snapshot.matches("training");
   const isBattling = snapshot.matches("battling");
+
+  const playButtonClick = useCallback(() => {
+    const audio = buttonClickSeRef.current;
+    if (!audio || !isSeEnabled) return;
+
+    if (audio.preload === "none" && audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+      audio.load();
+    }
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  }, [isSeEnabled]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -112,12 +186,16 @@ export function PetPage({ onNavigate }: PetPageProps) {
   useEffect(() => {
     const grantedPet = consumeGrantedPet();
     if (grantedPet) {
-      const guildName = grantedPet.guildId === "guild_go" ? "Goギルド" : "所属ギルド";
-      const petName =
-        grantedPet.attribute.toLowerCase() === "go" ? "Gopher君" : grantedPet.attribute;
-      send({ type: "NOTICE", message: `${guildName}の相棒「${petName}」が仲間になった！` });
+      setGrantedPetNotice(grantedPet);
     }
-  }, [send]);
+  }, []);
+
+  useEffect(() => {
+    if (!homePetMessage) return;
+
+    const timer = window.setTimeout(() => setHomePetMessage(null), 3900);
+    return () => window.clearTimeout(timer);
+  }, [homePetMessage]);
 
   useEffect(() => {
     let isMounted = true;
@@ -201,6 +279,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
       return;
     }
 
+    playButtonClick();
     send({ type: "TRAIN", stat });
     try {
       const result = await trainPet(selectedPet.id, stat);
@@ -224,6 +303,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
   const battle = async () => {
     if (!selectedOpponent || !selectedPet || isBattling) return;
 
+    playButtonClick();
     send({ type: "BATTLE" });
     try {
       const result =
@@ -234,7 +314,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
                 650,
               );
             })
-          : await startPetBattle(selectedOpponent.userId);
+          : await startPetBattle(selectedPet.id, selectedOpponent.petId);
       if (!isMountedRef.current) return;
       saveBattleSession({ playerPet: selectedPet, opponent: selectedOpponent, result });
       send({ type: "BATTLE_SUCCESS", result });
@@ -252,6 +332,22 @@ export function PetPage({ onNavigate }: PetPageProps) {
     }
   };
 
+  const startDemoBattle = () => {
+    const opponent = sampleOpponents[0];
+    if (!opponent) return;
+
+    playButtonClick();
+    saveBattleSession({ playerPet: sampleCurrentPet, opponent, result: sampleBattleResult });
+    onNavigate(PATHS.BATTLE);
+  };
+
+  const setHomePet = (pet: PetSummary) => {
+    playButtonClick();
+    saveHomePetId(pet.id);
+    setHomePetId(pet.id);
+    setHomePetMessage(`${petDisplayName(pet)} をホームに表示します。`);
+  };
+
   return (
     <motion.main
       animate="visible"
@@ -260,6 +356,13 @@ export function PetPage({ onNavigate }: PetPageProps) {
       variants={pageVariants}
     >
       <motion.div className={styles.shell} variants={pageVariants}>
+        <audio
+          ref={buttonClickSeRef}
+          src={AUDIO_ASSETS.se.buttonClick}
+          preload="none"
+          muted={!isSeEnabled}
+          aria-hidden="true"
+        />
         <motion.header className={styles.header} variants={panelVariants}>
           <div>
             <p className={styles.eyebrow}>PET TERMINAL</p>
@@ -268,14 +371,16 @@ export function PetPage({ onNavigate }: PetPageProps) {
           <button
             className={styles.backButton}
             type="button"
-            onClick={() => onNavigate(PATHS.HOME)}
+            onClick={() => {
+              playButtonClick();
+              onNavigate(PATHS.HOME);
+            }}
           >
             HOME
           </button>
         </motion.header>
 
-        {noticeMessage && <div className={styles.notice}>{noticeMessage}</div>}
-        {statusMessage && <div className={styles.notice}>{statusMessage}</div>}
+        {grantedPetNotice && <GrantedPetCelebration grantedPet={grantedPetNotice} />}
 
         <motion.div className={styles.layout} variants={pageVariants}>
           <motion.section
@@ -304,13 +409,20 @@ export function PetPage({ onNavigate }: PetPageProps) {
                     <div className={styles.meta}>
                       <span className={styles.chip}>{selectedPet.guildName} Guild</span>
                       <span className={styles.chip}>{selectedPet.attribute}</span>
-                      <span className={styles.chip}>Lv {selectedPet.level}</span>
                       {selectedPet.id === data.currentGuildPet?.id && (
                         <span className={styles.chip}>CURRENT GUILD</span>
                       )}
-                      <span className={styles.chip}>CP {data.cpBalance}</span>
                     </div>
+                    <PetStatusPanel pet={selectedPet} cpBalance={data.cpBalance} />
                     <PetStats pet={selectedPet} />
+                    <button
+                      className={styles.homePetButton}
+                      disabled={homePetId === selectedPet.id}
+                      type="button"
+                      onClick={() => setHomePet(selectedPet)}
+                    >
+                      {homePetId === selectedPet.id ? "HOME PET" : "SET HOME PET"}
+                    </button>
                   </div>
                 </div>
 
@@ -326,13 +438,34 @@ export function PetPage({ onNavigate }: PetPageProps) {
                         type="button"
                         onClick={() => void train(stat)}
                       >
-                        {trainingStat === stat
-                          ? "TRAINING..."
-                          : `${training.label} +${training.amount} / ${training.cost} CP`}
+                        <span className={styles.actionLabel}>
+                          {trainingStat === stat ? "TRAINING..." : training.label}
+                        </span>
+                        <span className={styles.actionBoost}>+{training.amount}</span>
+                        <span className={styles.actionCost}>{training.cost} CP</span>
                       </button>
                     );
                   })}
                 </div>
+
+                {(statusMessage || homePetMessage) && (
+                  <div className={styles.trainingFeedbackStack} role="status">
+                    {statusMessage && (
+                      <div className={styles.trainingFeedback} key={statusMessage}>
+                        <span className={styles.trainingFeedbackLabel}>BOOST RESULT</span>
+                        <p className={styles.trainingFeedbackText}>{statusMessage}</p>
+                      </div>
+                    )}
+                    {homePetMessage && (
+                      <div className={styles.trainingFeedback} key={homePetMessage}>
+                        <span className={styles.trainingFeedbackLabel}>HOME DISPLAY</span>
+                        <p className={styles.trainingFeedbackText}>{homePetMessage}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <PetBattleRecordPreview />
               </>
             )}
           </motion.section>
@@ -353,7 +486,10 @@ export function PetPage({ onNavigate }: PetPageProps) {
                   className={styles.petListItem}
                   key={pet.id}
                   type="button"
-                  onClick={() => send({ type: "SELECT_PET", petId: pet.id })}
+                  onClick={() => {
+                    playButtonClick();
+                    send({ type: "SELECT_PET", petId: pet.id });
+                  }}
                 >
                   <div>
                     <h3 className={styles.itemTitle}>{petDisplayName(pet)}</h3>
@@ -366,6 +502,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
                       <span className={styles.chip}>GUILD</span>
                     )}
                     {pet.id === selectedPetId && <span className={styles.chip}>SELECTED</span>}
+                    {pet.id === homePetId && <span className={styles.chip}>HOME</span>}
                     <span className={styles.chip}>Lv {pet.level}</span>
                   </div>
                 </button>
@@ -391,7 +528,10 @@ export function PetPage({ onNavigate }: PetPageProps) {
                   className={styles.opponentItem}
                   key={opponent.userId}
                   type="button"
-                  onClick={() => send({ type: "SELECT_OPPONENT", userId: opponent.userId })}
+                  onClick={() => {
+                    playButtonClick();
+                    send({ type: "SELECT_OPPONENT", userId: opponent.userId });
+                  }}
                 >
                   <span className={styles.itemTitle}>{opponent.playerName}</span>
                   <span className={styles.itemText}>
@@ -401,6 +541,11 @@ export function PetPage({ onNavigate }: PetPageProps) {
               ))}
             </div>
             <div className={styles.battleActions}>
+              {import.meta.env.DEV && (
+                <button className={styles.demoBattleButton} type="button" onClick={startDemoBattle}>
+                  DEMO BATTLE
+                </button>
+              )}
               <button
                 className={styles.battleButton}
                 disabled={!selectedOpponent || !selectedPet || isBattling}
@@ -414,6 +559,101 @@ export function PetPage({ onNavigate }: PetPageProps) {
         </motion.div>
       </motion.div>
     </motion.main>
+  );
+}
+
+function GrantedPetCelebration({ grantedPet }: { grantedPet: GrantedPet }) {
+  const attribute = grantedPetAttributeLabel(grantedPet.attribute);
+  const guildName = grantedPetGuildName(grantedPet.guildId, grantedPet.attribute);
+  const pet: PetSummary = {
+    id: grantedPet.id,
+    guildId: grantedPet.guildId,
+    guildName,
+    name: attribute.toLowerCase() === "go" ? "Gopher" : attribute,
+    species: attribute.toLowerCase(),
+    attribute,
+    level: 1,
+    exp: 0,
+    maxHp: 1,
+    power: 1,
+    guard: 1,
+    speed: 1,
+    acquiredAt: grantedPet.createdAt,
+  };
+
+  return (
+    <motion.aside
+      animate={{ opacity: [0, 1, 1, 0], y: [16, 0, 0, -12], scale: [0.98, 1, 1, 0.99] }}
+      className={styles.grantToast}
+      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+      transition={{ duration: 5.2, times: [0, 0.16, 0.82, 1], ease: "easeOut" }}
+    >
+      <div className={styles.grantPortrait} aria-hidden="true">
+        <PetPortrait pet={pet} />
+      </div>
+      <div>
+        <span className={styles.grantLabel}>NEW COMPANION</span>
+        <h3 className={styles.grantTitle}>{petDisplayName(pet)} joined!</h3>
+        <p className={styles.grantText}>{guildName} の相棒が仲間になりました。</p>
+      </div>
+    </motion.aside>
+  );
+}
+
+function PetBattleRecordPreview() {
+  const metrics = [
+    { label: "BATTLES", value: "--" },
+    { label: "WINS", value: "--" },
+    { label: "STREAK", value: "--" },
+  ];
+
+  return (
+    <section className={styles.recordPanel} aria-labelledby="pet-record-title">
+      <div className={styles.recordHeader}>
+        <div>
+          <h3 className={styles.recordTitle} id="pet-record-title">
+            CAREER LOG
+          </h3>
+          <p className={styles.recordCaption}>戦績データ連携予定</p>
+        </div>
+        <span className={styles.recordBadge}>COMING SOON</span>
+      </div>
+      <div className={styles.recordMetrics}>
+        {metrics.map((metric) => (
+          <div className={styles.recordMetric} key={metric.label}>
+            <span className={styles.recordMetricLabel}>{metric.label}</span>
+            <strong className={styles.recordMetricValue}>{metric.value}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PetStatusPanel({ pet, cpBalance }: { pet: PetSummary; cpBalance: number }) {
+  const progress = levelProgress(pet);
+
+  return (
+    <div className={styles.statusGrid} aria-label="ペット育成ステータス">
+      <div className={`${styles.statusCard} ${styles.levelCard}`}>
+        <div className={styles.statusHeader}>
+          <span className={styles.statusLabel}>CURRENT LV</span>
+          <span className={styles.levelBadge}>Lv {pet.level}</span>
+        </div>
+        <div className={styles.expTrack} aria-label={`次のレベルまで ${progress.percentage}%`}>
+          <span className={styles.expFill} style={{ width: `${progress.percentage}%` }} />
+        </div>
+        <p className={styles.statusHelp}>
+          NEXT {progress.expToNextLevel - progress.currentExp} EXP
+        </p>
+      </div>
+
+      <div className={`${styles.statusCard} ${styles.cpCard}`}>
+        <span className={styles.statusLabel}>OWNED CP</span>
+        <strong className={styles.cpValue}>{cpBalance}</strong>
+        <span className={styles.statusHelp}>TRAINING RESOURCE</span>
+      </div>
+    </div>
   );
 }
 
@@ -434,6 +674,10 @@ function PetPortrait({ pet }: { pet: PetSummary }) {
   if (pet.attribute.toLowerCase() === "go") {
     return <GopherSprite />;
   }
+  const spriteAsset = petSpriteAssets[pet.attribute.toLowerCase()];
+  if (spriteAsset) {
+    return <LanguagePetSprite asset={spriteAsset} />;
+  }
 
   const portrait = petPortraits[pet.attribute] ?? {
     label: pet.attribute.slice(0, 2).toUpperCase(),
@@ -449,5 +693,32 @@ function PetPortrait({ pet }: { pet: PetSummary }) {
       <span className={styles.placeholderFace}>{portrait.label}</span>
       <span className={styles.placeholderName}>{petDisplayName(pet)}</span>
     </div>
+  );
+}
+
+function LanguagePetSprite({ asset }: { asset: string }) {
+  const scale = PET_SPRITE_DISPLAY_WIDTH / SPRITE_FRAME_WIDTH;
+  const displaySheetWidth = Math.round(SPRITE_FRAME_WIDTH * SPRITE_COLUMNS * scale);
+  const displaySheetHeight = Math.round(SPRITE_FRAME_HEIGHT * SPRITE_ROWS * scale);
+  const frameStep = Math.round(SPRITE_FRAME_WIDTH * scale);
+  const totalMoveX = frameStep * PET_IDLE_FRAMES;
+
+  return (
+    <motion.div
+      animate={{ backgroundPositionX: ["0px", `-${totalMoveX}px`] }}
+      className={styles.petSprite}
+      transition={{
+        duration: 0.9,
+        repeat: Infinity,
+        ease: steppedEase(PET_IDLE_FRAMES),
+      }}
+      style={{
+        width: `${PET_SPRITE_DISPLAY_WIDTH}px`,
+        height: `${PET_SPRITE_DISPLAY_HEIGHT}px`,
+        backgroundImage: `url(${asset})`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: `${displaySheetWidth}px ${displaySheetHeight}px`,
+      }}
+    />
   );
 }

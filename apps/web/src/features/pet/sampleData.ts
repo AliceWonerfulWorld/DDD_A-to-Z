@@ -19,6 +19,7 @@ export const sampleCurrentPet: PetSummary = {
 export const sampleOpponents: BattleOpponent[] = [
   {
     userId: "sample_user_rust",
+    petId: "sample_pet_rust",
     playerName: "FerrisBlade",
     pet: {
       id: "sample_pet_rust",
@@ -38,6 +39,7 @@ export const sampleOpponents: BattleOpponent[] = [
   },
   {
     userId: "sample_user_python",
+    petId: "sample_pet_python",
     playerName: "PyRunner",
     pet: {
       id: "sample_pet_python",

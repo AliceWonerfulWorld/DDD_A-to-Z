@@ -41,6 +41,7 @@ export interface TrainingResult {
 
 export interface BattleOpponent {
   userId: string;
+  petId: string;
   playerName: string;
   pet: PetSummary;
 }
@@ -58,6 +59,30 @@ export interface BattleResult {
   turns: BattleTurnLog[];
 }
 
+interface PetTrainingApiResponse {
+  pet: PetSummary;
+  spentCp: number;
+  cpBalance: number;
+}
+
+interface BattleOpponentApiResponse {
+  petId: string;
+  guildId: string;
+  guildName: string;
+  name: string;
+  species: string;
+  attribute: string;
+  level: number;
+  maxHp: number;
+  power: number;
+  guard: number;
+  speed: number;
+}
+
+interface BattleResultApiResponse extends Omit<BattleResult, "result"> {
+  result: "win" | "loss" | "draw";
+}
+
 export const PET_TRAINING_COSTS: Record<
   PetTrainingStat,
   { label: string; amount: number; cost: number }
@@ -73,20 +98,56 @@ export async function fetchMyPets(): Promise<MyPetsResponse> {
 }
 
 export async function trainPet(petId: string, stat: PetTrainingStat): Promise<TrainingResult> {
-  return apiFetch<TrainingResult>(`/pets/${encodeURIComponent(petId)}/training`, {
-    method: "POST",
-    body: JSON.stringify({ stat }),
-  });
+  const result = await apiFetch<PetTrainingApiResponse>(
+    `/pets/${encodeURIComponent(petId)}/train`,
+    {
+      method: "POST",
+      body: JSON.stringify({ stat }),
+    },
+  );
+  return {
+    pet: result.pet,
+    cpBefore: result.cpBalance + result.spentCp,
+    cpAfter: result.cpBalance,
+    increasedStat: stat,
+    increasedBy: PET_TRAINING_COSTS[stat].amount,
+  };
 }
 
 export async function fetchBattleOpponents(): Promise<BattleOpponent[]> {
-  const data = await apiFetch<{ opponents: BattleOpponent[] }>("/pets/battle-opponents");
-  return data.opponents;
+  const data = await apiFetch<{ opponents: BattleOpponentApiResponse[] }>("/pets/battle/opponents");
+  return data.opponents.map((opponent) => ({
+    userId: opponent.petId,
+    petId: opponent.petId,
+    playerName: `${opponent.guildName} Challenger`,
+    pet: {
+      id: opponent.petId,
+      guildId: opponent.guildId,
+      guildName: opponent.guildName,
+      name: opponent.name,
+      species: opponent.species,
+      attribute: opponent.attribute,
+      level: opponent.level,
+      exp: 0,
+      maxHp: opponent.maxHp,
+      power: opponent.power,
+      guard: opponent.guard,
+      speed: opponent.speed,
+      acquiredAt: "",
+    },
+  }));
 }
 
-export async function startPetBattle(opponentUserId: string): Promise<BattleResult> {
-  return apiFetch<BattleResult>("/pets/battles", {
-    method: "POST",
-    body: JSON.stringify({ opponentUserId }),
-  });
+export async function startPetBattle(petId: string, opponentPetId: string): Promise<BattleResult> {
+  const result = await apiFetch<BattleResultApiResponse>(
+    `/pets/${encodeURIComponent(petId)}/battle`,
+    {
+      method: "POST",
+      body: JSON.stringify({ opponentPetId }),
+    },
+  );
+  return {
+    ...result,
+    result: result.result === "loss" ? "lose" : result.result,
+  };
 }

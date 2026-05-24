@@ -5,7 +5,11 @@ import { useAudioSettings } from "../../features/audio/useAudioSettings";
 const HOME_BGM_VOLUME = 0.34;
 const HOME_BGM_FADE_IN_MS = 520;
 
-export function HomeBgm() {
+interface HomeBgmProps {
+  src?: string;
+}
+
+export function HomeBgm({ src = AUDIO_ASSETS.bgm.home }: HomeBgmProps) {
   const { isBgmEnabled } = useAudioSettings();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasAttemptedPlayRef = useRef(false);
@@ -95,13 +99,6 @@ export function HomeBgm() {
   }, [isBgmEnabled]);
 
   return (
-    <audio
-      ref={audioRef}
-      src={AUDIO_ASSETS.bgm.home}
-      loop
-      preload="auto"
-      muted={!isBgmEnabled}
-      aria-hidden="true"
-    />
+    <audio ref={audioRef} src={src} loop preload="auto" muted={!isBgmEnabled} aria-hidden="true" />
   );
 }

@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SPRITE_ASSETS } from "../../constants/assets";
+import type { PetSummary } from "../../features/pet/api";
 import { steppedEase } from "../../lib/animationUtils";
 import { GopherSprite } from "../shared/GopherSprite";
 
@@ -12,8 +14,18 @@ const gopherTalkLines = [
 ] as const;
 
 const GOPHER_HITBOX_WIDTH = 132;
+const SPRITE_FRAME_WIDTH = 192;
+const SPRITE_FRAME_HEIGHT = 208;
+const SPRITE_COLUMNS = 8;
+const SPRITE_ROWS = 9;
 const AUDIO_PANEL_SAFE_SPACE = 124;
 const DEFAULT_STAGE_WIDTH = 960;
+
+const homePetSpriteAssets: Record<string, string> = {
+  python: SPRITE_ASSETS.PYTHON,
+  rust: SPRITE_ASSETS.RUST,
+  java: SPRITE_ASSETS.JAVA,
+};
 
 function createWalkPath(stageWidth: number) {
   const safeStageWidth = Math.max(stageWidth, 320);
@@ -24,7 +36,7 @@ function createWalkPath(stageWidth: number) {
   return [0, 0.32, 0.2, 0.62, 0.78, 0.56, 0.28, 0].map((ratio) => Math.round(minX + span * ratio));
 }
 
-export function WalkingGopher({ onTalk }: { onTalk: () => void }) {
+export function WalkingGopher({ onTalk, pet }: { onTalk: () => void; pet?: PetSummary | null }) {
   const gopherButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastXRef = useRef<number | null>(null);
   const talkTimeoutRef = useRef<number | null>(null);
@@ -33,6 +45,7 @@ export function WalkingGopher({ onTalk }: { onTalk: () => void }) {
   const [talkLine, setTalkLine] = useState<(typeof gopherTalkLines)[number] | null>(null);
   const [reactionCount, setReactionCount] = useState(0);
   const walkPathX = useMemo(() => createWalkPath(stageWidth), [stageWidth]);
+  const petAttribute = pet?.attribute.toLowerCase() ?? "go";
   const walkRow = direction === "right" ? 1 : 2;
   const speechBubbleSide =
     direction === "right" ? { left: "104px", right: "auto" } : { left: "auto", right: "96px" };
@@ -86,7 +99,7 @@ export function WalkingGopher({ onTalk }: { onTalk: () => void }) {
     <motion.button
       ref={gopherButtonRef}
       type="button"
-      aria-label="Gopher君に話しかける"
+      aria-label="ペットに話しかける"
       initial={false}
       animate={{
         x: walkPathX,
@@ -191,7 +204,7 @@ export function WalkingGopher({ onTalk }: { onTalk: () => void }) {
           }
           transition={{ duration: 0.42, ease: steppedEase(5) }}
         >
-          <GopherSprite frameCount={8} row={walkRow} />
+          <HomePetSprite attribute={petAttribute} row={walkRow} />
         </motion.div>
       </motion.div>
       <motion.div
@@ -208,5 +221,59 @@ export function WalkingGopher({ onTalk }: { onTalk: () => void }) {
         }}
       />
     </motion.button>
+  );
+}
+
+function HomePetSprite({ attribute, row }: { attribute: string; row: number }) {
+  if (attribute === "go") {
+    return <GopherSprite frameCount={8} row={row} />;
+  }
+  const spriteAsset = homePetSpriteAssets[attribute];
+  if (spriteAsset) {
+    return <LanguageHomePetSprite asset={spriteAsset} row={row} />;
+  }
+
+  const label = attribute.slice(0, 2).toUpperCase();
+  return (
+    <div
+      style={{
+        display: "grid",
+        width: "132px",
+        height: "143px",
+        placeItems: "center",
+        border: "4px solid rgba(255, 248, 215, 0.62)",
+        background:
+          "linear-gradient(180deg, rgba(116, 247, 161, 0.22), rgba(0, 245, 255, 0.14)), rgba(20, 38, 54, 0.74)",
+        color: "#fff8d7",
+        fontSize: "1.8rem",
+        boxShadow: "0 0 0 2px rgba(0, 0, 0, 0.7), inset 0 0 22px rgba(255, 255, 255, 0.08)",
+      }}
+    >
+      {label}
+    </div>
+  );
+}
+
+function LanguageHomePetSprite({ asset, row }: { asset: string; row: number }) {
+  const scale = 132 / SPRITE_FRAME_WIDTH;
+  const displaySheetWidth = Math.round(SPRITE_FRAME_WIDTH * SPRITE_COLUMNS * scale);
+  const displaySheetHeight = Math.round(SPRITE_FRAME_HEIGHT * SPRITE_ROWS * scale);
+  const frameStep = Math.round(SPRITE_FRAME_WIDTH * scale);
+  const rowOffsetY = Math.round(SPRITE_FRAME_HEIGHT * row * scale);
+
+  return (
+    <motion.div
+      animate={{ backgroundPositionX: ["0px", `-${frameStep * 8}px`] }}
+      transition={{ duration: 0.9, repeat: Infinity, ease: steppedEase(8) }}
+      style={{
+        width: "132px",
+        height: "143px",
+        backgroundImage: `url(${asset})`,
+        backgroundPositionY: `-${rowOffsetY}px`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: `${displaySheetWidth}px ${displaySheetHeight}px`,
+        imageRendering: "pixelated",
+      }}
+    />
   );
 }

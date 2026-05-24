@@ -2,6 +2,7 @@ export const AUDIO_ASSETS = {
   bgm: {
     title: "/bgm/title_bgm.mp3",
     home: "/bgm/home_bgm.ogg",
+    petDisplay: "/bgm/petdisplay_bgm.ogg",
     guild: "/bgm/guild.ogg",
     guildTown: "/bgm/guild-town.ogg",
     warMap: "/bgm/war_map.ogg",
@@ -16,6 +17,7 @@ export const AUDIO_ASSETS = {
     homeNavSelect: "/SE/home-nav-select.wav",
     returnTitle: "/SE/return-title.wav",
     gopherTalk: "/SE/gopher-talk.wav",
+    pythonPetTalk: "/SE/python-pet-talk.wav",
     warGuildScout: "/SE/war-guild-scout.wav",
   },
 } as const;

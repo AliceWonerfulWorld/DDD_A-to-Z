@@ -4,7 +4,7 @@
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(9, 20, 34, 0.34), rgba(6, 13, 24, 0.62)),
-    url("/pixel-town-day.png");
+    url("/pet-background.png");
   background-position: center;
   background-size: cover;
   color: #fff8d7;
@@ -13,6 +13,7 @@
 }
 
 .shell {
+  position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: clamp(10px, 1.8svh, 18px);
@@ -75,19 +76,85 @@
   box-shadow: 0 0 16px rgba(255, 248, 215, 0.14);
 }
 
-.notice {
-  border: 3px solid rgba(116, 247, 161, 0.8);
-  border-bottom-color: rgba(8, 40, 22, 0.96);
-  border-right-color: rgba(8, 40, 22, 0.96);
-  background: rgba(4, 22, 16, 0.9);
+.grantToast {
+  position: absolute;
+  top: clamp(88px, 13svh, 116px);
+  right: 0;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  width: min(440px, calc(100% - 24px));
+  pointer-events: none;
+  border: 2px solid rgba(116, 247, 161, 0.74);
+  background:
+    linear-gradient(90deg, rgba(116, 247, 161, 0.2), rgba(107, 183, 255, 0.1)),
+    linear-gradient(180deg, rgba(8, 32, 34, 0.96), rgba(6, 16, 30, 0.97));
   box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.76),
-    7px 7px 0 rgba(0, 0, 0, 0.34);
-  color: #f7ffe4;
-  font-size: 0.68rem;
-  line-height: 1.75;
-  margin-bottom: 18px;
-  padding: 14px 16px;
+    inset 0 0 24px rgba(116, 247, 161, 0.1),
+    0 0 24px rgba(116, 247, 161, 0.24),
+    6px 6px 0 rgba(0, 0, 0, 0.32);
+  padding: 12px 14px;
+}
+
+.grantToast::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(255, 248, 215, 0.08);
+}
+
+.grantPortrait {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 86px;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid rgba(255, 248, 215, 0.24);
+  background:
+    radial-gradient(circle at 50% 70%, rgba(116, 247, 161, 0.18), transparent 58%),
+    rgba(3, 10, 18, 0.38);
+}
+
+.grantPortrait > * {
+  transform: scale(0.62);
+}
+
+.grantLabel,
+.grantTitle,
+.grantText {
+  position: relative;
+  z-index: 1;
+}
+
+.grantLabel {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: #74f7a1;
+  font-size: 0.46rem;
+  line-height: 1.4;
+  text-shadow: 0 0 12px rgba(116, 247, 161, 0.34);
+}
+
+.grantTitle {
+  margin: 0;
+  color: #fff8d7;
+  font-size: clamp(0.72rem, 1.3vw, 0.9rem);
+  line-height: 1.45;
+  text-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.64),
+    0 0 16px rgba(255, 248, 215, 0.18);
+}
+
+.grantText {
+  margin: 5px 0 0;
+  color: rgba(255, 248, 215, 0.78);
+  font-family: "DotGothic16", monospace;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .layout {
@@ -119,6 +186,7 @@
 }
 
 .trainingPanel {
+  position: relative;
   grid-area: training;
 }
 
@@ -215,6 +283,10 @@
   white-space: nowrap;
 }
 
+.petSprite {
+  image-rendering: pixelated;
+}
+
 .petName {
   margin: 0 0 8px;
   font-size: clamp(0.9rem, 1.8vw, 1.18rem);
@@ -225,7 +297,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: clamp(8px, 1.2svh, 12px);
+  margin-bottom: clamp(10px, 1.4svh, 14px);
 }
 
 .chip {
@@ -237,16 +309,145 @@
   padding: 5px 8px;
 }
 
+.statusGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(132px, 0.75fr);
+  gap: 10px;
+  margin-bottom: clamp(10px, 1.5svh, 14px);
+}
+
+.statusCard {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(116, 247, 161, 0.48);
+  background:
+    linear-gradient(135deg, rgba(116, 247, 161, 0.18), transparent 48%),
+    linear-gradient(180deg, rgba(13, 47, 54, 0.94), rgba(10, 24, 42, 0.96));
+  box-shadow:
+    inset 0 0 18px rgba(116, 247, 161, 0.1),
+    0 0 16px rgba(116, 247, 161, 0.12);
+  min-height: 86px;
+  padding: 12px;
+}
+
+.statusCard::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(255, 248, 215, 0.08);
+  pointer-events: none;
+}
+
+.cpCard {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  border-color: rgba(255, 217, 102, 0.58);
+  background:
+    linear-gradient(135deg, rgba(255, 217, 102, 0.2), transparent 50%),
+    linear-gradient(180deg, rgba(58, 42, 18, 0.92), rgba(18, 28, 44, 0.96));
+  box-shadow:
+    inset 0 0 18px rgba(255, 217, 102, 0.12),
+    0 0 16px rgba(255, 217, 102, 0.13);
+}
+
+.statusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.statusLabel {
+  color: rgba(255, 248, 215, 0.68);
+  font-size: 0.46rem;
+  line-height: 1.5;
+}
+
+.levelBadge {
+  color: #74f7a1;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  text-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(116, 247, 161, 0.3);
+}
+
+.expTrack {
+  height: 14px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 248, 215, 0.2);
+  background: rgba(3, 10, 18, 0.72);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.54);
+}
+
+.expFill {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  background: linear-gradient(90deg, #74f7a1, #6bb7ff);
+  box-shadow: 0 0 14px rgba(116, 247, 161, 0.38);
+}
+
+.statusHelp {
+  position: relative;
+  z-index: 1;
+  margin: 9px 0 0;
+  color: rgba(255, 248, 215, 0.78);
+  font-family: "DotGothic16", monospace;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.cpValue {
+  color: #ffd966;
+  font-size: clamp(1rem, 2.4vw, 1.46rem);
+  line-height: 1.2;
+  text-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.62),
+    0 0 14px rgba(255, 217, 102, 0.32);
+}
+
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
+}
+
+.homePetButton {
+  width: 100%;
+  min-height: 32px;
+  margin-top: 7px;
+  border: 2px solid rgba(116, 247, 161, 0.68);
+  border-bottom-color: rgba(8, 40, 22, 0.96);
+  border-right-color: rgba(8, 40, 22, 0.96);
+  background:
+    linear-gradient(90deg, rgba(116, 247, 161, 0.16), rgba(107, 183, 255, 0.08)),
+    rgba(9, 26, 48, 0.94);
+  box-shadow:
+    inset 0 0 16px rgba(116, 247, 161, 0.08),
+    0 0 14px rgba(116, 247, 161, 0.12);
+  color: #fff8d7;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.52rem;
+  line-height: 1.4;
+}
+
+.homePetButton:disabled {
+  cursor: default;
+  border-color: rgba(255, 217, 102, 0.58);
+  background:
+    linear-gradient(90deg, rgba(255, 217, 102, 0.16), rgba(116, 247, 161, 0.08)),
+    rgba(9, 26, 48, 0.84);
+  color: #ffd966;
 }
 
 .statCell {
   background: rgba(255, 248, 215, 0.08);
   border: 1px solid rgba(255, 248, 215, 0.18);
-  padding: clamp(8px, 1.2svh, 11px);
+  padding: clamp(7px, 1svh, 9px);
 }
 
 .statLabel {
@@ -266,11 +467,79 @@
 .trainingGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(8px, 1.2svh, 10px);
-  margin-top: clamp(10px, 1.4svh, 14px);
+  gap: 6px;
+  margin-top: 8px;
 }
 
-.actionButton,
+.recordPanel {
+  margin-top: 6px;
+  border: 2px solid rgba(255, 248, 215, 0.2);
+  background:
+    linear-gradient(90deg, rgba(107, 183, 255, 0.14), transparent 42%), rgba(255, 248, 215, 0.06);
+  box-shadow: inset 0 0 22px rgba(107, 183, 255, 0.08);
+  padding: 8px 10px;
+}
+
+.recordHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.recordTitle {
+  margin: 0;
+  color: #6bb7ff;
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
+.recordCaption {
+  margin: 4px 0 0;
+  color: rgba(255, 248, 215, 0.68);
+  font-family: "DotGothic16", monospace;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.recordBadge {
+  flex: 0 0 auto;
+  border: 1px solid rgba(107, 183, 255, 0.48);
+  background: rgba(107, 183, 255, 0.12);
+  color: rgba(255, 248, 215, 0.82);
+  font-size: 0.46rem;
+  line-height: 1.35;
+  padding: 5px 7px;
+}
+
+.recordMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.recordMetric {
+  border: 1px solid rgba(255, 248, 215, 0.16);
+  background: rgba(3, 10, 18, 0.28);
+  padding: 6px;
+  text-align: center;
+}
+
+.recordMetricLabel {
+  display: block;
+  color: rgba(255, 248, 215, 0.58);
+  font-size: 0.42rem;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.recordMetricValue {
+  color: #fff8d7;
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
 .battleButton,
 .smallButton {
   min-height: clamp(42px, 6.4svh, 54px);
@@ -279,11 +548,166 @@
 }
 
 .actionButton {
-  background: linear-gradient(180deg, rgba(21, 53, 84, 0.96), rgba(9, 26, 48, 0.96));
-  border-color: rgba(159, 214, 255, 0.78);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  min-height: clamp(42px, 5.8svh, 50px);
+  overflow: hidden;
+  padding: 7px 10px;
+  border-color: rgba(159, 214, 255, 0.9);
+  background:
+    linear-gradient(90deg, rgba(116, 247, 161, 0.18), transparent 32%),
+    linear-gradient(180deg, rgba(21, 53, 84, 0.98), rgba(8, 24, 45, 0.98));
   box-shadow:
-    inset 0 0 16px rgba(86, 166, 255, 0.08),
-    0 0 14px rgba(86, 166, 255, 0.16);
+    inset 0 0 20px rgba(86, 166, 255, 0.12),
+    0 0 16px rgba(86, 166, 255, 0.18),
+    4px 4px 0 rgba(0, 0, 0, 0.28);
+  text-align: left;
+}
+
+.actionButton::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(255, 248, 215, 0.08);
+  pointer-events: none;
+}
+
+.actionButton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -28px;
+  width: 56px;
+  background: rgba(255, 248, 215, 0.08);
+  transform: skewX(-18deg);
+}
+
+.actionButton:not(:disabled):hover {
+  border-color: #74f7a1;
+  background:
+    linear-gradient(90deg, rgba(116, 247, 161, 0.24), transparent 36%),
+    linear-gradient(180deg, rgba(24, 64, 84, 0.98), rgba(8, 29, 48, 0.98));
+  box-shadow:
+    inset 0 0 22px rgba(116, 247, 161, 0.14),
+    0 0 20px rgba(116, 247, 161, 0.24),
+    4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.actionButton:not(:disabled):active {
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset 0 0 18px rgba(116, 247, 161, 0.12),
+    2px 2px 0 rgba(0, 0, 0, 0.28);
+}
+
+.actionLabel,
+.actionBoost,
+.actionCost {
+  position: relative;
+  z-index: 1;
+}
+
+.actionLabel {
+  color: #fff8d7;
+  font-size: clamp(0.5rem, 0.9vw, 0.62rem);
+  line-height: 1.4;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.actionBoost {
+  color: #74f7a1;
+  font-size: clamp(0.64rem, 1.15vw, 0.8rem);
+  line-height: 1.2;
+  text-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.52),
+    0 0 12px rgba(116, 247, 161, 0.28);
+}
+
+.actionCost {
+  min-width: 68px;
+  border: 1px solid rgba(255, 217, 102, 0.42);
+  background: rgba(255, 217, 102, 0.1);
+  color: #ffd966;
+  font-size: clamp(0.45rem, 0.78vw, 0.54rem);
+  line-height: 1.3;
+  padding: 5px 6px;
+  text-align: center;
+}
+
+.trainingFeedbackStack {
+  position: absolute;
+  right: clamp(14px, 2vw, 22px);
+  bottom: clamp(16px, 2.2svh, 24px);
+  z-index: 3;
+  display: grid;
+  width: min(470px, calc(100% - 28px));
+  gap: 8px;
+  pointer-events: none;
+}
+
+.trainingFeedback {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  border: 2px solid rgba(116, 247, 161, 0.68);
+  background:
+    linear-gradient(90deg, rgba(116, 247, 161, 0.22), rgba(107, 183, 255, 0.1)),
+    linear-gradient(180deg, rgba(8, 32, 34, 0.96), rgba(6, 16, 30, 0.96));
+  box-shadow:
+    inset 0 0 20px rgba(116, 247, 161, 0.1),
+    0 0 22px rgba(116, 247, 161, 0.24),
+    5px 5px 0 rgba(0, 0, 0, 0.28);
+  padding: 12px 14px;
+  animation: training-toast 3.8s both;
+}
+
+.trainingFeedback::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: -2px;
+  width: 7px;
+  background: linear-gradient(180deg, #74f7a1, #6bb7ff);
+  box-shadow: 0 0 14px rgba(116, 247, 161, 0.52);
+}
+
+.trainingFeedbackLabel {
+  color: #74f7a1;
+  font-size: 0.44rem;
+  line-height: 1.35;
+  text-shadow: 0 0 12px rgba(116, 247, 161, 0.35);
+}
+
+.trainingFeedbackText {
+  margin: 0;
+  color: #fff8d7;
+  font-family: "DotGothic16", monospace;
+  font-size: clamp(0.82rem, 1.12vw, 0.94rem);
+  line-height: 1.45;
+}
+
+@keyframes training-toast {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.99);
+  }
 }
 
 .battleButton {
@@ -296,9 +720,24 @@
   font-size: 0.62rem;
 }
 
+.demoBattleButton {
+  min-height: clamp(42px, 6.2svh, 52px);
+  border-color: rgba(116, 247, 161, 0.76);
+  background:
+    linear-gradient(90deg, rgba(116, 247, 161, 0.18), rgba(107, 183, 255, 0.1)),
+    linear-gradient(180deg, rgba(12, 54, 54, 0.96), rgba(8, 26, 46, 0.98));
+  box-shadow:
+    inset 0 0 18px rgba(116, 247, 161, 0.12),
+    0 0 16px rgba(116, 247, 161, 0.18);
+  color: #fff8d7;
+  font-family: inherit;
+  font-size: 0.58rem;
+}
+
 .actionButton:disabled,
 .battleButton:disabled,
-.smallButton:disabled {
+.smallButton:disabled,
+.demoBattleButton:disabled {
   cursor: not-allowed;
   opacity: 0.48;
 }
@@ -398,6 +837,7 @@
 
 .battleActions {
   display: grid;
+  gap: 10px;
 }
 
 @media (max-width: 860px) {
@@ -449,7 +889,35 @@
   }
 
   .statsGrid,
-  .trainingGrid {
+  .trainingGrid,
+  .statusGrid,
+  .recordMetrics {
     grid-template-columns: 1fr;
+  }
+
+  .recordHeader {
+    display: grid;
+  }
+
+  .trainingFeedback {
+    width: auto;
+  }
+
+  .trainingFeedbackStack {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100% - 24px);
+  }
+
+  .grantToast {
+    top: 96px;
+    left: 12px;
+    right: 12px;
+    grid-template-columns: 72px minmax(0, 1fr);
+    width: auto;
+  }
+
+  .grantPortrait {
+    width: 72px;
   }
 }
