@@ -36,6 +36,7 @@ type OpponentSummary struct {
 	ID        string
 	GuildID   string
 	GuildName string
+	DisplayName string
 	Name      string
 	Species   string
 	Attribute string

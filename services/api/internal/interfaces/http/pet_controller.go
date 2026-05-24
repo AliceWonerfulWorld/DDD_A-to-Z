@@ -199,6 +199,7 @@ func battleOpponentToResponse(p petapp.OpponentSummary) map[string]any {
 	return map[string]any{
 		"petId":     p.ID,
 		"guildId":   p.GuildID,
+		"DisplayName": p.DisplayName,
 		"guildName": p.GuildName,
 		"name":      p.Name,
 		"species":   p.Species,
