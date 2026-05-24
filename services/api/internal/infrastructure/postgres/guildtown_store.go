@@ -363,7 +363,7 @@ func lockGuildForUpdate(ctx context.Context, tx *gorm.DB, guildID guilddomain.ID
 	if result.Error != nil {
 		return result.Error
 	}
-	if result.RowsAffected == 0 {
+	if lockedID == "" {
 		return guildtownapp.ErrGuildNotFound
 	}
 
@@ -404,7 +404,7 @@ func addGuildExperience(ctx context.Context, tx *gorm.DB, guildID guilddomain.ID
 	if result.Error != nil {
 		return guilddomain.Guild{}, result.Error
 	}
-	if result.RowsAffected == 0 {
+	if record.ID == "" {
 		return guilddomain.Guild{}, guildtownapp.ErrGuildNotFound
 	}
 
