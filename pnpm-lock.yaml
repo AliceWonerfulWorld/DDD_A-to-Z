@@ -167,6 +167,8 @@ importers:
 
   services/loadtest-d: {}
 
+  services/moonbit-hexmap: {}
+
   services/news-api:
     dependencies:
       '@hono/node-server':

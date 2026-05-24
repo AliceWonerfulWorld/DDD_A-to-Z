@@ -1,0 +1,8 @@
+{
+  "name": "@lang-war/moonbit-hexmap",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "moon build --target wasm-gc --release && cp $(find _build/wasm-gc -name '*.wasm' | head -1) ../../apps/web/public/hexmap.wasm && echo hexmap.wasm built"
+  }
+}

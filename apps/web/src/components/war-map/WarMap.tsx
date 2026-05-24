@@ -15,6 +15,7 @@ import { RankingPanel } from "./RankingPanel";
 import { ScoutPanel } from "./ScoutPanel";
 import { createWarGuilds, findWarGuildByID, type WarGuild } from "./WarMapData";
 import { WarMapHex } from "./WarMapHex";
+import { TerritoryOverlay } from "./TerritoryOverlay";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import type { ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 
@@ -219,6 +220,8 @@ export function WarMap({ onNavigate }: WarMapProps) {
           pointerEvents: "none",
         }}
       />
+
+      <TerritoryOverlay guilds={warGuilds} />
 
       <div
         aria-hidden="true"

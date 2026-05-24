@@ -5,6 +5,9 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".cache/bin/**", "_build/**"]
     },
+    "@lang-war/moonbit-hexmap#build": {
+      "outputs": ["../../apps/web/public/hexmap.wasm"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
