@@ -48,11 +48,11 @@ func (r *testRepository) ReplacePlacements(ctx context.Context, guildID guilddom
 	return nil
 }
 
-func (r *testRepository) BuyBuilding(ctx context.Context, guildID guilddomain.ID, buildingType guildtowndomain.BuildingType, exp int64, now time.Time) (guilddomain.Guild, error) {
-	r.bought = append(r.bought, buildingType)
+func (r *testRepository) BuyBuilding(ctx context.Context, userID user.ID, guildID guilddomain.ID, building guildtowndomain.BuildingMaster, exp int64, now time.Time) (guilddomain.Guild, error) {
+	r.bought = append(r.bought, building.Type)
 	r.addedExp += exp
 	for index, item := range r.inventory {
-		if item.BuildingType == buildingType {
+		if item.BuildingType == building.Type {
 			r.inventory[index].Quantity++
 			return guilddomain.NewGuild(guilddomain.Guild{
 				ID:              guildID,
@@ -70,7 +70,7 @@ func (r *testRepository) BuyBuilding(ctx context.Context, guildID guilddomain.ID
 	}
 	r.inventory = append(r.inventory, guildtowndomain.InventoryItem{
 		GuildID:      guildID,
-		BuildingType: buildingType,
+		BuildingType: building.Type,
 		Quantity:     1,
 		CreatedAt:    now,
 		UpdatedAt:    now,
@@ -188,6 +188,69 @@ func TestUseCaseSavePlacements(t *testing.T) {
 	}
 }
 
+func TestUseCaseSavePlacementsUsesDefaultInventory(t *testing.T) {
+	now := time.Date(2026, 5, 18, 9, 0, 0, 0, time.UTC)
+	repository := &testRepository{}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testGuildRepository{
+		membership: testMembershipWithGuild("guild_go", "user_1", now),
+		ok:         true,
+	}, testIDGenerator{})
+	usecase.now = func() time.Time { return now }
+
+	state, err := usecase.SavePlacements(context.Background(), "session-token", []SavePlacementCommand{{
+		BuildingType: "tent",
+		X:            12,
+		Y:            34,
+		Width:        210,
+	}})
+	if err != nil {
+		t.Fatalf("SavePlacements() がエラーを返しました: %v", err)
+	}
+	if len(repository.replaced) != 1 {
+		t.Fatalf("replaced length = %d, 期待値 1", len(repository.replaced))
+	}
+	if len(state.Inventory) != 2 {
+		t.Fatalf("state inventory length = %d, 期待値 2", len(state.Inventory))
+	}
+}
+
+func TestUseCaseSavePlacementsAcceptsStoreBuilding(t *testing.T) {
+	now := time.Date(2026, 5, 18, 9, 0, 0, 0, time.UTC)
+	repository := &testRepository{
+		inventory: []guildtowndomain.InventoryItem{{
+			GuildID:      "guild_go",
+			BuildingType: "plasma-condenser",
+			Quantity:     1,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}},
+	}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testGuildRepository{
+		membership: testMembershipWithGuild("guild_go", "user_1", now),
+		ok:         true,
+	}, testIDGenerator{})
+	usecase.now = func() time.Time { return now }
+
+	_, err := usecase.SavePlacements(context.Background(), "session-token", []SavePlacementCommand{{
+		BuildingType: "plasma-condenser",
+		X:            12,
+		Y:            34,
+		Width:        210,
+	}})
+	if err != nil {
+		t.Fatalf("SavePlacements() がエラーを返しました: %v", err)
+	}
+	if repository.replaced[0].BuildingType != "plasma-condenser" {
+		t.Fatalf("replaced building type = %q, 期待値 plasma-condenser", repository.replaced[0].BuildingType)
+	}
+}
+
 func TestUseCaseSavePlacementsKeepsCanonicalPlacementLevel(t *testing.T) {
 	now := time.Date(2026, 5, 18, 9, 0, 0, 0, time.UTC)
 	repository := &testRepository{
@@ -257,6 +320,8 @@ func TestUseCaseSavePlacementsRejectsInsufficientInventory(t *testing.T) {
 	_, err := usecase.SavePlacements(context.Background(), "session-token", []SavePlacementCommand{
 		{BuildingType: "bonfire", X: 1, Y: 1, Width: 92},
 		{BuildingType: "bonfire", X: 2, Y: 2, Width: 92},
+		{BuildingType: "bonfire", X: 3, Y: 3, Width: 92},
+		{BuildingType: "bonfire", X: 4, Y: 4, Width: 92},
 	})
 	if !errors.Is(err, ErrInsufficientInventory) {
 		t.Fatalf("SavePlacements() error = %v, 期待値 ErrInsufficientInventory", err)
@@ -293,8 +358,8 @@ func TestUseCaseBuyBuildingAddsPersistentExpForEveryPurchase(t *testing.T) {
 	if len(repository.bought) != 1 || repository.bought[0] != "tent" {
 		t.Fatalf("bought = %v, 期待値 [tent]", repository.bought)
 	}
-	if len(state.Inventory) != 1 || state.Inventory[0].Quantity != 2 {
-		t.Fatalf("inventory quantity = %+v, 期待値 2", state.Inventory)
+	if quantity := inventoryQuantity(state.Inventory, "tent"); quantity != 2 {
+		t.Fatalf("tent inventory quantity = %d, 期待値 2", quantity)
 	}
 
 	state, err = usecase.BuyBuilding(context.Background(), "session-token", BuyBuildingCommand{BuildingType: "tent"})
@@ -307,8 +372,8 @@ func TestUseCaseBuyBuildingAddsPersistentExpForEveryPurchase(t *testing.T) {
 	if len(repository.bought) != 2 || repository.bought[0] != "tent" || repository.bought[1] != "tent" {
 		t.Fatalf("bought = %v, 期待値 [tent tent]", repository.bought)
 	}
-	if len(state.Inventory) != 1 || state.Inventory[0].Quantity != 3 {
-		t.Fatalf("inventory quantity after second purchase = %+v, 期待値 3", state.Inventory)
+	if quantity := inventoryQuantity(state.Inventory, "tent"); quantity != 3 {
+		t.Fatalf("tent inventory quantity after second purchase = %d, 期待値 3", quantity)
 	}
 }
 
@@ -352,6 +417,32 @@ func TestUseCaseDeployBuildingDoesNotAddExp(t *testing.T) {
 	}
 }
 
+func TestUseCaseDeployBuildingUsesDefaultInventory(t *testing.T) {
+	now := time.Date(2026, 5, 22, 9, 0, 0, 0, time.UTC)
+	repository := &testRepository{}
+	usecase := NewUseCase(repository, testCurrentUserRepository{
+		appUser: user.User{ID: "user_1"},
+		ok:      true,
+	}, testGuildRepository{
+		membership: testMembershipWithGuild("guild_go", "user_1", now),
+		ok:         true,
+	}, testIDGenerator{})
+	usecase.now = func() time.Time { return now }
+
+	_, err := usecase.DeployBuilding(context.Background(), "session-token", DeployBuildingCommand{
+		BuildingType: "bonfire",
+		X:            12,
+		Y:            34,
+		Width:        92,
+	})
+	if err != nil {
+		t.Fatalf("DeployBuilding() がエラーを返しました: %v", err)
+	}
+	if len(repository.created) != 1 {
+		t.Fatalf("created placements length = %d, 期待値 1", len(repository.created))
+	}
+}
+
 func TestUseCaseDeployBuildingRejectsInsufficientInventory(t *testing.T) {
 	now := time.Date(2026, 5, 22, 9, 0, 0, 0, time.UTC)
 	repository := &testRepository{
@@ -371,6 +462,17 @@ func TestUseCaseDeployBuildingRejectsInsufficientInventory(t *testing.T) {
 			Y:            34,
 			Width:        210,
 			ZIndex:       0,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}, {
+			ID:           "placement_2",
+			GuildID:      "guild_go",
+			BuildingType: "tent",
+			Level:        1,
+			X:            24,
+			Y:            48,
+			Width:        210,
+			ZIndex:       1,
 			CreatedAt:    now,
 			UpdatedAt:    now,
 		}},
@@ -484,4 +586,14 @@ func testMembershipWithGuild(guildID guilddomain.ID, userID user.ID, now time.Ti
 		},
 		Guild: guilddomain.Guild{ID: guildID},
 	}
+}
+
+func inventoryQuantity(inventory []guildtowndomain.InventoryItem, buildingType guildtowndomain.BuildingType) int {
+	for _, item := range inventory {
+		if item.BuildingType == buildingType {
+			return item.Quantity
+		}
+	}
+
+	return 0
 }

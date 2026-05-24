@@ -14,7 +14,21 @@ type RouteRegistrar interface {
 
 func NewRouter(logger *slog.Logger, registrars ...RouteRegistrar) *stdhttp.ServeMux {
 	mux := stdhttp.NewServeMux()
+	apiMux := stdhttp.NewServeMux()
 
+	registerHealthRoute(logger, mux)
+
+	for _, registrar := range registrars {
+		registrar.RegisterRoutes(mux)
+		registrar.RegisterRoutes(apiMux)
+	}
+
+	mux.Handle("/api/", stdhttp.StripPrefix("/api", apiMux))
+
+	return mux
+}
+
+func registerHealthRoute(logger *slog.Logger, mux *stdhttp.ServeMux) {
 	mux.HandleFunc("GET /healthz", func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		var body bytes.Buffer
 
@@ -31,10 +45,4 @@ func NewRouter(logger *slog.Logger, registrars ...RouteRegistrar) *stdhttp.Serve
 			logger.Error("failed to write health response", "error", err)
 		}
 	})
-
-	for _, registrar := range registrars {
-		registrar.RegisterRoutes(mux)
-	}
-
-	return mux
 }

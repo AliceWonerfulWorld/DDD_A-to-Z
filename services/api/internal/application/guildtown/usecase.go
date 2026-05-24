@@ -88,6 +88,7 @@ func (u *UseCase) GetTown(ctx context.Context, sessionToken string) (TownState, 
 	if err != nil {
 		return TownState{}, err
 	}
+	inventory = inventoryWithDefaults(membership.Membership.GuildID, inventory, u.now())
 	placements, err := u.repository.ListPlacements(ctx, membership.Membership.GuildID)
 	if err != nil {
 		return TownState{}, err
@@ -111,6 +112,7 @@ func (u *UseCase) SavePlacements(ctx context.Context, sessionToken string, comma
 	if err != nil {
 		return TownState{}, err
 	}
+	inventory = inventoryWithDefaults(membership.Membership.GuildID, inventory, u.now())
 	existingPlacements, err := u.repository.ListPlacements(ctx, membership.Membership.GuildID)
 	if err != nil {
 		return TownState{}, err
@@ -184,14 +186,16 @@ func (u *UseCase) BuyBuilding(ctx context.Context, sessionToken string, command 
 	if err != nil {
 		return TownState{}, err
 	}
-	if _, ok := guildtowndomain.FindBuildingMaster(command.BuildingType); !ok {
+	building, ok := guildtowndomain.FindBuildingMaster(command.BuildingType)
+	if !ok {
 		return TownState{}, ErrUnknownBuildingType
 	}
 
 	updatedGuild, err := u.repository.BuyBuilding(
 		ctx,
+		membership.Membership.UserID,
 		membership.Membership.GuildID,
-		command.BuildingType,
+		building,
 		guilddomain.BuyBuildingExperience,
 		u.now(),
 	)
@@ -215,6 +219,7 @@ func (u *UseCase) DeployBuilding(ctx context.Context, sessionToken string, comma
 	if err != nil {
 		return TownState{}, err
 	}
+	inventory = inventoryWithDefaults(membership.Membership.GuildID, inventory, u.now())
 	placements, err := u.repository.ListPlacements(ctx, membership.Membership.GuildID)
 	if err != nil {
 		return TownState{}, err
@@ -337,6 +342,7 @@ func (u *UseCase) getTownForGuild(ctx context.Context, guild guilddomain.Guild) 
 	if err != nil {
 		return TownState{}, err
 	}
+	inventory = inventoryWithDefaults(guild.ID, inventory, u.now())
 	placements, err := u.repository.ListPlacements(ctx, guild.ID)
 	if err != nil {
 		return TownState{}, err
@@ -348,4 +354,34 @@ func (u *UseCase) getTownForGuild(ctx context.Context, guild guilddomain.Guild) 
 		Inventory:  inventory,
 		Placements: placements,
 	}, nil
+}
+
+func inventoryWithDefaults(guildID guilddomain.ID, inventory []guildtowndomain.InventoryItem, now time.Time) []guildtowndomain.InventoryItem {
+	merged := make([]guildtowndomain.InventoryItem, 0, len(inventory)+len(guildtowndomain.DefaultInventories))
+	itemByType := make(map[guildtowndomain.BuildingType]int, len(inventory)+len(guildtowndomain.DefaultInventories))
+
+	for _, item := range inventory {
+		itemByType[item.BuildingType] = len(merged)
+		merged = append(merged, item)
+	}
+
+	for _, defaultInventory := range guildtowndomain.DefaultInventories {
+		index, ok := itemByType[defaultInventory.BuildingType]
+		if ok {
+			if merged[index].Quantity < defaultInventory.Quantity {
+				merged[index].Quantity = defaultInventory.Quantity
+			}
+			continue
+		}
+
+		merged = append(merged, guildtowndomain.InventoryItem{
+			GuildID:      guildID,
+			BuildingType: defaultInventory.BuildingType,
+			Quantity:     defaultInventory.Quantity,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		})
+	}
+
+	return merged
 }

@@ -102,6 +102,7 @@ const petSpriteAssets: Record<string, string> = {
   python: SPRITE_ASSETS.PYTHON,
   rust: SPRITE_ASSETS.RUST,
   java: SPRITE_ASSETS.JAVA,
+  zig: SPRITE_ASSETS.ZIG,
 };
 
 const pageVariants: Variants = {

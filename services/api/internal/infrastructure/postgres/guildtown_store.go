@@ -4,18 +4,26 @@ import (
 	"context"
 	"time"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	guildtownapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guildtown"
+	contributionpointdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/contributionpoint"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	guildtowndomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guildtown"
+	"github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/user"
 	"gorm.io/gorm"
 )
 
 type GuildTownStore struct {
-	db *gorm.DB
+	db          *gorm.DB
+	cpLedgerIDs contributionpointapp.IDGenerator
 }
 
 func NewGuildTownStore(db *gorm.DB) *GuildTownStore {
 	return &GuildTownStore{db: db}
+}
+
+func NewGuildTownStoreWithLedgerIDs(db *gorm.DB, cpLedgerIDs contributionpointapp.IDGenerator) *GuildTownStore {
+	return &GuildTownStore{db: db, cpLedgerIDs: cpLedgerIDs}
 }
 
 func (s *GuildTownStore) ListInventory(ctx context.Context, guildID guilddomain.ID) ([]guildtowndomain.InventoryItem, error) {
@@ -86,19 +94,22 @@ func (s *GuildTownStore) FindPlacementByID(ctx context.Context, guildID guilddom
 	return placement, true, nil
 }
 
-func (s *GuildTownStore) BuyBuilding(ctx context.Context, guildID guilddomain.ID, buildingType guildtowndomain.BuildingType, exp int64, now time.Time) (guilddomain.Guild, error) {
+func (s *GuildTownStore) BuyBuilding(ctx context.Context, userID user.ID, guildID guilddomain.ID, building guildtowndomain.BuildingMaster, exp int64, now time.Time) (guilddomain.Guild, error) {
 	var updatedGuild guilddomain.Guild
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := lockGuildForUpdate(ctx, tx, guildID); err != nil {
 			return err
 		}
+		if err := s.spendPurchaseCost(ctx, tx, userID, guildID, building); err != nil {
+			return err
+		}
 
 		if err := tx.Exec(`
 			INSERT INTO guild_town_inventories (guild_id, building_type, quantity, created_at, updated_at)
-			VALUES (?, ?, 1, ?, ?)
+			VALUES (?, ?, ?, ?, ?)
 			ON CONFLICT (guild_id, building_type)
 			DO UPDATE SET quantity = guild_town_inventories.quantity + 1, updated_at = EXCLUDED.updated_at
-		`, guildID, buildingType, now, now).Error; err != nil {
+		`, guildID, building.Type, guildtowndomain.DefaultInventoryQuantity(building.Type)+1, now, now).Error; err != nil {
 			return err
 		}
 
@@ -116,6 +127,50 @@ func (s *GuildTownStore) BuyBuilding(ctx context.Context, guildID guilddomain.ID
 	return updatedGuild, nil
 }
 
+func (s *GuildTownStore) spendPurchaseCost(ctx context.Context, tx *gorm.DB, userID user.ID, guildID guilddomain.ID, building guildtowndomain.BuildingMaster) error {
+	if building.PurchaseCP == 0 && building.PurchaseSP == 0 {
+		return nil
+	}
+	if s.cpLedgerIDs == nil {
+		return nil
+	}
+
+	cp := contributionpointapp.NewUseCase(NewContributionPointStore(tx), s.cpLedgerIDs)
+	sourceID := string(guildID) + ":" + string(building.Type)
+	if building.PurchaseCP > 0 {
+		if _, err := cp.Spend(ctx, contributionpointapp.SpendCommand{
+			UserID:     userID,
+			PointType:  contributionpointdomain.PointTypeCP,
+			Amount:     building.PurchaseCP,
+			Reason:     "guild_town_building_purchase",
+			SourceType: "guild_town_building",
+			SourceID:   sourceID,
+		}); err != nil {
+			return err
+		}
+	}
+	if shouldSpendPurchaseSP(building) {
+		if _, err := cp.Spend(ctx, contributionpointapp.SpendCommand{
+			UserID:     userID,
+			PointType:  contributionpointdomain.SPType(building.TargetSP),
+			Amount:     building.PurchaseSP,
+			Reason:     "guild_town_building_purchase",
+			SourceType: "guild_town_building",
+			SourceID:   sourceID,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func shouldSpendPurchaseSP(building guildtowndomain.BuildingMaster) bool {
+	// Common is a cross-language bucket in the town UI, not a persisted SP account.
+	// Until point_types has a canonical SP/Common entry and earning source, purchases only charge CP for Common-targeted buildings.
+	return building.PurchaseSP > 0 && building.TargetSP != "" && building.TargetSP != "Common"
+}
+
 func (s *GuildTownStore) CreatePlacement(ctx context.Context, guildID guilddomain.ID, placement guildtowndomain.Placement) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := lockGuildForUpdate(ctx, tx, guildID); err != nil {
@@ -130,6 +185,9 @@ func (s *GuildTownStore) CreatePlacement(ctx context.Context, guildID guilddomai
 			FOR UPDATE
 		`, guildID, placement.BuildingType).Scan(&quantity).Error; err != nil {
 			return err
+		}
+		if defaultQuantity := guildtowndomain.DefaultInventoryQuantity(placement.BuildingType); quantity < defaultQuantity {
+			quantity = defaultQuantity
 		}
 
 		var placedCount int64

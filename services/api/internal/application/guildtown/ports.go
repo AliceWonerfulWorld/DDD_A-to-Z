@@ -13,7 +13,7 @@ type Repository interface {
 	ListInventory(ctx context.Context, guildID guilddomain.ID) ([]guildtowndomain.InventoryItem, error)
 	ListPlacements(ctx context.Context, guildID guilddomain.ID) ([]guildtowndomain.Placement, error)
 	FindPlacementByID(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID) (guildtowndomain.Placement, bool, error)
-	BuyBuilding(ctx context.Context, guildID guilddomain.ID, buildingType guildtowndomain.BuildingType, exp int64, now time.Time) (guilddomain.Guild, error)
+	BuyBuilding(ctx context.Context, userID user.ID, guildID guilddomain.ID, building guildtowndomain.BuildingMaster, exp int64, now time.Time) (guilddomain.Guild, error)
 	CreatePlacement(ctx context.Context, guildID guilddomain.ID, placement guildtowndomain.Placement) error
 	ReplacePlacements(ctx context.Context, guildID guilddomain.ID, placements []guildtowndomain.Placement) error
 	UpgradePlacement(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, exp int64, now time.Time) (guilddomain.Guild, error)
