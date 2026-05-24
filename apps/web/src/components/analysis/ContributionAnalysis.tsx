@@ -4,6 +4,7 @@ import { ParticleBackground } from "../shared/ParticleBackground";
 import { AnalyzingPanel } from "./AnalyzingPanel";
 import { CompletePanel, type AnalysisResult } from "./CompletePanel";
 import { analyzeContribution } from "../../features/analysis/api";
+import { NadesikoGimmick } from "../analysis/NadesikoGimmick";
 
 interface ContributionAnalysisProps {
   onComplete?: () => void;
@@ -34,7 +35,8 @@ const DEPARTURE_SPARKS = [
   { x: 84, y: 80, size: 6, delay: 0.38, color: "var(--color-neon-cyan)" },
 ] as const;
 
-const steppedEase = (steps: number) => (t: number) => Math.floor(t * steps) / steps;
+const steppedEase = (steps: number) => (t: number) =>
+  Math.floor(t * steps) / steps;
 
 function AnalysisArrivalWipe() {
   return (
@@ -72,7 +74,10 @@ function AnalysisArrivalWipe() {
               ease: steppedEase(1),
             }}
             style={{
-              background: i % 3 === 0 ? "var(--color-neon-cyan)" : "var(--color-pixel-white)",
+              background:
+                i % 3 === 0
+                  ? "var(--color-neon-cyan)"
+                  : "var(--color-pixel-white)",
             }}
           />
         ))}
@@ -89,7 +94,8 @@ function AnalysisArrivalWipe() {
           right: 0,
           height: "18px",
           background: "var(--color-pixel-white)",
-          boxShadow: "0 18px 0 var(--color-neon-cyan), 0 -18px 0 var(--color-gold)",
+          boxShadow:
+            "0 18px 0 var(--color-neon-cyan), 0 -18px 0 var(--color-gold)",
           transform: "translateY(-50%)",
         }}
       />
@@ -108,7 +114,8 @@ function AnalysisBootPanel() {
         zIndex: 2,
         border: "4px solid var(--color-gold)",
         background: "var(--color-navy-light)",
-        boxShadow: "0 0 30px rgba(0, 245, 255, 0.12), 8px 8px 0 rgba(0,0,0,0.8)",
+        boxShadow:
+          "0 0 30px rgba(0, 245, 255, 0.12), 8px 8px 0 rgba(0,0,0,0.8)",
         maxWidth: "560px",
         width: "100%",
         padding: "2rem",
@@ -120,7 +127,11 @@ function AnalysisBootPanel() {
       <div style={{ textAlign: "center" }}>
         <motion.span
           animate={{ opacity: [1, 0, 1] }}
-          transition={{ duration: 0.32, repeat: Infinity, ease: steppedEase(2) }}
+          transition={{
+            duration: 0.32,
+            repeat: Infinity,
+            ease: steppedEase(2),
+          }}
           style={{
             display: "inline-block",
             fontFamily: "var(--font-press)",
@@ -148,7 +159,11 @@ function AnalysisBootPanel() {
         <motion.div
           initial={{ y: "-100%" }}
           animate={{ y: ["-100%", "120%"] }}
-          transition={{ duration: 1.15, repeat: Infinity, ease: steppedEase(8) }}
+          transition={{
+            duration: 1.15,
+            repeat: Infinity,
+            ease: steppedEase(8),
+          }}
           style={{
             position: "absolute",
             inset: "0 0 auto 0",
@@ -180,7 +195,11 @@ function AnalysisBootPanel() {
             key={message}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.85 + i * 0.36, duration: 0.18, ease: steppedEase(4) }}
+            transition={{
+              delay: 0.85 + i * 0.36,
+              duration: 0.18,
+              ease: steppedEase(4),
+            }}
             style={{
               fontFamily: "var(--font-dot)",
               fontSize: "0.8rem",
@@ -194,7 +213,11 @@ function AnalysisBootPanel() {
             &gt; {message}
             <motion.span
               animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 0.35, repeat: Infinity, ease: steppedEase(2) }}
+              transition={{
+                duration: 0.35,
+                repeat: Infinity,
+                ease: steppedEase(2),
+              }}
             >
               _
             </motion.span>
@@ -301,10 +324,12 @@ function AnalysisDepartureWipe() {
   );
 }
 
-export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) {
-  const [phase, setPhase] = useState<"booting" | "analyzing" | "complete" | "departing" | "error">(
-    "booting",
-  );
+export function ContributionAnalysis({
+  onComplete,
+}: ContributionAnalysisProps) {
+  const [phase, setPhase] = useState<
+    "booting" | "analyzing" | "complete" | "departing" | "error"
+  >("booting");
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const promiseRef = useRef<Promise<AnalysisResult> | null>(null);
@@ -446,7 +471,8 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
             zIndex: 2,
             border: "4px solid var(--color-gold)",
             background: "var(--color-navy-light)",
-            boxShadow: "0 0 30px rgba(0, 245, 255, 0.12), 8px 8px 0 rgba(0,0,0,0.8)",
+            boxShadow:
+              "0 0 30px rgba(0, 245, 255, 0.12), 8px 8px 0 rgba(0,0,0,0.8)",
             maxWidth: "520px",
             width: "100%",
             padding: "2rem",
@@ -466,8 +492,8 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
             ✗ ANALYSIS FAILED
           </span>
           <span style={{ fontSize: "0.8rem", color: "rgba(232,232,208,0.6)" }}>
-            Failed to fetch contribution data from GitHub. Make sure you have synced your
-            repositories.
+            Failed to fetch contribution data from GitHub. Make sure you have
+            synced your repositories.
           </span>
           <button
             onClick={handleRetry}
@@ -495,6 +521,7 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
           {phase === "departing" && <AnalysisDepartureWipe />}
         </>
       ) : null}
+      <NadesikoGimmick />
     </div>
   );
 }
