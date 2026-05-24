@@ -243,6 +243,21 @@ func TestGuildTownControllerBuyBuildingAcceptsCamelCaseBuildingID(t *testing.T) 
 	}
 }
 
+func TestGuildTownControllerBuyBuildingAcceptsAPIPrefix(t *testing.T) {
+	controller := newGuildTownTestController()
+	router := NewRouter(slog.New(slog.NewTextHandler(io.Discard, nil)), controller)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodPost, "/api/me/guild/town/buildings", strings.NewReader(`{"buildingId":"tent"}`))
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusCreated {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusCreated)
+	}
+}
+
 func TestGuildTownControllerBuyBuildingRejectsMultipleJSONValues(t *testing.T) {
 	controller := newGuildTownTestController()
 	router := stdhttp.NewServeMux()
