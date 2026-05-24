@@ -149,7 +149,9 @@ B速度＝6
             window.removeEventListener("pointerdown", handleGlobalClick);
             try {
               nako.run("全タイマー停止");
-            } catch { /* なでしこタイマー停止は失敗しても無視 */ }
+            } catch {
+              /* なでしこタイマー停止は失敗しても無視 */
+            }
           };
         } catch (e) {
           console.error("Nadesiko script error:", e);
