@@ -86,7 +86,8 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 	if err != nil {
 		return controllerSet{}, connectHandlerSet{}, err
 	}
-	guildTownStore := postgres.NewGuildTownStore(db)
+	cpLedgerIDGenerator := security.NewIDGenerator("cp")
+	guildTownStore := postgres.NewGuildTownStoreWithLedgerIDs(db, cpLedgerIDGenerator)
 	chatStore := postgres.NewChatStore(db, guildStore)
 	badgeStore := postgres.NewBadgeStore(db)
 	seasonStore := postgres.NewSeasonStore(db)
@@ -108,7 +109,6 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 		repositoryClient,
 		repositoryStore,
 	)
-	cpLedgerIDGenerator := security.NewIDGenerator("cp")
 	cpUseCase := contributionpointapp.NewUseCase(contributionPointStore, cpLedgerIDGenerator)
 	cpManager := newCPManager(cpUseCase)
 	guildUseCase := guildapp.NewUseCaseWithPetAndCPTransaction(

@@ -1,4 +1,4 @@
-h1:zsAnBhjTK98OsxCNcRcaLzsnlQ51teIKO45OvjahmMg=
+h1:lK+Zza6Rvks+gysUhEk3zILBIIzPbl8ei1W1g+wj+zE=
 20260511165019_create_auth_tables.sql h1:xBhU31KhHPurVx2RqVxMmiyIjEg1sqKV3RUJyU6gr9Y=
 20260513090000_create_cp_tables.sql h1:3Ax1icNsujVhIX3ObVtWMEbIP/a3XPD2JQHeLhQG5Mg=
 20260514113146_contribution_point.sql h1:ZUdMX0wLF3+SpmuKtFVvhtIdFQSC+P0fjO8k/eYmEhA=
@@ -26,4 +26,5 @@ h1:zsAnBhjTK98OsxCNcRcaLzsnlQ51teIKO45OvjahmMg=
 20260524000006_insert_initial_season.sql h1:/dqFDGNOAiPedG4F+XkXmGVbQ1mM8XVvKHsJ7ITsxIo=
 20260524000007_drop_seasons_is_current.sql h1:3ztXu4dWH68omt/e/1W0kX0muufVWCwMxeDQJwZAATM=
 20260524000008_drop_season_ranking_tables.sql h1:gz5KTvr5b6pkKRYS2pwNlKED4iPFo6HvzC/pdMFmonw=
-20260524022739.sql h1:Vo765zqfF5yAJLnmPwhfqm/ZfzuKUp1jYzyOuif1Uc8=
+20260524001000_backfill_guild_town_default_inventory.sql h1:0V4qEbo6Qz9o9k/2yWX/oEVhK1F62RM0v6TBby5RD0Y=
+20260524022739.sql h1:k/axE4MK6EBf9nUuuQ32EuDOMX4CyFhXRKYUUMFH/Tw=
