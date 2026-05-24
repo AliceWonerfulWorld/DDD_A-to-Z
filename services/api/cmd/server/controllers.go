@@ -193,7 +193,7 @@ func buildControllers(logger *slog.Logger, db *gorm.DB) (controllerSet, connectH
 				settings.frontendURL,
 			),
 			repository: httpapi.NewRepositoryController(repositoryUseCase, logger),
-			guild:      httpapi.NewGuildController(guildUseCase, logger),
+			guild:      httpapi.NewGuildControllerWithSeason(guildUseCase, seasonUseCase, logger),
 			guildTown:  httpapi.NewGuildTownController(guildTownUseCase, logger),
 			mypage:     httpapi.NewMypageController(mypageUseCase, logger),
 			pet:        httpapi.NewPetController(petUseCase, logger),
