@@ -64,6 +64,7 @@
             pkgs.opentofu
             pkgs.php83
             pkgs.php83Packages.composer
+            pkgs.github-linguist
             pnpmPackage
             goPackage
             moonbit
