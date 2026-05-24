@@ -411,3 +411,15 @@ CREATE TABLE user_badges (
 );
 
 CREATE INDEX user_badges_user_id_earned_at_idx ON user_badges(user_id, earned_at DESC);
+
+CREATE TABLE seasons (
+  id TEXT PRIMARY KEY,
+  number INTEGER NOT NULL UNIQUE,
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+INSERT INTO seasons (id, number, starts_at, ends_at, created_at, updated_at) VALUES
+  ('season_1', 1, '2026-05-24 00:00:00+09', '2026-08-24 00:00:00+09', NOW(), NOW());

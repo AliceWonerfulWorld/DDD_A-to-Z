@@ -4,6 +4,7 @@ import { ParticleBackground } from "../shared/ParticleBackground";
 import { AnalyzingPanel } from "./AnalyzingPanel";
 import { CompletePanel, type AnalysisResult } from "./CompletePanel";
 import { analyzeContribution } from "../../features/analysis/api";
+import { NadesikoGimmick } from "../analysis/NadesikoGimmick";
 
 interface ContributionAnalysisProps {
   onComplete?: () => void;
@@ -120,7 +121,11 @@ function AnalysisBootPanel() {
       <div style={{ textAlign: "center" }}>
         <motion.span
           animate={{ opacity: [1, 0, 1] }}
-          transition={{ duration: 0.32, repeat: Infinity, ease: steppedEase(2) }}
+          transition={{
+            duration: 0.32,
+            repeat: Infinity,
+            ease: steppedEase(2),
+          }}
           style={{
             display: "inline-block",
             fontFamily: "var(--font-press)",
@@ -148,7 +153,11 @@ function AnalysisBootPanel() {
         <motion.div
           initial={{ y: "-100%" }}
           animate={{ y: ["-100%", "120%"] }}
-          transition={{ duration: 1.15, repeat: Infinity, ease: steppedEase(8) }}
+          transition={{
+            duration: 1.15,
+            repeat: Infinity,
+            ease: steppedEase(8),
+          }}
           style={{
             position: "absolute",
             inset: "0 0 auto 0",
@@ -180,7 +189,11 @@ function AnalysisBootPanel() {
             key={message}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.85 + i * 0.36, duration: 0.18, ease: steppedEase(4) }}
+            transition={{
+              delay: 0.85 + i * 0.36,
+              duration: 0.18,
+              ease: steppedEase(4),
+            }}
             style={{
               fontFamily: "var(--font-dot)",
               fontSize: "0.8rem",
@@ -194,7 +207,11 @@ function AnalysisBootPanel() {
             &gt; {message}
             <motion.span
               animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 0.35, repeat: Infinity, ease: steppedEase(2) }}
+              transition={{
+                duration: 0.35,
+                repeat: Infinity,
+                ease: steppedEase(2),
+              }}
             >
               _
             </motion.span>
@@ -495,6 +512,7 @@ export function ContributionAnalysis({ onComplete }: ContributionAnalysisProps) 
           {phase === "departing" && <AnalysisDepartureWipe />}
         </>
       ) : null}
+      <NadesikoGimmick />
     </div>
   );
 }

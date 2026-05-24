@@ -22,7 +22,8 @@ export function toDisplayGuild(guild: Guild): DisplayGuild {
     accent: master?.accent ?? fallbackGuildMeta.accent,
     sortOrder: master?.sortOrder ?? GUILD_MASTERS.length,
     memberCount: guild.member_count,
-    previousSeasonCp: master?.previousSeasonCp ?? fallbackGuildMeta.previousSeasonCp,
+    previousSeasonCp:
+      guild.previous_season_cp ?? master?.previousSeasonCp ?? fallbackGuildMeta.previousSeasonCp,
     oath: master?.oath ?? fallbackGuildMeta.oath,
     guildExperience: guild.currentExp ?? guild.current_exp ?? guild.guild_experience ?? 0,
     guildLevel: guild.guildLevel ?? guild.guild_level ?? 1,

@@ -66,6 +66,7 @@ export const RANKINGS: RankingMember[] = [
 export const GUILD_TABS: { id: GuildTab; label: string }[] = [
   { id: "activity", label: "ACTIVITY LOG" },
   { id: "rankings", label: "RANKINGS" },
+  { id: "season", label: "SEASON" },
 ];
 
 const PLAYERS = [

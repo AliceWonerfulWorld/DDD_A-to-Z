@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -10,13 +11,16 @@ import (
 
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	guildapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guild"
+	seasonapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/season"
 	guilddomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guild"
 	petdomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/pet"
+	seasondomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/season"
 )
 
 type GuildController struct {
-	usecase *guildapp.UseCase
-	logger  *slog.Logger
+	usecase       *guildapp.UseCase
+	seasonUseCase *seasonapp.UseCase
+	logger        *slog.Logger
 }
 
 func NewGuildController(usecase *guildapp.UseCase, logger *slog.Logger) *GuildController {
@@ -24,6 +28,12 @@ func NewGuildController(usecase *guildapp.UseCase, logger *slog.Logger) *GuildCo
 		usecase: usecase,
 		logger:  logger,
 	}
+}
+
+func NewGuildControllerWithSeason(usecase *guildapp.UseCase, seasonUseCase *seasonapp.UseCase, logger *slog.Logger) *GuildController {
+	c := NewGuildController(usecase, logger)
+	c.seasonUseCase = seasonUseCase
+	return c
 }
 
 func (c *GuildController) RegisterRoutes(mux *stdhttp.ServeMux) {
@@ -46,8 +56,18 @@ func (c *GuildController) listGuilds(w stdhttp.ResponseWriter, r *stdhttp.Reques
 		return
 	}
 
+	seasonCP := c.currentSeasonCPMap(r.Context())
+	prevCP := c.previousSeasonCPMap(r.Context())
+	responses := make([]map[string]any, 0, len(guilds))
+	for _, g := range guilds {
+		gr := guildResponse(g)
+		applySeasonCP(gr, seasonCP, string(g.ID))
+		setPreviousSeasonCP(gr, prevCP, string(g.ID))
+		responses = append(responses, gr)
+	}
+
 	if err := writeJSON(w, stdhttp.StatusOK, map[string]any{
-		"guilds": guildResponses(guilds),
+		"guilds": responses,
 	}); err != nil {
 		c.logger.Error("failed to write guild list response", "error", err)
 	}
@@ -90,7 +110,7 @@ func (c *GuildController) getMyGuild(w stdhttp.ResponseWriter, r *stdhttp.Reques
 		return
 	}
 
-	if err := writeJSON(w, stdhttp.StatusOK, myGuildDetailsResponse(details)); err != nil {
+	if err := writeJSON(w, stdhttp.StatusOK, myGuildDetailsResponse(details, c.currentSeasonCPMap(r.Context()), c.previousSeasonCPMap(r.Context()))); err != nil {
 		c.logger.Error("failed to write my guild response", "error", err)
 	}
 }
@@ -108,7 +128,7 @@ func (c *GuildController) getGuildDashboard(w stdhttp.ResponseWriter, r *stdhttp
 		return
 	}
 
-	if err := writeJSON(w, stdhttp.StatusOK, guildDashboardResponse(details)); err != nil {
+	if err := writeJSON(w, stdhttp.StatusOK, guildDashboardResponse(details, c.currentSeasonCPMap(r.Context()), c.previousSeasonCPMap(r.Context()))); err != nil {
 		c.logger.Error("failed to write guild dashboard response", "error", err)
 	}
 }
@@ -242,15 +262,6 @@ func (c *GuildController) writeError(w stdhttp.ResponseWriter, err error) {
 	}
 }
 
-func guildResponses(guilds []guilddomain.Guild) []map[string]any {
-	responses := make([]map[string]any, 0, len(guilds))
-	for _, guild := range guilds {
-		responses = append(responses, guildResponse(guild))
-	}
-
-	return responses
-}
-
 func membershipResponse(membership guilddomain.MembershipWithGuild) map[string]any {
 	return map[string]any{
 		"guild": guildResponse(membership.Guild),
@@ -288,9 +299,13 @@ func petResponse(pet *petdomain.Pet) any {
 	}
 }
 
-func myGuildDetailsResponse(details guildapp.MyGuildDetails) map[string]any {
+func myGuildDetailsResponse(details guildapp.MyGuildDetails, seasonCP, prevCP map[string]int64) map[string]any {
+	gResp := guildResponse(details.Guild)
+	applySeasonCP(gResp, seasonCP, string(details.Guild.ID))
+	setPreviousSeasonCP(gResp, prevCP, string(details.Guild.ID))
+
 	return map[string]any{
-		"guild":   guildResponse(details.Guild),
+		"guild":   gResp,
 		"members": memberContributionResponses(details.Members),
 		"membership": map[string]any{
 			"id":        details.Membership.ID,
@@ -300,8 +315,8 @@ func myGuildDetailsResponse(details guildapp.MyGuildDetails) map[string]any {
 	}
 }
 
-func guildDashboardResponse(details guildapp.MyGuildDetails) map[string]any {
-	response := myGuildDetailsResponse(details)
+func guildDashboardResponse(details guildapp.MyGuildDetails, seasonCP, prevCP map[string]int64) map[string]any {
+	response := myGuildDetailsResponse(details, seasonCP, prevCP)
 	response["state"] = "joined"
 
 	return response
@@ -325,6 +340,84 @@ func guildResponse(guild guilddomain.Guild) map[string]any {
 		"current_guild_level_experience": guild.CurrentGuildLevelExperience,
 		"next_guild_level_experience":    guild.NextGuildLevelExperience,
 	}
+}
+
+func (c *GuildController) currentSeasonCPMap(ctx context.Context) map[string]int64 {
+	if c.seasonUseCase == nil {
+		return nil
+	}
+
+	season, err := c.seasonUseCase.GetCurrentSeason()
+	if err != nil {
+		return nil
+	}
+
+	rankings, err := c.seasonUseCase.ListGuildRankings(season.ID)
+	if err != nil {
+		return nil
+	}
+
+	m := make(map[string]int64, len(rankings))
+	for _, r := range rankings {
+		m[r.GuildID] = r.TotalCP
+	}
+	return m
+}
+
+func (c *GuildController) previousSeasonCPMap(ctx context.Context) map[string]int64 {
+	if c.seasonUseCase == nil {
+		return nil
+	}
+
+	current, err := c.seasonUseCase.GetCurrentSeason()
+	if err != nil {
+		return nil
+	}
+
+	allSeasons, err := c.seasonUseCase.ListSeasons()
+	if err != nil {
+		return nil
+	}
+
+	var prevSeason *seasondomain.Season
+	for _, s := range allSeasons {
+		if s.EndsAt.Before(current.StartsAt) {
+			if prevSeason == nil || s.EndsAt.After(prevSeason.EndsAt) {
+				s := s
+				prevSeason = &s
+			}
+		}
+	}
+
+	if prevSeason == nil {
+		return nil
+	}
+
+	rankings, err := c.seasonUseCase.ListGuildRankings(prevSeason.ID)
+	if err != nil {
+		return nil
+	}
+
+	m := make(map[string]int64, len(rankings))
+	for _, r := range rankings {
+		m[r.GuildID] = r.TotalCP
+	}
+	return m
+}
+
+func applySeasonCP(gr map[string]any, seasonCP map[string]int64, guildID string) {
+	if seasonCP == nil {
+		return
+	}
+	gr["total_contributed_cp"] = seasonCP[guildID]
+}
+
+func setPreviousSeasonCP(gr map[string]any, prevCP map[string]int64, guildID string) {
+	if prevCP == nil {
+		gr["previous_season_cp"] = 0
+		return
+	}
+	gr["previous_season_cp"] = prevCP[guildID]
 }
 
 func memberContributionResponses(members []guilddomain.MemberContribution) []map[string]any {

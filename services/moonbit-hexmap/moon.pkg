@@ -1,0 +1,17 @@
+options(
+  link: {
+    "wasm-gc": {
+      "exports": [
+        "set_guild_count",
+        "set_guild",
+        "calc",
+        "get_cell_count",
+        "get_cell_q",
+        "get_cell_r",
+        "get_cell_guild",
+        "get_cell_intensity",
+        "get_cell_contested",
+      ],
+    },
+  }
+)
