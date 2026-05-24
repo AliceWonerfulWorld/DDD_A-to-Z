@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	stdhttp "net/http"
 
+	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
 	guildtownapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/guildtown"
 	guildtowndomain "github.com/jyogi-web/ddd-a-to-z/services/api/internal/domain/guildtown"
 )
@@ -291,6 +292,8 @@ func (c *GuildTownController) writeError(w stdhttp.ResponseWriter, err error) {
 		writeAPIError(w, stdhttp.StatusBadRequest, "unknown_building_type", "unknown building type", 0, nil)
 	case errors.Is(err, guildtownapp.ErrInsufficientInventory):
 		writeAPIError(w, stdhttp.StatusBadRequest, "insufficient_inventory", "insufficient inventory", 0, nil)
+	case errors.Is(err, contributionpointapp.ErrInsufficientBalance):
+		writeAPIError(w, stdhttp.StatusBadRequest, "insufficient_balance", "insufficient balance", 0, nil)
 	case errors.Is(err, guildtownapp.ErrPlacementNotFound):
 		writeAPIError(w, stdhttp.StatusNotFound, "guild_town_placement_not_found", "guild town placement not found", 0, nil)
 	case errors.Is(err, guildtownapp.ErrInvalidPlacementLevel):

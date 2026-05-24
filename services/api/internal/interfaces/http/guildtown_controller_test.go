@@ -44,7 +44,7 @@ func (r guildTownTestRepository) ReplacePlacements(ctx context.Context, guildID 
 	return nil
 }
 
-func (r guildTownTestRepository) BuyBuilding(ctx context.Context, guildID guilddomain.ID, buildingType guildtowndomain.BuildingType, exp int64, now time.Time) (guilddomain.Guild, error) {
+func (r guildTownTestRepository) BuyBuilding(ctx context.Context, userID user.ID, guildID guilddomain.ID, building guildtowndomain.BuildingMaster, exp int64, now time.Time) (guilddomain.Guild, error) {
 	return guilddomain.NewGuild(guilddomain.Guild{
 		ID:              guildID,
 		Slug:            "go",
@@ -159,6 +159,23 @@ func TestGuildTownControllerSavePlacementsRejectsLargeBody(t *testing.T) {
 
 	if response.Code != stdhttp.StatusRequestEntityTooLarge {
 		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusRequestEntityTooLarge)
+	}
+}
+
+func TestGuildTownControllerSavePlacementsAcceptsAPIPrefix(t *testing.T) {
+	controller := newGuildTownTestController()
+	router := NewRouter(slog.New(slog.NewTextHandler(io.Discard, nil)), controller)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(stdhttp.MethodPut, "/api/me/guild/town/placements", strings.NewReader(`{
+		"placements": []
+	}`))
+	request.AddCookie(&stdhttp.Cookie{Name: sessionCookieName, Value: "session-token"})
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != stdhttp.StatusOK {
+		t.Fatalf("ステータスコード = %d, 期待値 %d", response.Code, stdhttp.StatusOK)
 	}
 }
 

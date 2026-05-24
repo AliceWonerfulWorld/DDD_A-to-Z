@@ -36,5 +36,7 @@ func NewRouter(logger *slog.Logger, registrars ...RouteRegistrar) *stdhttp.Serve
 		registrar.RegisterRoutes(mux)
 	}
 
+	mux.Handle("/api/", stdhttp.StripPrefix("/api", mux))
+
 	return mux
 }
