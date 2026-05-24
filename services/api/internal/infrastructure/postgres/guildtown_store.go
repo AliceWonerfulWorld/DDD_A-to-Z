@@ -149,7 +149,7 @@ func (s *GuildTownStore) spendPurchaseCost(ctx context.Context, tx *gorm.DB, use
 			return err
 		}
 	}
-	if building.PurchaseSP > 0 && building.TargetSP != "" && building.TargetSP != "Common" {
+	if shouldSpendPurchaseSP(building) {
 		if _, err := cp.Spend(ctx, contributionpointapp.SpendCommand{
 			UserID:     userID,
 			PointType:  contributionpointdomain.SPType(building.TargetSP),
@@ -163,6 +163,12 @@ func (s *GuildTownStore) spendPurchaseCost(ctx context.Context, tx *gorm.DB, use
 	}
 
 	return nil
+}
+
+func shouldSpendPurchaseSP(building guildtowndomain.BuildingMaster) bool {
+	// Common is a cross-language bucket in the town UI, not a persisted SP account.
+	// Until point_types has a canonical SP/Common entry and earning source, purchases only charge CP for Common-targeted buildings.
+	return building.PurchaseSP > 0 && building.TargetSP != "" && building.TargetSP != "Common"
 }
 
 func (s *GuildTownStore) CreatePlacement(ctx context.Context, guildID guilddomain.ID, placement guildtowndomain.Placement) error {
