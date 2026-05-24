@@ -79,28 +79,84 @@ func (s *SeasonStore) Create(szn seasondomain.Season) error {
 }
 
 func (s *SeasonStore) ListGuildRankings(seasonID seasondomain.ID) ([]seasondomain.GuildSeasonRanking, error) {
-	var rows []guildSeasonRankingRow
-	if err := s.db.Where("season_id = ?", string(seasonID)).Order("rank ASC").Find(&rows).Error; err != nil {
-		return nil, fmt.Errorf("list guild season rankings: %w", err)
+	var season seasonRow
+	if err := s.db.Where("id = ?", string(seasonID)).First(&season).Error; err != nil {
+		return nil, fmt.Errorf("find season for rankings: %w", err)
 	}
 
-	rankings := make([]seasondomain.GuildSeasonRanking, 0, len(rows))
-	for _, r := range rows {
-		rankings = append(rankings, toGuildSeasonRanking(r))
+	type aggRow struct {
+		GuildID     string
+		TotalCP     int64
+		MemberCount int64
+	}
+
+	var results []aggRow
+	if err := s.db.Raw(`
+		SELECT gcc.guild_id, SUM(gcc.amount) AS total_cp, COUNT(DISTINCT gcc.user_id) AS member_count
+		FROM guild_cp_contributions gcc
+		WHERE gcc.created_at >= ? AND gcc.created_at <= ?
+		GROUP BY gcc.guild_id
+		ORDER BY total_cp DESC
+	`, season.StartsAt, season.EndsAt).Scan(&results).Error; err != nil {
+		return nil, fmt.Errorf("aggregate guild season rankings: %w", err)
+	}
+
+	now := time.Now()
+	rankings := make([]seasondomain.GuildSeasonRanking, 0, len(results))
+	for i, r := range results {
+		rankings = append(rankings, seasondomain.GuildSeasonRanking{
+			ID:          fmt.Sprintf("%s_%s", string(seasonID), r.GuildID),
+			SeasonID:    seasonID,
+			GuildID:     r.GuildID,
+			TotalCP:     r.TotalCP,
+			Rank:        i + 1,
+			MemberCount: int(r.MemberCount),
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		})
 	}
 
 	return rankings, nil
 }
 
 func (s *SeasonStore) ListGuildMemberRankings(seasonID seasondomain.ID, guildID string) ([]seasondomain.GuildSeasonMemberRanking, error) {
-	var rows []guildSeasonMemberRankingRow
-	if err := s.db.Where("season_id = ? AND guild_id = ?", string(seasonID), guildID).Order("rank ASC").Find(&rows).Error; err != nil {
-		return nil, fmt.Errorf("list guild season member rankings: %w", err)
+	var season seasonRow
+	if err := s.db.Where("id = ?", string(seasonID)).First(&season).Error; err != nil {
+		return nil, fmt.Errorf("find season for member rankings: %w", err)
 	}
 
-	rankings := make([]seasondomain.GuildSeasonMemberRanking, 0, len(rows))
-	for _, r := range rows {
-		rankings = append(rankings, toGuildSeasonMemberRanking(r))
+	type aggRow struct {
+		UserID        string
+		UserName      string
+		ContributedCP int64
+	}
+
+	var results []aggRow
+	if err := s.db.Raw(`
+		SELECT gcc.user_id, COALESCE(ga.username, '') AS user_name, SUM(gcc.amount) AS contributed_cp
+		FROM guild_cp_contributions gcc
+		LEFT JOIN github_accounts ga ON ga.user_id = gcc.user_id
+		WHERE gcc.created_at >= ? AND gcc.created_at <= ? AND gcc.guild_id = ?
+		GROUP BY gcc.user_id, ga.username
+		ORDER BY contributed_cp DESC
+	`, season.StartsAt, season.EndsAt, guildID).Scan(&results).Error; err != nil {
+		return nil, fmt.Errorf("aggregate guild season member rankings: %w", err)
+	}
+
+	now := time.Now()
+	rankings := make([]seasondomain.GuildSeasonMemberRanking, 0, len(results))
+	for i, r := range results {
+		rankings = append(rankings, seasondomain.GuildSeasonMemberRanking{
+			ID:            fmt.Sprintf("%s_%s_%s", string(seasonID), guildID, r.UserID),
+			SeasonID:      seasonID,
+			GuildID:       guildID,
+			UserID:        r.UserID,
+			UserName:      r.UserName,
+			ContributedCP: r.ContributedCP,
+			Rank:          i + 1,
+			CreatedAt:     now,
+			UpdatedAt:     now,
+		})
 	}
 
 	return rankings, nil
@@ -115,32 +171,7 @@ type seasonRow struct {
 	UpdatedAt time.Time
 }
 
-type guildSeasonRankingRow struct {
-	ID          string `gorm:"primaryKey"`
-	SeasonID    string
-	GuildID     string
-	TotalCP     int64 `gorm:"column:total_cp"`
-	Rank        int
-	MemberCount int
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-type guildSeasonMemberRankingRow struct {
-	ID            string `gorm:"primaryKey"`
-	SeasonID      string
-	GuildID       string
-	UserID        string
-	UserName      string
-	ContributedCP int64 `gorm:"column:contributed_cp"`
-	Rank          int
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-}
-
-func (seasonRow) TableName() string                   { return "seasons" }
-func (guildSeasonRankingRow) TableName() string       { return "guild_season_rankings" }
-func (guildSeasonMemberRankingRow) TableName() string { return "guild_season_member_rankings" }
+func (seasonRow) TableName() string { return "seasons" }
 
 func toSeason(r seasonRow) seasondomain.Season {
 	return seasondomain.Season{
@@ -150,32 +181,5 @@ func toSeason(r seasonRow) seasondomain.Season {
 		EndsAt:    r.EndsAt,
 		CreatedAt: r.CreatedAt,
 		UpdatedAt: r.UpdatedAt,
-	}
-}
-
-func toGuildSeasonRanking(r guildSeasonRankingRow) seasondomain.GuildSeasonRanking {
-	return seasondomain.GuildSeasonRanking{
-		ID:          r.ID,
-		SeasonID:    seasondomain.ID(r.SeasonID),
-		GuildID:     r.GuildID,
-		TotalCP:     r.TotalCP,
-		Rank:        r.Rank,
-		MemberCount: r.MemberCount,
-		CreatedAt:   r.CreatedAt,
-		UpdatedAt:   r.UpdatedAt,
-	}
-}
-
-func toGuildSeasonMemberRanking(r guildSeasonMemberRankingRow) seasondomain.GuildSeasonMemberRanking {
-	return seasondomain.GuildSeasonMemberRanking{
-		ID:            r.ID,
-		SeasonID:      seasondomain.ID(r.SeasonID),
-		GuildID:       r.GuildID,
-		UserID:        r.UserID,
-		UserName:      r.UserName,
-		ContributedCP: r.ContributedCP,
-		Rank:          r.Rank,
-		CreatedAt:     r.CreatedAt,
-		UpdatedAt:     r.UpdatedAt,
 	}
 }
