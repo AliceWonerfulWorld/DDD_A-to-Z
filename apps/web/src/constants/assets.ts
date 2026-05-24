@@ -7,4 +7,5 @@ export const SPRITE_ASSETS = {
   PYTHON: "/character/python.webp",
   RUST: "/character/rust.webp",
   JAVA: "/character/duke.webp",
+  ZIG: "/character/ziggy.webp",
 } as const;
