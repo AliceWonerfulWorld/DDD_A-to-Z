@@ -338,6 +338,7 @@ func (r guildTownPlacementRecord) toDomain() (guildtowndomain.Placement, error) 
 }
 
 type guildForUpdateRecord struct {
+	Found              bool           `gorm:"column:found"`
 	ID                 guilddomain.ID `gorm:"column:id"`
 	Slug               string         `gorm:"column:slug"`
 	Name               string         `gorm:"column:name"`
@@ -353,17 +354,17 @@ type guildForUpdateRecord struct {
 }
 
 func lockGuildForUpdate(ctx context.Context, tx *gorm.DB, guildID guilddomain.ID) error {
-	var lockedID guilddomain.ID
+	var found bool
 	result := tx.WithContext(ctx).Raw(`
-		SELECT id
+		SELECT TRUE
 		FROM guilds
 		WHERE id = ?
 		FOR UPDATE
-	`, guildID).Scan(&lockedID)
+	`, guildID).Scan(&found)
 	if result.Error != nil {
 		return result.Error
 	}
-	if lockedID == "" {
+	if !found {
 		return guildtownapp.ErrGuildNotFound
 	}
 
@@ -374,6 +375,7 @@ func addGuildExperience(ctx context.Context, tx *gorm.DB, guildID guilddomain.ID
 	var record guildForUpdateRecord
 	result := tx.WithContext(ctx).Raw(`
 		SELECT
+			TRUE AS found,
 			g.id,
 			g.slug,
 			g.name,
@@ -404,7 +406,7 @@ func addGuildExperience(ctx context.Context, tx *gorm.DB, guildID guilddomain.ID
 	if result.Error != nil {
 		return guilddomain.Guild{}, result.Error
 	}
-	if record.ID == "" {
+	if !record.Found {
 		return guilddomain.Guild{}, guildtownapp.ErrGuildNotFound
 	}
 
