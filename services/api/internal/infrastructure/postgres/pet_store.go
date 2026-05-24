@@ -284,7 +284,6 @@ type playerPetWithGuildRecord struct {
 	GuildExperience    int64               `gorm:"column:guild_experience"`
 	GuildCreatedAt     time.Time           `gorm:"column:guild_created_at"`
 	GuildUpdatedAt     time.Time           `gorm:"column:guild_updated_at"`
-
 }
 
 func (r playerPetWithGuildRecord) toApplicationModel() (petapp.PetWithGuild, error) {

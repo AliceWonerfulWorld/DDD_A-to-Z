@@ -33,18 +33,18 @@ type BattleOpponentsData struct {
 }
 
 type OpponentSummary struct {
-	ID        string
-	GuildID   string
-	GuildName string
+	ID          string
+	GuildID     string
+	GuildName   string
 	DisplayName string
-	Name      string
-	Species   string
-	Attribute string
-	Level     int
-	MaxHP     int
-	Power     int
-	Guard     int
-	Speed     int
+	Name        string
+	Species     string
+	Attribute   string
+	Level       int
+	MaxHP       int
+	Power       int
+	Guard       int
+	Speed       int
 }
 
 type BattleResult struct {
