@@ -95,7 +95,7 @@ func (r *testRepository) CreatePlacement(ctx context.Context, guildID guilddomai
 	return nil
 }
 
-func (r *testRepository) UpgradePlacement(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, exp int64, now time.Time) (guilddomain.Guild, error) {
+func (r *testRepository) UpgradePlacement(ctx context.Context, userID user.ID, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, cost guildtowndomain.BuildingLevelCost, exp int64, now time.Time) (guilddomain.Guild, error) {
 	r.upgradedID = placementID
 	r.upgradedNextLevel = nextLevel
 	r.addedExp += exp

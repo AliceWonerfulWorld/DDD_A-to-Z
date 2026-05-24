@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	contributionpointapp "github.com/jyogi-web/ddd-a-to-z/services/api/internal/application/contributionpoint"
@@ -138,13 +139,24 @@ func (s *GuildTownStore) spendPurchaseCost(ctx context.Context, tx *gorm.DB, use
 	cp := contributionpointapp.NewUseCase(NewContributionPointStore(tx), s.cpLedgerIDs)
 	sourceID := string(guildID) + ":" + string(building.Type)
 	if building.PurchaseCP > 0 {
-		if _, err := cp.Spend(ctx, contributionpointapp.SpendCommand{
+		ledgerEntry, err := cp.Spend(ctx, contributionpointapp.SpendCommand{
 			UserID:     userID,
 			PointType:  contributionpointdomain.PointTypeCP,
 			Amount:     building.PurchaseCP,
 			Reason:     "guild_town_building_purchase",
 			SourceType: "guild_town_building",
 			SourceID:   sourceID,
+		})
+		if err != nil {
+			return err
+		}
+		if err := insertGuildTownCPContribution(ctx, tx, guilddomain.CPContribution{
+			ID:            guilddomain.CPContributionID(ledgerEntry.ID),
+			GuildID:       guildID,
+			UserID:        userID,
+			PointLedgerID: ledgerEntry.ID,
+			Amount:        building.PurchaseCP,
+			CreatedAt:     ledgerEntry.CreatedAt,
 		}); err != nil {
 			return err
 		}
@@ -245,7 +257,7 @@ func (s *GuildTownStore) ReplacePlacements(ctx context.Context, guildID guilddom
 	})
 }
 
-func (s *GuildTownStore) UpgradePlacement(ctx context.Context, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, exp int64, now time.Time) (guilddomain.Guild, error) {
+func (s *GuildTownStore) UpgradePlacement(ctx context.Context, userID user.ID, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, cost guildtowndomain.BuildingLevelCost, exp int64, now time.Time) (guilddomain.Guild, error) {
 	var updatedGuild guilddomain.Guild
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := lockGuildForUpdate(ctx, tx, guildID); err != nil {
@@ -268,6 +280,9 @@ func (s *GuildTownStore) UpgradePlacement(ctx context.Context, guildID guilddoma
 		if nextLevel != currentLevel+1 || nextLevel > guilddomain.MaxGuildLevel {
 			return guildtownapp.ErrInvalidPlacementLevel
 		}
+		if err := s.spendUpgradeCost(ctx, tx, userID, guildID, placementID, nextLevel, cost); err != nil {
+			return err
+		}
 
 		if err := tx.Exec(`
 			UPDATE guild_town_placements
@@ -289,6 +304,71 @@ func (s *GuildTownStore) UpgradePlacement(ctx context.Context, guildID guilddoma
 	}
 
 	return updatedGuild, nil
+}
+
+func (s *GuildTownStore) spendUpgradeCost(ctx context.Context, tx *gorm.DB, userID user.ID, guildID guilddomain.ID, placementID guildtowndomain.PlacementID, nextLevel int, cost guildtowndomain.BuildingLevelCost) error {
+	if cost.CP == 0 && cost.SP == 0 {
+		return nil
+	}
+	if s.cpLedgerIDs == nil {
+		return nil
+	}
+
+	cp := contributionpointapp.NewUseCase(NewContributionPointStore(tx), s.cpLedgerIDs)
+	sourceID := string(guildID) + ":" + string(placementID) + ":" + strconv.Itoa(nextLevel)
+	if cost.CP > 0 {
+		ledgerEntry, err := cp.Spend(ctx, contributionpointapp.SpendCommand{
+			UserID:     userID,
+			PointType:  contributionpointdomain.PointTypeCP,
+			Amount:     cost.CP,
+			Reason:     "guild_town_building_upgrade",
+			SourceType: "guild_town_building_upgrade",
+			SourceID:   sourceID,
+		})
+		if err != nil {
+			return err
+		}
+		if err := insertGuildTownCPContribution(ctx, tx, guilddomain.CPContribution{
+			ID:            guilddomain.CPContributionID(ledgerEntry.ID),
+			GuildID:       guildID,
+			UserID:        userID,
+			PointLedgerID: ledgerEntry.ID,
+			Amount:        cost.CP,
+			CreatedAt:     ledgerEntry.CreatedAt,
+		}); err != nil {
+			return err
+		}
+	}
+	if shouldSpendUpgradeSP(cost) {
+		if _, err := cp.Spend(ctx, contributionpointapp.SpendCommand{
+			UserID:     userID,
+			PointType:  contributionpointdomain.SPType(cost.TargetSP),
+			Amount:     cost.SP,
+			Reason:     "guild_town_building_upgrade",
+			SourceType: "guild_town_building_upgrade",
+			SourceID:   sourceID,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func shouldSpendUpgradeSP(cost guildtowndomain.BuildingLevelCost) bool {
+	return cost.SP > 0 && cost.TargetSP != "" && cost.TargetSP != "Common"
+}
+
+func insertGuildTownCPContribution(ctx context.Context, tx *gorm.DB, contribution guilddomain.CPContribution) error {
+	_, err := guilddomain.NewCPContribution(contribution)
+	if err != nil {
+		return err
+	}
+
+	return tx.WithContext(ctx).Exec(`
+		INSERT INTO guild_cp_contributions (id, guild_id, user_id, point_ledger_id, amount, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, contribution.ID, contribution.GuildID, contribution.UserID, contribution.PointLedgerID, contribution.Amount, contribution.CreatedAt).Error
 }
 
 type guildTownInventoryRecord struct {

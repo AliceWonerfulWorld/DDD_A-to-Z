@@ -19,3 +19,17 @@ func TestShouldSpendPurchaseSP(t *testing.T) {
 		}
 	})
 }
+
+func TestShouldSpendUpgradeSP(t *testing.T) {
+	t.Run("Commonは永続SP口座がないためSP消費しない", func(t *testing.T) {
+		if shouldSpendUpgradeSP(guildtowndomain.BuildingLevelCost{SP: 50, TargetSP: "Common"}) {
+			t.Fatal("shouldSpendUpgradeSP() = true, 期待値 false")
+		}
+	})
+
+	t.Run("言語別SPは消費対象にする", func(t *testing.T) {
+		if !shouldSpendUpgradeSP(guildtowndomain.BuildingLevelCost{SP: 50, TargetSP: "Go"}) {
+			t.Fatal("shouldSpendUpgradeSP() = false, 期待値 true")
+		}
+	})
+}
