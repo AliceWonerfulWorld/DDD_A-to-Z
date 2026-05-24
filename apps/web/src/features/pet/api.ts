@@ -69,6 +69,7 @@ interface BattleOpponentApiResponse {
   petId: string;
   guildId: string;
   guildName: string;
+  displayName: string;
   name: string;
   species: string;
   attribute: string;
@@ -119,7 +120,7 @@ export async function fetchBattleOpponents(): Promise<BattleOpponent[]> {
   return data.opponents.map((opponent) => ({
     userId: opponent.petId,
     petId: opponent.petId,
-    playerName: `${opponent.guildName} Challenger`,
+    playerName: opponent.displayName, // ← API から取得
     pet: {
       id: opponent.petId,
       guildId: opponent.guildId,

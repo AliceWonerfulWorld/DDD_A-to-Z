@@ -155,9 +155,11 @@ func (s *PetStore) ListOpponentPets(ctx context.Context, userID user.ID) ([]peta
 			g.updated_at AS guild_updated_at,
 			COALESCE(active_gm.member_count, 0) AS member_count,
 			COALESCE(gcc.total_contributed_cp, 0) AS total_contributed_cp,
-			g.current_exp AS guild_experience
+			g.current_exp AS guild_experience,
+			up.display_name
 		FROM player_pets pp
 		JOIN guilds g ON g.id = pp.guild_id
+		JOIN user_profiles up ON up.user_id = pp.user_id
 		LEFT JOIN (
 			SELECT guild_id, COUNT(*) AS member_count
 			FROM guild_memberships
@@ -264,6 +266,7 @@ type playerPetWithGuildRecord struct {
 	ID                 petdomain.ID        `gorm:"column:id"`
 	UserID             user.ID             `gorm:"column:user_id"`
 	GuildID            guilddomain.ID      `gorm:"column:guild_id"`
+	DisplayName        string              `gorm:"column:display_name"`
 	Attribute          petdomain.Attribute `gorm:"column:attribute"`
 	Vitality           int                 `gorm:"column:vitality"`
 	Strength           int                 `gorm:"column:strength"`
@@ -319,5 +322,5 @@ func (r playerPetWithGuildRecord) toApplicationModel() (petapp.PetWithGuild, err
 		return petapp.PetWithGuild{}, err
 	}
 
-	return petapp.PetWithGuild{Pet: foundPet, Guild: foundGuild}, nil
+	return petapp.PetWithGuild{Pet: foundPet, Guild: foundGuild, DisplayName: r.DisplayName}, nil
 }

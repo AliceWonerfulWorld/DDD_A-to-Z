@@ -56,6 +56,7 @@ type CurrentGuildReader interface {
 
 // PetWithGuild combines a pet with guild display data needed by the API.
 type PetWithGuild struct {
-	Pet   petdomain.Pet
-	Guild guilddomain.Guild
+	Pet         petdomain.Pet
+	Guild       guilddomain.Guild
+	DisplayName string
 }

@@ -197,17 +197,18 @@ func petToResponse(p petapp.PetSummary) map[string]any {
 
 func battleOpponentToResponse(p petapp.OpponentSummary) map[string]any {
 	return map[string]any{
-		"petId":     p.ID,
-		"guildId":   p.GuildID,
-		"guildName": p.GuildName,
-		"name":      p.Name,
-		"species":   p.Species,
-		"attribute": p.Attribute,
-		"level":     p.Level,
-		"maxHp":     p.MaxHP,
-		"power":     p.Power,
-		"guard":     p.Guard,
-		"speed":     p.Speed,
+		"petId":       p.ID,
+		"guildId":     p.GuildID,
+		"displayName": p.DisplayName,
+		"guildName":   p.GuildName,
+		"name":        p.Name,
+		"species":     p.Species,
+		"attribute":   p.Attribute,
+		"level":       p.Level,
+		"maxHp":       p.MaxHP,
+		"power":       p.Power,
+		"guard":       p.Guard,
+		"speed":       p.Speed,
 	}
 }
 

@@ -91,6 +91,7 @@ describe("pet api", () => {
           petId: "pet_rust",
           guildId: "guild_rust",
           guildName: "Rust",
+          displayName: "Rust Challenger",
           name: "Ferris",
           species: "crab",
           attribute: "Rust",

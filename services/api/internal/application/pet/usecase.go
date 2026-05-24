@@ -341,17 +341,18 @@ func toPetSummary(petWithGuild PetWithGuild) PetSummary {
 func toOpponentSummary(petWithGuild PetWithGuild) OpponentSummary {
 	summary := toPetSummary(petWithGuild)
 	return OpponentSummary{
-		ID:        summary.ID,
-		GuildID:   summary.GuildID,
-		GuildName: summary.GuildName,
-		Name:      summary.Name,
-		Species:   summary.Species,
-		Attribute: summary.Attribute,
-		Level:     summary.Level,
-		MaxHP:     summary.MaxHP,
-		Power:     summary.Power,
-		Guard:     summary.Guard,
-		Speed:     summary.Speed,
+		ID:          summary.ID,
+		GuildID:     summary.GuildID,
+		GuildName:   summary.GuildName,
+		DisplayName: petWithGuild.DisplayName,
+		Name:        summary.Name,
+		Species:     summary.Species,
+		Attribute:   summary.Attribute,
+		Level:       summary.Level,
+		MaxHP:       summary.MaxHP,
+		Power:       summary.Power,
+		Guard:       summary.Guard,
+		Speed:       summary.Speed,
 	}
 }
 
