@@ -41,9 +41,11 @@ let petPageBootstrapPromise: Promise<{
 }> | null = null;
 
 async function fetchPetPageBootstrap() {
-  petPageBootstrapPromise ??= Promise.allSettled([fetchMyPets(), fetchBattleOpponents()]).then(
-    ([myPets, opponents]) => ({ myPets, opponents }),
-  );
+  petPageBootstrapPromise ??= Promise.allSettled([fetchMyPets(), fetchBattleOpponents()])
+    .then(([myPets, opponents]) => ({ myPets, opponents }))
+    .finally(() => {
+      petPageBootstrapPromise = null;
+    });
   return petPageBootstrapPromise;
 }
 
@@ -64,6 +66,19 @@ function grantedPetAttributeLabel(attribute: string) {
     zig: "Zig",
   };
   return labels[normalized] ?? attribute;
+}
+
+function grantedPetGuildName(guildId: string, attribute: string) {
+  const namesByGuildId: Record<string, string> = {
+    guild_go: "Go Guild",
+    guild_rust: "Rust Guild",
+    guild_python: "Python Guild",
+    guild_java: "Java Guild",
+    guild_typescript: "TypeScript Guild",
+    guild_haskell: "Haskell Guild",
+    guild_zig: "Zig Guild",
+  };
+  return namesByGuildId[guildId] ?? `${grantedPetAttributeLabel(attribute)} Guild`;
 }
 
 const petPortraits: Record<string, { label: string; tone: string }> = {
@@ -433,16 +448,20 @@ export function PetPage({ onNavigate }: PetPageProps) {
                   })}
                 </div>
 
-                {statusMessage && (
-                  <div className={styles.trainingFeedback} key={statusMessage} role="status">
-                    <span className={styles.trainingFeedbackLabel}>BOOST RESULT</span>
-                    <p className={styles.trainingFeedbackText}>{statusMessage}</p>
-                  </div>
-                )}
-                {homePetMessage && (
-                  <div className={styles.trainingFeedback} key={homePetMessage} role="status">
-                    <span className={styles.trainingFeedbackLabel}>HOME DISPLAY</span>
-                    <p className={styles.trainingFeedbackText}>{homePetMessage}</p>
+                {(statusMessage || homePetMessage) && (
+                  <div className={styles.trainingFeedbackStack} role="status">
+                    {statusMessage && (
+                      <div className={styles.trainingFeedback} key={statusMessage}>
+                        <span className={styles.trainingFeedbackLabel}>BOOST RESULT</span>
+                        <p className={styles.trainingFeedbackText}>{statusMessage}</p>
+                      </div>
+                    )}
+                    {homePetMessage && (
+                      <div className={styles.trainingFeedback} key={homePetMessage}>
+                        <span className={styles.trainingFeedbackLabel}>HOME DISPLAY</span>
+                        <p className={styles.trainingFeedbackText}>{homePetMessage}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -545,7 +564,7 @@ export function PetPage({ onNavigate }: PetPageProps) {
 
 function GrantedPetCelebration({ grantedPet }: { grantedPet: GrantedPet }) {
   const attribute = grantedPetAttributeLabel(grantedPet.attribute);
-  const guildName = grantedPet.guildId === "guild_go" ? "Go Guild" : "New Guild";
+  const guildName = grantedPetGuildName(grantedPet.guildId, grantedPet.attribute);
   const pet: PetSummary = {
     id: grantedPet.id,
     guildId: grantedPet.guildId,

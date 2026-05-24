@@ -99,7 +99,7 @@ export function WalkingGopher({ onTalk, pet }: { onTalk: () => void; pet?: PetSu
     <motion.button
       ref={gopherButtonRef}
       type="button"
-      aria-label="Gopher君に話しかける"
+      aria-label="ペットに話しかける"
       initial={false}
       animate={{
         x: walkPathX,
