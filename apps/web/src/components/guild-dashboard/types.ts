@@ -1,4 +1,4 @@
-export type GuildTab = "activity" | "rankings";
+export type GuildTab = "activity" | "rankings" | "season";
 
 export interface ActivityLog {
   id: string;
