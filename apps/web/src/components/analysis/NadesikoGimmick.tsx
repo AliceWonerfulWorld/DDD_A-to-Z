@@ -7,7 +7,7 @@ export function NadesikoGimmick() {
   const [gameState, setGameState] = useState("待機");
 
   useEffect(() => {
-    // @ts-ignore
+    // @ts-expect-error: nako3 is not typed
     window.syncNakoState = (y: number, state: string) => {
       setGopherY(y);
       setGameState(state);
@@ -126,7 +126,7 @@ B速度＝6
 「ループ」を0.033秒毎
 `;
     const startNako = async () => {
-      // @ts-ignore
+      // @ts-expect-error: nako3 is not typed
       const nako = window.navigator.nako3;
       if (nako) {
         try {
@@ -134,22 +134,22 @@ B速度＝6
 
           const handleGlobalClick = () => {
             if (isUnmounted) return;
-            // @ts-ignore
+            // @ts-expect-error: nako3 is not typed
             window.nakoClickFlag = 1;
             setTimeout(() => {
-              // @ts-ignore
+              // @ts-expect-error: nako3 is not typed
               window.nakoClickFlag = 0;
             }, 50);
           };
           window.addEventListener("pointerdown", handleGlobalClick);
 
           // 終了時にタイマーなどを停止するクリーンアップ
-          // @ts-ignore
+          // @ts-expect-error: nako3 is not typed
           window.__nakoCleanup = () => {
             window.removeEventListener("pointerdown", handleGlobalClick);
             try {
               nako.run("全タイマー停止");
-            } catch (err) {}
+            } catch { /* なでしこタイマー停止は失敗しても無視 */ }
           };
         } catch (e) {
           console.error("Nadesiko script error:", e);
@@ -165,7 +165,7 @@ B速度＝6
 
     return () => {
       isUnmounted = true;
-      // @ts-ignore
+      // @ts-expect-error: nako3 is not typed
       if (window.__nakoCleanup) window.__nakoCleanup();
     };
   }, []);
