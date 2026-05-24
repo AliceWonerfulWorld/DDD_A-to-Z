@@ -10,6 +10,7 @@ type Repository interface {
 	Create(s season.Season) error
 	ListGuildRankings(seasonID season.ID) ([]season.GuildSeasonRanking, error)
 	ListGuildMemberRankings(seasonID season.ID, guildID string) ([]season.GuildSeasonMemberRanking, error)
+	GetGuildSeasonCP(seasonID season.ID, guildID string) (int64, error)
 }
 
 type IDGenerator interface {

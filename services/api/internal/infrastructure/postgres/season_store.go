@@ -162,6 +162,26 @@ func (s *SeasonStore) ListGuildMemberRankings(seasonID seasondomain.ID, guildID 
 	return rankings, nil
 }
 
+func (s *SeasonStore) GetGuildSeasonCP(seasonID seasondomain.ID, guildID string) (int64, error) {
+	var season seasonRow
+	if err := s.db.Where("id = ?", string(seasonID)).First(&season).Error; err != nil {
+		return 0, fmt.Errorf("find season for guild cp: %w", err)
+	}
+
+	var totalCP struct {
+		Total int64
+	}
+	if err := s.db.Raw(`
+		SELECT COALESCE(SUM(amount), 0) AS total
+		FROM guild_cp_contributions
+		WHERE guild_id = ? AND created_at >= ? AND created_at <= ?
+	`, guildID, season.StartsAt, season.EndsAt).Scan(&totalCP).Error; err != nil {
+		return 0, fmt.Errorf("aggregate guild season cp: %w", err)
+	}
+
+	return totalCP.Total, nil
+}
+
 type seasonRow struct {
 	ID        string `gorm:"primaryKey"`
 	Number    int
